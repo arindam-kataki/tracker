@@ -1,0 +1,972 @@
+@model EnhancementsViewModel
+@{
+    ViewData["Title"] = Model.ServiceAreaName + " - Enhancements";
+    var hasActiveFilter = Model.Filter.HasAnyFilter();
+    var sortableColumns = ColumnDefinition.GetSortableColumns();
+}
+
+@Html.AntiForgeryToken()
+
+<!-- Sticky Toolbar -->
+<div class="sticky-toolbar">
+    <!-- Row 1: Action Buttons -->
+    <div class="toolbar mb-2">
+        <button class="btn btn-primary" id="addBtn">
+            <i class="bi bi-plus-lg me-1"></i> Add
+        </button>
+        
+        <button class="btn btn-warning" id="toggleBulkBtn" disabled>
+            <i class="bi bi-pencil-square me-1"></i> Bulk Edit
+            <span class="bulk-count badge bg-dark ms-1" style="display: none;">0</span>
+        </button>
+        
+        <button class="btn btn-warning" id="toggleFilterBtn">
+            <i class="bi bi-funnel me-1"></i> Filters
+            @if (hasActiveFilter)
+            {
+                <span class="badge bg-dark ms-1">Active</span>
+            }
+        </button>
+        
+        <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#columnsModal">
+            <i class="bi bi-layout-three-columns me-1"></i> Columns
+        </button>
+        
+        <div class="vr mx-2"></div>
+        
+        <!-- Sorting -->
+        <div class="d-flex align-items-center gap-2">
+            <label class="form-label mb-0 small text-muted">Sort:</label>
+            <select class="form-select form-select-sm" id="sortColumn" style="width: auto;">
+                @foreach (var col in sortableColumns)
+                {
+                    var isSelected = col.Key.Equals(Model.SortColumn, StringComparison.OrdinalIgnoreCase);
+                    <option value="@col.Key" selected="@isSelected">@col.Label</option>
+                }
+            </select>
+            <select class="form-select form-select-sm" id="sortOrder" style="width: auto;">
+                <option value="asc" selected="@(Model.SortOrder == "asc")">Asc</option>
+                <option value="desc" selected="@(Model.SortOrder == "desc")">Desc</option>
+            </select>
+        </div>
+        
+        <div class="vr mx-2"></div>
+        
+        <!-- Page Size -->
+        <div class="d-flex align-items-center gap-2">
+            <label class="form-label mb-0 small text-muted">Show:</label>
+            <select class="form-select form-select-sm" id="pageSize" style="width: auto;">
+                @foreach (var size in new[] { 10, 25, 50, 100 })
+                {
+                    var isSelected = size == Model.PageSize;
+                    <option value="@size" selected="@isSelected">@size</option>
+                }
+            </select>
+        </div>
+        
+        <span class="text-muted ms-auto small">
+            @Model.StartItem - @Model.EndItem of @Model.TotalItems
+        </span>
+    </div>
+</div>
+
+<!-- Bulk Actions Panel -->
+<div class="bulk-panel-container mb-3" id="bulkPanel" style="display: none;">
+    <div class="bulk-panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="fw-bold"><i class="bi bi-pencil-square me-2"></i>Bulk Edit (<span id="bulkSelectedCount">0</span> selected)</span>
+            <button type="button" class="btn-close" id="closeBulkPanel"></button>
+        </div>
+        
+        <div class="row g-2">
+            <div class="col-md-6">
+                <div class="bulk-row">
+                    <label class="bulk-label">Status</label>
+                    <select class="form-select form-select-sm" id="bulkStatus">
+                        <option value="">-- No change --</option>
+                        @foreach (var status in Model.AvailableStatuses)
+                        {
+                            <option value="@status">@status</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="bulk-row">
+                    <label class="bulk-label">INF Status</label>
+                    <input type="text" class="form-control form-control-sm" id="bulkInfStatus" placeholder="No change" />
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="bulk-row">
+                    <label class="bulk-label">Service Line</label>
+                    <input type="text" class="form-control form-control-sm" id="bulkServiceLine" placeholder="No change" />
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="bulk-row">
+                    <label class="bulk-label">Start Date</label>
+                    <div class="d-flex gap-1 align-items-center">
+                        <input type="date" class="form-control form-control-sm" id="bulkStartDate" style="width: 140px;" />
+                        <div class="form-check form-check-inline mb-0">
+                            <input type="checkbox" class="form-check-input" id="bulkClearStartDate" />
+                            <label class="form-check-label small" for="bulkClearStartDate">Clear</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="bulk-row">
+                    <label class="bulk-label">End Date</label>
+                    <div class="d-flex gap-1 align-items-center">
+                        <input type="date" class="form-control form-control-sm" id="bulkEndDate" style="width: 140px;" />
+                        <div class="form-check form-check-inline mb-0">
+                            <input type="checkbox" class="form-check-input" id="bulkClearEndDate" />
+                            <label class="form-check-label small" for="bulkClearEndDate">Clear</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="bulk-row">
+                    <label class="bulk-label">Est. Start</label>
+                    <div class="d-flex gap-1 align-items-center">
+                        <input type="date" class="form-control form-control-sm" id="bulkEstStartDate" style="width: 140px;" />
+                        <div class="form-check form-check-inline mb-0">
+                            <input type="checkbox" class="form-check-input" id="bulkClearEstStartDate" />
+                            <label class="form-check-label small" for="bulkClearEstStartDate">Clear</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="bulk-row">
+                    <label class="bulk-label">Est. End</label>
+                    <div class="d-flex gap-1 align-items-center">
+                        <input type="date" class="form-control form-control-sm" id="bulkEstEndDate" style="width: 140px;" />
+                        <div class="form-check form-check-inline mb-0">
+                            <input type="checkbox" class="form-check-input" id="bulkClearEstEndDate" />
+                            <label class="form-check-label small" for="bulkClearEstEndDate">Clear</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="bulk-row">
+                    <label class="bulk-label">Resources</label>
+                    <div class="d-flex gap-1 align-items-center flex-grow-1">
+                        <select class="form-select form-select-sm" id="bulkResources" multiple style="height: 60px;">
+                            @foreach (var r in Model.AvailableResources)
+                            {
+                                <option value="@r.Id">@r.Name</option>
+                            }
+                        </select>
+                        <div class="form-check form-check-inline mb-0">
+                            <input type="checkbox" class="form-check-input" id="bulkClearResources" />
+                            <label class="form-check-label small" for="bulkClearResources">Clear</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="bulk-row">
+                    <label class="bulk-label">Contacts</label>
+                    <div class="d-flex gap-1 align-items-center flex-grow-1">
+                        <select class="form-select form-select-sm" id="bulkContacts" multiple style="height: 60px;">
+                            @foreach (var c in Model.AvailableContacts)
+                            {
+                                <option value="@c.Id">@c.Name</option>
+                            }
+                        </select>
+                        <div class="form-check form-check-inline mb-0">
+                            <input type="checkbox" class="form-check-input" id="bulkClearContacts" />
+                            <label class="form-check-label small" for="bulkClearContacts">Clear</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <button type="button" class="btn btn-warning btn-sm" id="applyBulkBtn">
+                <i class="bi bi-check-lg me-1"></i> Apply to <span id="bulkApplyCount">0</span> items
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="cancelBulkBtn">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Panel -->
+<div class="filter-panel-container mb-3" id="filterPanel" style="display: none;">
+    <div class="filter-panel">
+        <div class="filter-header d-flex justify-content-between align-items-center mb-3">
+            <span class="fw-bold"><i class="bi bi-funnel me-2"></i>Filters</span>
+            <div class="d-flex gap-2 align-items-center">
+                <select class="form-select form-select-sm" style="width: auto;" id="savedFilterSelect">
+                    <option value="">-- Saved Filters --</option>
+                    @foreach (var sf in Model.SavedFilters)
+                    {
+                        var isSelected = sf.Id == Model.CurrentFilterId;
+                        <option value="@sf.Id" selected="@isSelected">
+                            @sf.Name @(sf.IsDefault ? "(Default)" : "")
+                        </option>
+                    }
+                </select>
+                <button class="btn btn-outline-secondary btn-sm" id="saveFilterBtn" title="Save filter">
+                    <i class="bi bi-save"></i>
+                </button>
+                @if (!string.IsNullOrEmpty(Model.CurrentFilterId))
+                {
+                    <button class="btn btn-outline-danger btn-sm" id="deleteFilterBtn" title="Delete filter">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                }
+                <button type="button" class="btn-close" id="closeFilterPanel"></button>
+            </div>
+        </div>
+        
+        <form id="filterForm" method="get">
+            <input type="hidden" name="serviceAreaId" value="@Model.ServiceAreaId" />
+            
+            <div class="filter-row mb-2">
+                <label class="filter-label">Search</label>
+                <input type="text" name="filter.Search" value="@Model.Filter.Search" 
+                       class="form-control form-control-sm" placeholder="Work ID, Description, Notes..." />
+            </div>
+            
+            <div class="filter-row mb-2">
+                <label class="filter-label">Status</label>
+                <div class="filter-checkboxes">
+                    @foreach (var status in Model.AvailableStatuses)
+                    {
+                        var isChecked = Model.Filter.Statuses.Contains(status);
+                        var statusId = "status_" + status.Replace(" ", "_");
+                        <div class="form-check form-check-inline">
+                            @if (isChecked)
+                            {
+                                <input type="checkbox" class="form-check-input" name="filter.Statuses" value="@status" id="@statusId" checked />
+                            }
+                            else
+                            {
+                                <input type="checkbox" class="form-check-input" name="filter.Statuses" value="@status" id="@statusId" />
+                            }
+                            <label class="form-check-label small" for="@statusId">@status</label>
+                        </div>
+                    }
+                </div>
+            </div>
+            
+            @if (Model.AvailableInfStatuses.Any())
+            {
+                <div class="filter-row mb-2">
+                    <label class="filter-label">INF Status</label>
+                    <div class="filter-checkboxes">
+                        @foreach (var infStatus in Model.AvailableInfStatuses)
+                        {
+                            var isChecked = Model.Filter.InfStatuses.Contains(infStatus);
+                            var infId = "inf_" + infStatus.Replace(" ", "_");
+                            <div class="form-check form-check-inline">
+                                @if (isChecked)
+                                {
+                                    <input type="checkbox" class="form-check-input" name="filter.InfStatuses" value="@infStatus" id="@infId" checked />
+                                }
+                                else
+                                {
+                                    <input type="checkbox" class="form-check-input" name="filter.InfStatuses" value="@infStatus" id="@infId" />
+                                }
+                                <label class="form-check-label small" for="@infId">@infStatus</label>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            
+            <div class="filter-row mb-2">
+                <label class="filter-label">Est. Hours</label>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="number" name="filter.EstimatedHoursMin" value="@Model.Filter.EstimatedHoursMin" 
+                           class="form-control form-control-sm" placeholder="Min" style="width: 70px;" step="0.5" />
+                    <span class="text-muted">-</span>
+                    <input type="number" name="filter.EstimatedHoursMax" value="@Model.Filter.EstimatedHoursMax" 
+                           class="form-control form-control-sm" placeholder="Max" style="width: 70px;" step="0.5" />
+                </div>
+            </div>
+            
+            <div class="filter-row mb-2">
+                <label class="filter-label">Est. Start</label>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="date" name="filter.EstimatedStartDateFrom" value="@Model.Filter.EstimatedStartDateFrom?.ToString("yyyy-MM-dd")" 
+                           class="form-control form-control-sm" style="width: 130px;" />
+                    <span class="text-muted">-</span>
+                    <input type="date" name="filter.EstimatedStartDateTo" value="@Model.Filter.EstimatedStartDateTo?.ToString("yyyy-MM-dd")" 
+                           class="form-control form-control-sm" style="width: 130px;" />
+                </div>
+            </div>
+            
+            <div class="filter-row mb-2">
+                <label class="filter-label">Est. End</label>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="date" name="filter.EstimatedEndDateFrom" value="@Model.Filter.EstimatedEndDateFrom?.ToString("yyyy-MM-dd")" 
+                           class="form-control form-control-sm" style="width: 130px;" />
+                    <span class="text-muted">-</span>
+                    <input type="date" name="filter.EstimatedEndDateTo" value="@Model.Filter.EstimatedEndDateTo?.ToString("yyyy-MM-dd")" 
+                           class="form-control form-control-sm" style="width: 130px;" />
+                </div>
+            </div>
+            
+            <div class="filter-row mb-2">
+                <label class="filter-label">Start Date</label>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="date" name="filter.StartDateFrom" value="@Model.Filter.StartDateFrom?.ToString("yyyy-MM-dd")" 
+                           class="form-control form-control-sm" style="width: 130px;" />
+                    <span class="text-muted">-</span>
+                    <input type="date" name="filter.StartDateTo" value="@Model.Filter.StartDateTo?.ToString("yyyy-MM-dd")" 
+                           class="form-control form-control-sm" style="width: 130px;" />
+                </div>
+            </div>
+            
+            <div class="filter-row mb-2">
+                <label class="filter-label">End Date</label>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="date" name="filter.EndDateFrom" value="@Model.Filter.EndDateFrom?.ToString("yyyy-MM-dd")" 
+                           class="form-control form-control-sm" style="width: 130px;" />
+                    <span class="text-muted">-</span>
+                    <input type="date" name="filter.EndDateTo" value="@Model.Filter.EndDateTo?.ToString("yyyy-MM-dd")" 
+                           class="form-control form-control-sm" style="width: 130px;" />
+                </div>
+            </div>
+            
+            <div class="filter-actions mt-3 d-flex gap-2">
+                <button type="submit" class="btn btn-warning btn-sm">
+                    <i class="bi bi-funnel me-1"></i> Apply
+                </button>
+                <a href="@Url.Action("Index", new { serviceAreaId = Model.ServiceAreaId })" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-lg me-1"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Data Table -->
+<div class="card">
+    <div class="table-wrapper">
+        <table class="table table-hover mb-0 table-frozen" id="enhancementsTable">
+            <thead class="table-light">
+                <tr>
+                    @foreach (var col in Model.AllColumns.Where(c => Model.VisibleColumns.Contains(c.Key)))
+                    {
+                        var frozenClass = col.IsFrozen ? "frozen-col" : "";
+                        if (col.Key == "select")
+                        {
+                            <th class="@frozenClass col-select">
+                                <input type="checkbox" class="form-check-input" id="selectAll" />
+                                <div class="resize-handle"></div>
+                            </th>
+                        }
+                        else if (col.Key == "actions")
+                        {
+                            <th class="col-actions">
+                                <div class="resize-handle"></div>
+                            </th>
+                        }
+                        else
+                        {
+                            <th class="@frozenClass @col.CssClass" data-col="@col.Key">
+                                @col.Label
+                                <div class="resize-handle"></div>
+                            </th>
+                        }
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Enhancements.Any())
+                {
+                    <tr>
+                        <td colspan="@Model.VisibleColumns.Count" class="text-center text-muted py-4">
+                            No enhancements found.
+                            @if (hasActiveFilter)
+                            {
+                                <text>Try adjusting your filters.</text>
+                            }
+                            else
+                            {
+                                <text>Click "Add" to create one.</text>
+                            }
+                        </td>
+                    </tr>
+                }
+                @foreach (var item in Model.Enhancements)
+                {
+                    <tr data-id="@item.Id">
+                        @foreach (var col in Model.AllColumns.Where(c => Model.VisibleColumns.Contains(c.Key)))
+                        {
+                            var frozenClass = col.IsFrozen ? "frozen-col" : "";
+                            switch (col.Key)
+                            {
+                                case "select":
+                                    <td class="@frozenClass">
+                                        <input type="checkbox" class="form-check-input row-select" value="@item.Id" />
+                                    </td>
+                                    break;
+                                case "workIdDescription":
+                                    <td class="@frozenClass">
+                                        <a href="#" class="text-decoration-none edit-link fw-medium" data-id="@item.Id">@item.WorkId</a>
+                                        <div class="text-muted small text-truncate" style="max-width: 300px;" title="@item.Description">@item.Description</div>
+                                    </td>
+                                    break;
+                                case "status":
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.Status))
+                                        {
+                                            <span class="badge bg-secondary">@item.Status</span>
+                                        }
+                                    </td>
+                                    break;
+                                case "estimatedHours":
+                                    <td class="text-end">
+                                        @if (item.EstimatedHours.HasValue)
+                                        {
+                                            <a href="#" class="breakdown-link text-decoration-none" data-id="@item.Id">@item.EstimatedHours.Value.ToString("N1")</a>
+                                        }
+                                    </td>
+                                    break;
+                                case "estimatedStartDate":
+                                    <td>@item.EstimatedStartDate?.ToString("MMM dd, yyyy")</td>
+                                    break;
+                                case "estimatedEndDate":
+                                    <td>@item.EstimatedEndDate?.ToString("MMM dd, yyyy")</td>
+                                    break;
+                                case "returnedHours":
+                                    <td class="text-end">@item.ReturnedHours?.ToString("N1")</td>
+                                    break;
+                                case "startDate":
+                                    <td>@item.StartDate?.ToString("MMM dd, yyyy")</td>
+                                    break;
+                                case "endDate":
+                                    <td>@item.EndDate?.ToString("MMM dd, yyyy")</td>
+                                    break;
+                                case "infStatus":
+                                    <td>@item.InfStatus</td>
+                                    break;
+                                case "serviceLine":
+                                    <td>@item.ServiceLine</td>
+                                    break;
+                                case "infServiceLine":
+                                    <td>@item.InfServiceLine</td>
+                                    break;
+                                case "notes":
+                                    <td class="text-truncate" style="max-width: 200px;" title="@item.Notes">@item.Notes</td>
+                                    break;
+                                case "createdAt":
+                                    <td>@item.CreatedAt.ToString("MMM dd, yyyy")</td>
+                                    break;
+                                case "createdBy":
+                                    <td>@item.CreatedBy</td>
+                                    break;
+                                case "modifiedAt":
+                                    <td>@item.ModifiedAt?.ToString("MMM dd, yyyy")</td>
+                                    break;
+                                case "modifiedBy":
+                                    <td>@item.ModifiedBy</td>
+                                    break;
+                                case "actions":
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary edit-btn" data-id="@item.Id" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger delete-btn" data-id="@item.Id" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    break;
+                            }
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer">
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    Showing @Model.StartItem - @Model.EndItem of @Model.TotalItems
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm">
+                        <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                            <a class="page-link" href="@GetPageUrl(1)">First</a>
+                        </li>
+                        <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                            <a class="page-link" href="@GetPageUrl(Model.PageNumber - 1)">Prev</a>
+                        </li>
+                        
+                        @for (var p = Math.Max(1, Model.PageNumber - 2); p <= Math.Min(Model.TotalPages, Model.PageNumber + 2); p++)
+                        {
+                            <li class="page-item @(p == Model.PageNumber ? "active" : "")">
+                                <a class="page-link" href="@GetPageUrl(p)">@p</a>
+                            </li>
+                        }
+                        
+                        <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                            <a class="page-link" href="@GetPageUrl(Model.PageNumber + 1)">Next</a>
+                        </li>
+                        <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                            <a class="page-link" href="@GetPageUrl(Model.TotalPages)">Last</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    }
+</div>
+
+@functions {
+    string GetPageUrl(int page)
+    {
+        return Url.Action("Index", new { 
+            serviceAreaId = Model.ServiceAreaId, 
+            filterId = Model.CurrentFilterId,
+            filter = new { 
+                Page = page, 
+                PageSize = Model.PageSize,
+                SortColumn = Model.SortColumn,
+                SortOrder = Model.SortOrder
+            }
+        }) ?? "#";
+    }
+}
+
+<!-- Modals -->
+<div class="modal fade" id="columnsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-layout-three-columns me-2"></i>Select Columns</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    @foreach (var col in Model.AllColumns.Where(c => c.Key != "select" && c.Key != "actions"))
+                    {
+                        var isChecked = Model.VisibleColumns.Contains(col.Key);
+                        var colId = "col_" + col.Key;
+                        <div class="col-6">
+                            <div class="form-check">
+                                @if (col.IsFrozen)
+                                {
+                                    <input type="checkbox" class="form-check-input column-checkbox" value="@col.Key" id="@colId" checked disabled />
+                                }
+                                else if (isChecked)
+                                {
+                                    <input type="checkbox" class="form-check-input column-checkbox" value="@col.Key" id="@colId" checked />
+                                }
+                                else
+                                {
+                                    <input type="checkbox" class="form-check-input column-checkbox" value="@col.Key" id="@colId" />
+                                }
+                                <label class="form-check-label" for="@colId">
+                                    @col.Label @(col.IsFrozen ? "(Frozen)" : "")
+                                </label>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveColumnsBtn">Apply</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="saveFilterModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Save Filter</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Filter Name</label>
+                    <input type="text" class="form-control" id="filterName" placeholder="My Filter" />
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="filterIsDefault" />
+                    <label class="form-check-label" for="filterIsDefault">Set as default</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="confirmSaveFilterBtn">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="editModalContent"></div>
+    </div>
+</div>
+
+<div class="modal fade" id="breakdownModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="breakdownModalContent"></div>
+    </div>
+</div>
+
+@await Html.PartialAsync("_ConfirmModal")
+
+@section Scripts {
+<script>
+    var serviceAreaId = '@Model.ServiceAreaId';
+    var currentFilterId = '@Model.CurrentFilterId';
+    var currentPage = @Model.PageNumber;
+    var currentPageSize = @Model.PageSize;
+    var currentSortColumn = '@Model.SortColumn';
+    var currentSortOrder = '@Model.SortOrder';
+    var antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
+    
+    // Column widths storage (session-based per service area)
+    var columnWidthsKey = 'columnWidths_' + serviceAreaId;
+    var columnWidths = JSON.parse(sessionStorage.getItem(columnWidthsKey) || '{}');
+    
+    // Apply stored column widths
+    function applyColumnWidths() {
+        Object.keys(columnWidths).forEach(function(col) {
+            var th = document.querySelector('th[data-col="' + col + '"]');
+            if (th) th.style.width = columnWidths[col] + 'px';
+        });
+    }
+    applyColumnWidths();
+    
+    // Column resizing
+    var resizing = null;
+    document.querySelectorAll('.resize-handle').forEach(function(handle) {
+        handle.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            var th = this.parentElement;
+            resizing = { th: th, startX: e.pageX, startWidth: th.offsetWidth };
+            th.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+        });
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+        if (!resizing) return;
+        var newWidth = Math.max(50, resizing.startWidth + (e.pageX - resizing.startX));
+        resizing.th.style.width = newWidth + 'px';
+        
+        // Update frozen column positions if needed
+        updateFrozenPositions();
+    });
+    
+    document.addEventListener('mouseup', function(e) {
+        if (!resizing) return;
+        var col = resizing.th.dataset.col;
+        if (col) {
+            columnWidths[col] = resizing.th.offsetWidth;
+            sessionStorage.setItem(columnWidthsKey, JSON.stringify(columnWidths));
+        }
+        resizing.th.classList.remove('resizing');
+        document.body.style.cursor = '';
+        resizing = null;
+    });
+    
+    function updateFrozenPositions() {
+        var firstFrozen = document.querySelector('.frozen-col:nth-child(1)');
+        var secondFrozen = document.querySelector('.frozen-col:nth-child(2)');
+        if (firstFrozen && secondFrozen) {
+            secondFrozen.style.left = firstFrozen.offsetWidth + 'px';
+        }
+    }
+    
+    // Filter Panel
+    var filterPanel = document.getElementById('filterPanel');
+    var filterVisible = localStorage.getItem('filterVisible_' + serviceAreaId) === 'true' || @(hasActiveFilter ? "true" : "false");
+    filterPanel.style.display = filterVisible ? 'block' : 'none';
+    
+    document.getElementById('toggleFilterBtn').addEventListener('click', function() {
+        filterVisible = !filterVisible;
+        localStorage.setItem('filterVisible_' + serviceAreaId, filterVisible);
+        filterPanel.style.display = filterVisible ? 'block' : 'none';
+    });
+    
+    document.getElementById('closeFilterPanel').addEventListener('click', function() {
+        filterVisible = false;
+        localStorage.setItem('filterVisible_' + serviceAreaId, false);
+        filterPanel.style.display = 'none';
+    });
+    
+    // Bulk Actions Panel
+    var bulkPanel = document.getElementById('bulkPanel');
+    
+    document.getElementById('toggleBulkBtn').addEventListener('click', function() {
+        bulkPanel.style.display = bulkPanel.style.display === 'none' ? 'block' : 'none';
+    });
+    
+    document.getElementById('closeBulkPanel').addEventListener('click', function() {
+        bulkPanel.style.display = 'none';
+    });
+    
+    document.getElementById('cancelBulkBtn').addEventListener('click', function() {
+        bulkPanel.style.display = 'none';
+    });
+    
+    // Select All / Row Selection
+    document.getElementById('selectAll').addEventListener('change', function() {
+        document.querySelectorAll('.row-select').forEach(function(cb) { cb.checked = this.checked; }.bind(this));
+        updateSelectionCount();
+    });
+    
+    document.querySelectorAll('.row-select').forEach(function(cb) {
+        cb.addEventListener('change', updateSelectionCount);
+    });
+    
+    function updateSelectionCount() {
+        var count = document.querySelectorAll('.row-select:checked').length;
+        var bulkBtn = document.getElementById('toggleBulkBtn');
+        bulkBtn.disabled = count === 0;
+        bulkBtn.querySelector('.bulk-count').style.display = count > 0 ? 'inline' : 'none';
+        bulkBtn.querySelector('.bulk-count').textContent = count;
+        document.getElementById('bulkSelectedCount').textContent = count;
+        document.getElementById('bulkApplyCount').textContent = count;
+    }
+    
+    // Bulk Update
+    document.getElementById('applyBulkBtn').addEventListener('click', function() {
+        var ids = [];
+        document.querySelectorAll('.row-select:checked').forEach(function(cb) { ids.push(cb.value); });
+        if (ids.length === 0) return;
+        
+        var request = {
+            selectedIds: ids,
+            status: document.getElementById('bulkStatus').value || null,
+            infStatus: document.getElementById('bulkInfStatus').value || null,
+            serviceLine: document.getElementById('bulkServiceLine').value || null,
+            startDate: document.getElementById('bulkStartDate').value || null,
+            endDate: document.getElementById('bulkEndDate').value || null,
+            estimatedStartDate: document.getElementById('bulkEstStartDate').value || null,
+            estimatedEndDate: document.getElementById('bulkEstEndDate').value || null,
+            resourceIds: Array.from(document.getElementById('bulkResources').selectedOptions).map(o => o.value),
+            contactIds: Array.from(document.getElementById('bulkContacts').selectedOptions).map(o => o.value),
+            clearStartDate: document.getElementById('bulkClearStartDate').checked,
+            clearEndDate: document.getElementById('bulkClearEndDate').checked,
+            clearEstimatedStartDate: document.getElementById('bulkClearEstStartDate').checked,
+            clearEstimatedEndDate: document.getElementById('bulkClearEstEndDate').checked,
+            clearResources: document.getElementById('bulkClearResources').checked,
+            clearContacts: document.getElementById('bulkClearContacts').checked
+        };
+        
+        fetch('@Url.Action("BulkUpdate", "Enhancements")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgeryToken },
+            body: JSON.stringify(request)
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.success) location.reload();
+        });
+    });
+    
+    // Sorting & Paging
+    document.getElementById('sortColumn').addEventListener('change', applySort);
+    document.getElementById('sortOrder').addEventListener('change', applySort);
+    document.getElementById('pageSize').addEventListener('change', function() {
+        navigateWithParams({ pageSize: this.value, page: 1 });
+    });
+    
+    function applySort() {
+        navigateWithParams({
+            sortColumn: document.getElementById('sortColumn').value,
+            sortOrder: document.getElementById('sortOrder').value,
+            page: 1
+        });
+    }
+    
+    function navigateWithParams(params) {
+        var url = new URL(window.location.href);
+        Object.keys(params).forEach(function(key) {
+            url.searchParams.set('filter.' + key.charAt(0).toUpperCase() + key.slice(1), params[key]);
+        });
+        window.location.href = url.toString();
+    }
+    
+    // Edit/Delete/Add handlers
+    document.getElementById('addBtn').addEventListener('click', function() { loadEditModal(null); });
+    
+    document.querySelectorAll('.edit-btn, .edit-link').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            loadEditModal(this.dataset.id);
+        });
+    });
+    
+    document.querySelectorAll('.breakdown-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            loadBreakdownModal(this.dataset.id);
+        });
+    });
+    
+    document.querySelectorAll('.delete-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var id = this.dataset.id;
+            showConfirm('Delete', 'Delete this enhancement?', function() {
+                fetch('@Url.Action("Delete", "Enhancements")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': antiForgeryToken },
+                    body: 'id=' + id + '&serviceAreaId=' + serviceAreaId
+                }).then(function(r) { return r.json(); }).then(function(data) {
+                    if (data.success) location.reload();
+                });
+            });
+        });
+    });
+    
+    function loadEditModal(id) {
+        var url = '@Url.Action("Edit", "Enhancements")' + '?serviceAreaId=' + serviceAreaId + (id ? '&id=' + id : '');
+        fetch(url).then(function(r) { return r.text(); }).then(function(html) {
+            document.getElementById('editModalContent').innerHTML = html;
+            new bootstrap.Modal(document.getElementById('editModal')).show();
+            attachEditFormHandler();
+        });
+    }
+    
+    function attachEditFormHandler() {
+        var form = document.getElementById('editEnhancementForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                fetch(form.action, { method: 'POST', body: new FormData(form) })
+                .then(function(r) { return r.json(); })
+                .then(function(data) { if (data.success) location.reload(); });
+            });
+        }
+    }
+    
+    function loadBreakdownModal(id) {
+        fetch('@Url.Action("GetBreakdown", "Enhancements")?enhancementId=' + id)
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+            document.getElementById('breakdownModalContent').innerHTML = html;
+            new bootstrap.Modal(document.getElementById('breakdownModal')).show();
+            attachBreakdownFormHandler();
+        });
+    }
+    
+    function attachBreakdownFormHandler() {
+        var form = document.getElementById('breakdownForm');
+        if (form) {
+            form.querySelectorAll('.phase-hours').forEach(function(input) {
+                input.addEventListener('input', function() {
+                    var total = 0;
+                    form.querySelectorAll('.phase-hours').forEach(function(inp) { total += parseFloat(inp.value) || 0; });
+                    document.getElementById('totalHours').textContent = total.toFixed(1);
+                });
+            });
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                fetch('@Url.Action("SaveBreakdown", "Enhancements")', { method: 'POST', body: new FormData(form) })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        bootstrap.Modal.getInstance(document.getElementById('breakdownModal')).hide();
+                        location.reload();
+                    }
+                });
+            });
+        }
+    }
+    
+    // Saved Filters
+    document.getElementById('savedFilterSelect').addEventListener('change', function() {
+        if (this.value) {
+            window.location.href = '@Url.Action("Index", "Enhancements")?serviceAreaId=' + serviceAreaId + '&filterId=' + this.value;
+        }
+    });
+    
+    document.getElementById('saveFilterBtn').addEventListener('click', function() {
+        new bootstrap.Modal(document.getElementById('saveFilterModal')).show();
+    });
+    
+    document.getElementById('confirmSaveFilterBtn').addEventListener('click', function() {
+        var name = document.getElementById('filterName').value.trim();
+        if (!name) { alert('Enter a filter name'); return; }
+        
+        var form = document.getElementById('filterForm');
+        var formData = new FormData(form);
+        var filterData = {
+            id: currentFilterId || null,
+            name: name,
+            serviceAreaId: serviceAreaId,
+            isDefault: document.getElementById('filterIsDefault').checked,
+            filter: {
+                search: formData.get('filter.Search') || null,
+                statuses: formData.getAll('filter.Statuses'),
+                infStatuses: formData.getAll('filter.InfStatuses'),
+                estimatedHoursMin: parseFloat(formData.get('filter.EstimatedHoursMin')) || null,
+                estimatedHoursMax: parseFloat(formData.get('filter.EstimatedHoursMax')) || null,
+                estimatedStartDateFrom: formData.get('filter.EstimatedStartDateFrom') || null,
+                estimatedStartDateTo: formData.get('filter.EstimatedStartDateTo') || null,
+                estimatedEndDateFrom: formData.get('filter.EstimatedEndDateFrom') || null,
+                estimatedEndDateTo: formData.get('filter.EstimatedEndDateTo') || null,
+                startDateFrom: formData.get('filter.StartDateFrom') || null,
+                startDateTo: formData.get('filter.StartDateTo') || null,
+                endDateFrom: formData.get('filter.EndDateFrom') || null,
+                endDateTo: formData.get('filter.EndDateTo') || null
+            }
+        };
+        
+        fetch('@Url.Action("SaveFilter", "Enhancements")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgeryToken },
+            body: JSON.stringify(filterData)
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('saveFilterModal')).hide();
+                window.location.href = '@Url.Action("Index", "Enhancements")?serviceAreaId=' + serviceAreaId + '&filterId=' + data.id;
+            }
+        });
+    });
+    
+    var deleteFilterBtn = document.getElementById('deleteFilterBtn');
+    if (deleteFilterBtn) {
+        deleteFilterBtn.addEventListener('click', function() {
+            if (!confirm('Delete this saved filter?')) return;
+            fetch('@Url.Action("DeleteFilter", "Enhancements")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': antiForgeryToken },
+                body: 'id=' + currentFilterId
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) window.location.href = '@Url.Action("Index", "Enhancements")?serviceAreaId=' + serviceAreaId;
+            });
+        });
+    }
+    
+    // Column Selection
+    document.getElementById('saveColumnsBtn').addEventListener('click', function() {
+        var columns = ['select', 'workIdDescription'];
+        document.querySelectorAll('.column-checkbox:checked').forEach(function(cb) {
+            if (columns.indexOf(cb.value) === -1) columns.push(cb.value);
+        });
+        columns.push('actions');
+        
+        fetch('@Url.Action("SaveColumns", "Enhancements")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgeryToken },
+            body: JSON.stringify({ serviceAreaId: serviceAreaId, columns: columns })
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.success) location.reload();
+        });
+    });
+</script>
+}

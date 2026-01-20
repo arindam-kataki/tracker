@@ -1,0 +1,12 @@
+@model ResourcesViewModel
+
+@Html.AntiForgeryToken()
+
+<div class="toolbar mb-3">
+    @if (User.IsInRole("SuperAdmin"))
+    {
+        <button class="btn btn-primary" id="addBtn">
+            <i class="bi bi-plus-lg me-1"></i> Add Resource
+        </button>
+    }
+</div>

@@ -1,0 +1,41 @@
+@model EnhancementsViewModel
+
+<form method="get" class="filter-bar mb-3">
+    <input type="hidden" name="serviceAreaId" value="@Model.ServiceAreaId" />
+    
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small">Search</label>
+            <input type="text" name="search" value="@Model.SearchTerm" 
+                   class="form-control" placeholder="Search by Work ID or Description..." />
+        </div>
+        
+        <div class="col-md-4">
+            <label class="form-label small">Status</label>
+            <select name="statuses" class="form-select" id="statusFilter" multiple>
+                @foreach (var status in Model.AvailableStatuses)
+                {
+                    <option value="@status" selected="@Model.SelectedStatuses.Contains(status)">@status</option>
+                }
+            </select>
+        </div>
+        
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-secondary">
+                <i class="bi bi-funnel me-1"></i> Apply Filter
+            </button>
+            <a href="@Url.Action("Index", new { serviceAreaId = Model.ServiceAreaId })" class="btn btn-outline-secondary">
+                <i class="bi bi-x-lg me-1"></i> Clear
+            </a>
+        </div>
+    </div>
+</form>
+
+<script>
+    // Simple multi-select handling
+    document.getElementById('statusFilter')?.addEventListener('change', function() {
+        const selected = Array.from(this.selectedOptions).map(o => o.value);
+        this.name = 'statuses';
+        this.value = selected.join(',');
+    });
+</script>

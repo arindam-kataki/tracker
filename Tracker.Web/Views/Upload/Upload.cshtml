@@ -1,0 +1,213 @@
+@model UploadViewModel
+@{
+    ViewData["Title"] = "Upload Enhancements";
+    var serviceAreas = ViewBag.ServiceAreas as List<ServiceArea> ?? new List<ServiceArea>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">
+        <i class="bi bi-upload me-2"></i>Upload Enhancements
+    </h4>
+</div>
+
+@await Html.PartialAsync("_Toolbar", Model)
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="uploadForm" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Service Area</label>
+                    <select id="serviceAreaSelect" class="form-select" required>
+                        @foreach (var sa in serviceAreas)
+                        {
+                            <option value="@sa.Id" selected="@(sa.Id == Model.ServiceAreaId)">@sa.Name</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="col-md-5">
+                    <label class="form-label">CSV File</label>
+                    <input type="file" id="csvFile" class="form-control" accept=".csv" required />
+                    <small class="text-muted">Expected columns: work_id, description, notes</small>
+                </div>
+                
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload me-1"></i> Parse File
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger">@Model.ErrorMessage</div>
+}
+
+<!-- Preview Section -->
+<div id="previewSection" style="display: none;">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-table me-2"></i>Preview (<span id="rowCount">0</span> rows)</span>
+            <button id="importBtn" class="btn btn-success btn-sm">
+                <i class="bi bi-download me-1"></i> Import Selected
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 40px;">
+                            <input type="checkbox" class="form-check-input" id="selectAllPreview" checked />
+                        </th>
+                        <th style="width: 50px;">#</th>
+                        <th>Work ID</th>
+                        <th>Description</th>
+                        <th>Notes</th>
+                        <th>Match Status</th>
+                    </tr>
+                </thead>
+                <tbody id="previewBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let uploadedRows = [];
+    
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('csvFile');
+        const serviceAreaId = document.getElementById('serviceAreaSelect').value;
+        
+        if (!fileInput.files[0]) {
+            alert('Please select a file');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('serviceAreaId', serviceAreaId);
+        formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+        
+        try {
+            const response = await fetch('@Url.Action("Parse", "Upload")', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                uploadedRows = data.rows;
+                renderPreview(data.rows);
+            } else {
+                alert(data.error || 'Error parsing file');
+            }
+        } catch (err) {
+            alert('Error uploading file');
+        }
+    });
+    
+    function renderPreview(rows) {
+        const tbody = document.getElementById('previewBody');
+        tbody.innerHTML = '';
+        
+        rows.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            tr.className = row.hasMatch ? 'table-warning' : '';
+            tr.innerHTML = `
+                <td>
+                    <input type="checkbox" class="form-check-input row-check" data-idx="${idx}" ${row.shouldImport ? 'checked' : ''} />
+                </td>
+                <td>${row.rowNumber}</td>
+                <td>${escapeHtml(row.workId)}</td>
+                <td>
+                    <input type="text" class="form-control form-control-sm desc-input" data-idx="${idx}" value="${escapeHtml(row.description)}" />
+                </td>
+                <td>${escapeHtml(row.notes || '')}</td>
+                <td>
+                    ${row.hasMatch 
+                        ? `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>${escapeHtml(row.matchInfo)}</span>` 
+                        : '<span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>New</span>'}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+        document.getElementById('rowCount').textContent = rows.length;
+        document.getElementById('previewSection').style.display = 'block';
+        
+        // Add event listeners
+        document.querySelectorAll('.row-check').forEach(cb => {
+            cb.addEventListener('change', function() {
+                uploadedRows[this.dataset.idx].shouldImport = this.checked;
+            });
+        });
+        
+        document.querySelectorAll('.desc-input').forEach(input => {
+            input.addEventListener('change', function() {
+                uploadedRows[this.dataset.idx].description = this.value;
+            });
+        });
+    }
+    
+    document.getElementById('selectAllPreview').addEventListener('change', function() {
+        document.querySelectorAll('.row-check').forEach(cb => {
+            cb.checked = this.checked;
+            uploadedRows[cb.dataset.idx].shouldImport = this.checked;
+        });
+    });
+    
+    document.getElementById('importBtn').addEventListener('click', async function() {
+        const serviceAreaId = document.getElementById('serviceAreaSelect').value;
+        const rowsToImport = uploadedRows.filter(r => r.shouldImport);
+        
+        if (rowsToImport.length === 0) {
+            alert('No rows selected for import');
+            return;
+        }
+        
+        if (!confirm(`Import ${rowsToImport.length} enhancement(s)?`)) return;
+        
+        try {
+            const response = await fetch('@Url.Action("Import", "Upload")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({
+                    serviceAreaId: serviceAreaId,
+                    rows: uploadedRows
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                alert(`Successfully imported ${data.importedCount} enhancement(s)`);
+                window.location.href = '@Url.Action("Index", "Enhancements")?serviceAreaId=' + serviceAreaId;
+            }
+        } catch (err) {
+            alert('Error importing enhancements');
+        }
+    });
+    
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+}

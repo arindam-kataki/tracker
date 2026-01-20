@@ -1,0 +1,151 @@
+@model ServiceAreasViewModel
+@{
+    ViewData["Title"] = "Service Areas";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">
+        <i class="bi bi-diagram-3 me-2"></i>Service Areas
+    </h4>
+</div>
+
+@Html.AntiForgeryToken()
+
+<div class="toolbar mb-3">
+    <button class="btn btn-primary" id="addBtn">
+        <i class="bi bi-plus-lg me-1"></i> Add Service Area
+    </button>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Order</th>
+                    <th>Name</th>
+                    <th>Code</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th style="width: 80px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var sa in Model.ServiceAreas.OrderBy(s => s.DisplayOrder))
+                {
+                    <tr>
+                        <td>@sa.DisplayOrder</td>
+                        <td>@sa.Name</td>
+                        <td><code>@sa.Code</code></td>
+                        <td>
+                            @if (sa.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning">Inactive</span>
+                            }
+                        </td>
+                        <td>@sa.CreatedAt.ToString("MMM dd, yyyy")</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary edit-btn" data-id="@sa.Id" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger delete-btn" data-id="@sa.Id" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" id="editModalContent">
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("_ConfirmModal")
+
+@section Scripts {
+<script>
+    var antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
+    
+    document.getElementById('addBtn').addEventListener('click', function() {
+        loadEditModal(null);
+    });
+    
+    document.querySelectorAll('.edit-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            loadEditModal(this.dataset.id);
+        });
+    });
+    
+    document.querySelectorAll('.delete-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var id = this.dataset.id;
+            showConfirm('Delete Service Area', 'Are you sure? This cannot be undone if there are no enhancements.', function() {
+                deleteServiceArea(id);
+            });
+        });
+    });
+    
+    function loadEditModal(id) {
+        var url = id 
+            ? '@Url.Action("EditServiceArea", "Admin")?id=' + id
+            : '@Url.Action("EditServiceArea", "Admin")';
+        
+        fetch(url)
+            .then(function(r) { return r.text(); })
+            .then(function(html) {
+                document.getElementById('editModalContent').innerHTML = html;
+                var modal = new bootstrap.Modal(document.getElementById('editModal'));
+                modal.show();
+                attachFormHandler();
+            });
+    }
+    
+    function attachFormHandler() {
+        var form = document.getElementById('editServiceAreaForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form)
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) location.reload();
+                    else alert('Error saving service area');
+                })
+                .catch(function() { alert('Error saving service area'); });
+            });
+        }
+    }
+    
+    function deleteServiceArea(id) {
+        fetch('@Url.Action("DeleteServiceArea", "Admin")', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': antiForgeryToken
+            },
+            body: 'id=' + id
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) location.reload();
+            else alert('Cannot delete: Service area has existing enhancements.');
+        });
+    }
+</script>
+}

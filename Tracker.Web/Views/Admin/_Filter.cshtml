@@ -1,0 +1,30 @@
+@model UsersViewModel
+
+<form method="get" class="filter-bar mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small">Search</label>
+            <input type="text" name="search" value="@Model.SearchTerm" 
+                   class="form-control" placeholder="Search by name or email..." />
+        </div>
+        
+        <div class="col-md-3">
+            <label class="form-label small">Role</label>
+            <select name="role" class="form-select">
+                <option value="">All Roles</option>
+                <option value="SuperAdmin" selected="@(Model.RoleFilter == "SuperAdmin")">SuperAdmin</option>
+                <option value="User" selected="@(Model.RoleFilter == "User")">User</option>
+                <option value="Reporting" selected="@(Model.RoleFilter == "Reporting")">Reporting</option>
+            </select>
+        </div>
+        
+        <div class="col-md-5">
+            <button type="submit" class="btn btn-secondary">
+                <i class="bi bi-funnel me-1"></i> Apply Filter
+            </button>
+            <a href="@Url.Action("Users", "Admin")" class="btn btn-outline-secondary">
+                <i class="bi bi-x-lg me-1"></i> Clear
+            </a>
+        </div>
+    </div>
+</form>

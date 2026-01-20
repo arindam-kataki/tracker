@@ -1,0 +1,24 @@
+@model EnhancementsViewModel
+
+@Html.AntiForgeryToken()
+
+<div class="toolbar mb-3 d-flex gap-2">
+    <button class="btn btn-primary" id="addBtn">
+        <i class="bi bi-plus-lg me-1"></i> Add Enhancement
+    </button>
+    
+    <div class="dropdown">
+        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="bulkActionsBtn" 
+                data-bs-toggle="dropdown" disabled>
+            Bulk Actions
+        </button>
+        <ul class="dropdown-menu">
+            <li><h6 class="dropdown-header">Set Status</h6></li>
+            <li><a class="dropdown-item bulk-status" href="#" data-status="New">New</a></li>
+            <li><a class="dropdown-item bulk-status" href="#" data-status="In Progress">In Progress</a></li>
+            <li><a class="dropdown-item bulk-status" href="#" data-status="On Hold">On Hold</a></li>
+            <li><a class="dropdown-item bulk-status" href="#" data-status="Completed">Completed</a></li>
+            <li><a class="dropdown-item bulk-status" href="#" data-status="Cancelled">Cancelled</a></li>
+        </ul>
+    </div>
+</div>

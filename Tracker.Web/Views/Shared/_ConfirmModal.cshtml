@@ -1,0 +1,36 @@
+<!-- Confirm Delete Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalTitle">Confirm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirmModalBody">
+                Are you sure?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmModalBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let confirmCallback = null;
+    
+    function showConfirm(title, message, callback) {
+        document.getElementById('confirmModalTitle').textContent = title;
+        document.getElementById('confirmModalBody').textContent = message;
+        confirmCallback = callback;
+        new bootstrap.Modal(document.getElementById('confirmModal')).show();
+    }
+    
+    document.getElementById('confirmModalBtn').addEventListener('click', function() {
+        if (confirmCallback) {
+            confirmCallback();
+        }
+        bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+    });
+</script>

@@ -1,0 +1,195 @@
+@model UsersViewModel
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">
+        <i class="bi bi-person-gear me-2"></i>User Management
+    </h4>
+</div>
+
+@Html.AntiForgeryToken()
+
+<div class="toolbar mb-3">
+    <button class="btn btn-primary" id="addBtn">
+        <i class="bi bi-plus-lg me-1"></i> Add User
+    </button>
+</div>
+
+<form method="get" class="filter-bar mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small">Search</label>
+            <input type="text" name="search" value="@Model.SearchTerm" 
+                   class="form-control" placeholder="Search by name or email..." />
+        </div>
+        
+        <div class="col-md-3">
+            <label class="form-label small">Role</label>
+            <select name="role" class="form-select">
+                <option value="">All Roles</option>
+                <option value="SuperAdmin" selected="@(Model.RoleFilter == "SuperAdmin")">SuperAdmin</option>
+                <option value="User" selected="@(Model.RoleFilter == "User")">User</option>
+                <option value="Reporting" selected="@(Model.RoleFilter == "Reporting")">Reporting</option>
+            </select>
+        </div>
+        
+        <div class="col-md-5">
+            <button type="submit" class="btn btn-secondary">
+                <i class="bi bi-funnel me-1"></i> Apply Filter
+            </button>
+            <a href="@Url.Action("Users", "Admin")" class="btn btn-outline-secondary">
+                <i class="bi bi-x-lg me-1"></i> Clear
+            </a>
+        </div>
+    </div>
+</form>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Service Areas</th>
+                    <th>Status</th>
+                    <th>Last Login</th>
+                    <th style="width: 80px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model.Users)
+                {
+                    <tr>
+                        <td>@user.DisplayName</td>
+                        <td>@user.Email</td>
+                        <td>
+                            <span class="badge @(user.Role == UserRole.SuperAdmin ? "bg-danger" : user.Role == UserRole.Reporting ? "bg-info" : "bg-secondary")">
+                                @user.Role
+                            </span>
+                        </td>
+                        <td>
+                            @if (user.Role == UserRole.SuperAdmin)
+                            {
+                                <span class="text-muted small">All Areas</span>
+                            }
+                            else
+                            {
+                                @string.Join(", ", user.ServiceAreas.Select(sa => sa.ServiceArea.Name))
+                            }
+                        </td>
+                        <td>
+                            @if (user.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning">Inactive</span>
+                            }
+                        </td>
+                        <td>@user.LastLoginAt?.ToString("MMM dd, yyyy HH:mm")</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary edit-btn" data-id="@user.Id" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger delete-btn" data-id="@user.Id" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="editModalContent">
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("_ConfirmModal")
+
+@section Scripts {
+<script>
+    var antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
+    
+    document.getElementById('addBtn').addEventListener('click', function() {
+        loadEditModal(null);
+    });
+    
+    document.querySelectorAll('.edit-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            loadEditModal(this.dataset.id);
+        });
+    });
+    
+    document.querySelectorAll('.delete-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var id = this.dataset.id;
+            showConfirm('Delete User', 'Are you sure you want to delete this user?', function() {
+                deleteUser(id);
+            });
+        });
+    });
+    
+    function loadEditModal(id) {
+        var url = id 
+            ? '@Url.Action("EditUser", "Admin")?id=' + id
+            : '@Url.Action("EditUser", "Admin")';
+        
+        fetch(url)
+            .then(function(r) { return r.text(); })
+            .then(function(html) {
+                document.getElementById('editModalContent').innerHTML = html;
+                var modal = new bootstrap.Modal(document.getElementById('editModal'));
+                modal.show();
+                attachFormHandler();
+            });
+    }
+    
+    function attachFormHandler() {
+        var form = document.getElementById('editUserForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form)
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) location.reload();
+                    else alert('Error saving user');
+                })
+                .catch(function() { alert('Error saving user'); });
+            });
+        }
+    }
+    
+    function deleteUser(id) {
+        fetch('@Url.Action("DeleteUser", "Admin")', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': antiForgeryToken
+            },
+            body: 'id=' + id
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) location.reload();
+            else alert('Cannot delete this user.');
+        });
+    }
+</script>
+}

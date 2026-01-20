@@ -1,0 +1,51 @@
+@model EditServiceAreaViewModel
+
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="bi bi-diagram-3 me-2"></i>
+        @(string.IsNullOrEmpty(Model.Id) ? "Add Service Area" : "Edit Service Area")
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<form id="editServiceAreaForm" asp-action="SaveServiceArea" asp-controller="Admin">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    
+    <div class="modal-body">
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label">Name <span class="text-danger">*</span></label>
+            <input asp-for="Name" class="form-control" placeholder="e.g., Infrastructure" />
+            <span asp-validation-for="Name" class="text-danger small"></span>
+        </div>
+        
+        <div class="mb-3">
+            <label asp-for="Code" class="form-label">Code <span class="text-danger">*</span></label>
+            <input asp-for="Code" class="form-control" placeholder="e.g., INFRA" maxlength="20" />
+            <span asp-validation-for="Code" class="text-danger small"></span>
+            <small class="text-muted">Short unique code (max 20 chars)</small>
+        </div>
+        
+        @if (!string.IsNullOrEmpty(Model.Id))
+        {
+            <div class="mb-3">
+                <label asp-for="DisplayOrder" class="form-label">Display Order</label>
+                <input asp-for="DisplayOrder" type="number" class="form-control" min="1" />
+            </div>
+            
+            <div class="mb-3">
+                <div class="form-check">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label">Active</label>
+                </div>
+            </div>
+        }
+    </div>
+    
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i> Save
+        </button>
+    </div>
+</form>

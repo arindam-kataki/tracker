@@ -1,0 +1,106 @@
+@using System.Security.Claims
+@model Tracker.Web.ViewModels.SidebarViewModel
+
+<div class="sidebar bg-dark text-white d-flex flex-column" style="width: 260px; min-height: 100vh;">
+    <!-- Brand -->
+    <div class="p-3 border-bottom border-secondary">
+        <h4 class="mb-0">
+            <i class="bi bi-kanban me-2"></i>TRACKER
+        </h4>
+    </div>
+    
+    <!-- Navigation (flex-grow to push user section to bottom) -->
+    <nav class="mt-2 flex-grow-1">
+        <!-- Enhancements Section -->
+        <div class="sidebar-section">
+            <div class="sidebar-header px-3 py-2 text-uppercase small text-secondary">
+                <i class="bi bi-list-check me-2"></i>Enhancements
+            </div>
+            
+            @foreach (var sa in Model.ServiceAreas)
+            {
+                var isActive = Model.CurrentServiceAreaId == sa.Id;
+                <a href="@Url.Action("Index", "Enhancements", new { serviceAreaId = sa.Id })" 
+                   class="sidebar-link d-block px-4 py-2 text-decoration-none @(isActive ? "active" : "")">
+                    <i class="bi bi-folder me-2"></i>@sa.Name
+                </a>
+            }
+            
+            <a href="@Url.Action("Index", "Upload")" 
+               class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "upload" ? "active" : "")">
+                <i class="bi bi-upload me-2"></i>Upload
+            </a>
+        </div>
+        
+        <!-- Resources -->
+        <div class="sidebar-section mt-3">
+            <a href="@Url.Action("Index", "Resources")" 
+               class="sidebar-link d-block px-3 py-2 text-decoration-none @(Model.CurrentPage == "resources" ? "active" : "")">
+                <i class="bi bi-people me-2"></i>Resources
+            </a>
+        </div>
+        
+        <!-- Reports -->
+        <div class="sidebar-section mt-3">
+            <a href="@Url.Action("Index", "Reports")" 
+               class="sidebar-link d-block px-3 py-2 text-decoration-none @(Model.CurrentPage == "reports" ? "active" : "")">
+                <i class="bi bi-bar-chart me-2"></i>Reports
+            </a>
+        </div>
+        
+        <!-- Admin Section (SuperAdmin only) -->
+        @if (Model.IsSuperAdmin)
+        {
+            <div class="sidebar-section mt-3 border-top border-secondary pt-3">
+                <div class="sidebar-header px-3 py-2 text-uppercase small text-secondary">
+                    <i class="bi bi-gear me-2"></i>Administration
+                </div>
+                
+                <a href="@Url.Action("Users", "Admin")" 
+                   class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "users" ? "active" : "")">
+                    <i class="bi bi-person-gear me-2"></i>Users
+                </a>
+                
+                <a href="@Url.Action("ServiceAreas", "Admin")" 
+                   class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "serviceareas" ? "active" : "")">
+                    <i class="bi bi-diagram-3 me-2"></i>Service Areas
+                </a>
+            </div>
+        }
+    </nav>
+    
+    <!-- User Section (pinned to bottom) -->
+    <div class="user-section border-top border-secondary p-3">
+        <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-person-circle fs-4 me-2"></i>
+            <div>
+                <div class="fw-medium">@User.FindFirstValue(ClaimTypes.Name)</div>
+                <small class="text-secondary">@User.FindFirstValue(ClaimTypes.Role)</small>
+            </div>
+        </div>
+        <form asp-controller="Account" asp-action="Logout" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-light btn-sm w-100">
+                <i class="bi bi-box-arrow-right me-1"></i> Logout
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+    .sidebar-link {
+        color: rgba(255, 255, 255, 0.8);
+        transition: all 0.2s;
+    }
+    .sidebar-link:hover {
+        color: #fff;
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    .sidebar-link.active {
+        color: #fff;
+        background-color: #0d6efd;
+    }
+    .user-section {
+        background-color: rgba(0, 0, 0, 0.2);
+    }
+</style>
