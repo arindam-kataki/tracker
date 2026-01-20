@@ -22,6 +22,7 @@ public class TrackerDbContext : DbContext
     public DbSet<EnhancementHistory> EnhancementHistory => Set<EnhancementHistory>();
     public DbSet<SavedFilter> SavedFilters => Set<SavedFilter>();
     public DbSet<UserColumnPreference> UserColumnPreferences => Set<UserColumnPreference>();
+    public DbSet<NamedReport> NamedReports => Set<NamedReport>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -224,6 +225,24 @@ public class TrackerDbContext : DbContext
             entity.HasOne(e => e.ServiceArea)
                 .WithMany()
                 .HasForeignKey(e => e.ServiceAreaId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // NamedReport
+        modelBuilder.Entity<NamedReport>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.ServiceAreaIdsJson).IsRequired().HasDefaultValue("[]");
+            entity.Property(e => e.FilterJson).IsRequired().HasDefaultValue("{}");
+            entity.Property(e => e.ColumnsJson).IsRequired().HasDefaultValue("[]");
+            entity.Property(e => e.Description).HasMaxLength(500);
+            
+            entity.HasIndex(e => e.UserId);
+            
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

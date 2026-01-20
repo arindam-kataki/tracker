@@ -1,0 +1,390 @@
+@model NamedReportEditViewModel
+@{
+    ViewData["Title"] = string.IsNullOrEmpty(Model.Id) ? "Create Report" : "Edit Report";
+    var isEdit = !string.IsNullOrEmpty(Model.Id);
+}
+
+@Html.AntiForgeryToken()
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">
+            <i class="bi bi-@(isEdit ? "pencil" : "plus-lg") me-2"></i>@ViewData["Title"]
+        </h4>
+        <small class="text-muted">Define the report's service areas, filters, and columns</small>
+    </div>
+    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Reports
+    </a>
+</div>
+
+<div class="row">
+    <!-- Main Form -->
+    <div class="col-lg-8">
+        <!-- Basic Info -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>Report Details
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <label class="form-label">Report Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="reportName" value="@Model.Name" required>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="reportDescription" rows="2">@Model.Description</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Areas -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-diagram-3 me-2"></i>Service Areas <span class="text-danger">*</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">Select one or more service areas to include in this report.</p>
+                <div class="row">
+                    @foreach (var sa in Model.AvailableServiceAreas)
+                    {
+                        <div class="col-md-6 col-lg-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input service-area-checkbox" type="checkbox" 
+                                       value="@sa.Id" id="sa_@sa.Id" @(sa.IsSelected ? "checked" : "")>
+                                <label class="form-check-label" for="sa_@sa.Id">@sa.Name</label>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-funnel me-2"></i>Filters</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="clearFiltersBtn">
+                    <i class="bi bi-x-lg me-1"></i>Clear All
+                </button>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">Optional: Define filter criteria to narrow down the data.</p>
+                
+                <!-- Search -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Search (Work ID, Description, Notes)</label>
+                        <input type="text" class="form-control" id="filterSearch" value="@Model.Filter.Search">
+                    </div>
+                </div>
+                
+                <!-- Status -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Status</label>
+                        <div class="border rounded p-2" style="max-height: 150px; overflow-y: auto;">
+                            @foreach (var status in Model.AvailableStatuses)
+                            {
+                                <div class="form-check">
+                                    <input class="form-check-input filter-status" type="checkbox" 
+                                           value="@status" id="status_@status.Replace(" ", "_")"
+                                           @(Model.Filter.Statuses?.Contains(status) == true ? "checked" : "")>
+                                    <label class="form-check-label" for="status_@status.Replace(" ", "_")">@status</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">INF Status</label>
+                        <div class="border rounded p-2" style="max-height: 150px; overflow-y: auto;">
+                            @if (Model.AvailableInfStatuses.Any())
+                            {
+                                @foreach (var status in Model.AvailableInfStatuses)
+                                {
+                                    <div class="form-check">
+                                        <input class="form-check-input filter-infstatus" type="checkbox" 
+                                               value="@status" id="infstatus_@status.Replace(" ", "_")"
+                                               @(Model.Filter.InfStatuses?.Contains(status) == true ? "checked" : "")>
+                                        <label class="form-check-label" for="infstatus_@status.Replace(" ", "_")">@status</label>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">No INF statuses available</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Service Line -->
+                @if (Model.AvailableServiceLines.Any())
+                {
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Service Line</label>
+                            <div class="border rounded p-2" style="max-height: 150px; overflow-y: auto;">
+                                @foreach (var sl in Model.AvailableServiceLines)
+                                {
+                                    <div class="form-check">
+                                        <input class="form-check-input filter-serviceline" type="checkbox" 
+                                               value="@sl" id="sl_@sl.Replace(" ", "_")"
+                                               @(Model.Filter.ServiceLines?.Contains(sl) == true ? "checked" : "")>
+                                        <label class="form-check-label" for="sl_@sl.Replace(" ", "_")">@sl</label>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+                
+                <!-- Hours Range -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Est. Hours Min</label>
+                        <input type="number" class="form-control" id="filterEstHoursMin" step="0.5" value="@Model.Filter.EstimatedHoursMin">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Est. Hours Max</label>
+                        <input type="number" class="form-control" id="filterEstHoursMax" step="0.5" value="@Model.Filter.EstimatedHoursMax">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Ret. Hours Min</label>
+                        <input type="number" class="form-control" id="filterRetHoursMin" step="0.5" value="@Model.Filter.ReturnedHoursMin">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Ret. Hours Max</label>
+                        <input type="number" class="form-control" id="filterRetHoursMax" step="0.5" value="@Model.Filter.ReturnedHoursMax">
+                    </div>
+                </div>
+                
+                <!-- Date Ranges -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Est. Start From</label>
+                        <input type="date" class="form-control" id="filterEstStartFrom" value="@Model.Filter.EstimatedStartDateFrom?.ToString("yyyy-MM-dd")">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Est. Start To</label>
+                        <input type="date" class="form-control" id="filterEstStartTo" value="@Model.Filter.EstimatedStartDateTo?.ToString("yyyy-MM-dd")">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Est. End From</label>
+                        <input type="date" class="form-control" id="filterEstEndFrom" value="@Model.Filter.EstimatedEndDateFrom?.ToString("yyyy-MM-dd")">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Est. End To</label>
+                        <input type="date" class="form-control" id="filterEstEndTo" value="@Model.Filter.EstimatedEndDateTo?.ToString("yyyy-MM-dd")">
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Created From</label>
+                        <input type="date" class="form-control" id="filterCreatedFrom" value="@Model.Filter.CreatedAtFrom?.ToString("yyyy-MM-dd")">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Created To</label>
+                        <input type="date" class="form-control" id="filterCreatedTo" value="@Model.Filter.CreatedAtTo?.ToString("yyyy-MM-dd")">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Modified From</label>
+                        <input type="date" class="form-control" id="filterModifiedFrom" value="@Model.Filter.ModifiedAtFrom?.ToString("yyyy-MM-dd")">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Modified To</label>
+                        <input type="date" class="form-control" id="filterModifiedTo" value="@Model.Filter.ModifiedAtTo?.ToString("yyyy-MM-dd")">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar - Columns Selection -->
+    <div class="col-lg-4">
+        <div class="card sticky-top" style="top: 1rem;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-layout-three-columns me-2"></i>Export Columns <span class="text-danger">*</span></span>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" id="selectAllColumnsBtn">All</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="selectDefaultColumnsBtn">Default</button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <p class="text-muted small px-3 pt-3 mb-2">Select and reorder columns for export. Drag to reorder.</p>
+                <div id="columnsList" class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                    @foreach (var col in Model.AvailableColumns)
+                    {
+                        <div class="list-group-item d-flex align-items-center column-item" data-key="@col.Key">
+                            <i class="bi bi-grip-vertical me-2 text-muted drag-handle" style="cursor: grab;"></i>
+                            <div class="form-check flex-grow-1 mb-0">
+                                <input class="form-check-input column-checkbox" type="checkbox" 
+                                       value="@col.Key" id="col_@col.Key" @(col.IsSelected ? "checked" : "")>
+                                <label class="form-check-label" for="col_@col.Key">@col.Label</label>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="card-footer">
+                <div id="selectedColumnCount" class="text-muted small mb-3">
+                    <span id="colCount">@Model.SelectedColumns.Count</span> columns selected
+                </div>
+                <button type="button" class="btn btn-primary w-100" id="saveReportBtn">
+                    <i class="bi bi-check-lg me-1"></i> @(isEdit ? "Update Report" : "Create Report")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+(function() {
+    const reportId = '@Model.Id';
+    const isEdit = @(isEdit ? "true" : "false");
+    
+    // Initialize Sortable for column reordering
+    const columnsList = document.getElementById('columnsList');
+    new Sortable(columnsList, {
+        handle: '.drag-handle',
+        animation: 150,
+        onEnd: updateColumnCount
+    });
+    
+    // Update column count
+    function updateColumnCount() {
+        const count = document.querySelectorAll('.column-checkbox:checked').length;
+        document.getElementById('colCount').textContent = count;
+    }
+    
+    // Column checkbox changes
+    document.querySelectorAll('.column-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateColumnCount);
+    });
+    
+    // Select All Columns
+    document.getElementById('selectAllColumnsBtn').addEventListener('click', function() {
+        document.querySelectorAll('.column-checkbox').forEach(cb => cb.checked = true);
+        updateColumnCount();
+    });
+    
+    // Select Default Columns
+    document.getElementById('selectDefaultColumnsBtn').addEventListener('click', function() {
+        const defaultColumns = ['workIdDescription', 'status', 'estimatedHours', 'estimatedStartDate', 'estimatedEndDate'];
+        document.querySelectorAll('.column-checkbox').forEach(cb => {
+            cb.checked = defaultColumns.includes(cb.value);
+        });
+        updateColumnCount();
+    });
+    
+    // Clear Filters
+    document.getElementById('clearFiltersBtn').addEventListener('click', function() {
+        document.getElementById('filterSearch').value = '';
+        document.querySelectorAll('.filter-status, .filter-infstatus, .filter-serviceline').forEach(cb => cb.checked = false);
+        document.querySelectorAll('input[type="number"]').forEach(input => input.value = '');
+        document.querySelectorAll('input[type="date"]').forEach(input => input.value = '');
+    });
+    
+    // Save Report
+    document.getElementById('saveReportBtn').addEventListener('click', async function() {
+        const name = document.getElementById('reportName').value.trim();
+        if (!name) {
+            alert('Please enter a report name');
+            document.getElementById('reportName').focus();
+            return;
+        }
+        
+        // Get selected service areas
+        const serviceAreaIds = [];
+        document.querySelectorAll('.service-area-checkbox:checked').forEach(cb => {
+            serviceAreaIds.push(cb.value);
+        });
+        
+        if (serviceAreaIds.length === 0) {
+            alert('Please select at least one service area');
+            return;
+        }
+        
+        // Get selected columns in order
+        const columns = [];
+        document.querySelectorAll('.column-item').forEach(item => {
+            const checkbox = item.querySelector('.column-checkbox');
+            if (checkbox && checkbox.checked) {
+                columns.push(checkbox.value);
+            }
+        });
+        
+        if (columns.length === 0) {
+            alert('Please select at least one column');
+            return;
+        }
+        
+        // Build filter object
+        const filter = {
+            search: document.getElementById('filterSearch').value || null,
+            statuses: Array.from(document.querySelectorAll('.filter-status:checked')).map(cb => cb.value),
+            infStatuses: Array.from(document.querySelectorAll('.filter-infstatus:checked')).map(cb => cb.value),
+            serviceLines: Array.from(document.querySelectorAll('.filter-serviceline:checked')).map(cb => cb.value),
+            estimatedHoursMin: parseFloat(document.getElementById('filterEstHoursMin').value) || null,
+            estimatedHoursMax: parseFloat(document.getElementById('filterEstHoursMax').value) || null,
+            returnedHoursMin: parseFloat(document.getElementById('filterRetHoursMin').value) || null,
+            returnedHoursMax: parseFloat(document.getElementById('filterRetHoursMax').value) || null,
+            estimatedStartDateFrom: document.getElementById('filterEstStartFrom').value || null,
+            estimatedStartDateTo: document.getElementById('filterEstStartTo').value || null,
+            estimatedEndDateFrom: document.getElementById('filterEstEndFrom').value || null,
+            estimatedEndDateTo: document.getElementById('filterEstEndTo').value || null,
+            createdAtFrom: document.getElementById('filterCreatedFrom').value || null,
+            createdAtTo: document.getElementById('filterCreatedTo').value || null,
+            modifiedAtFrom: document.getElementById('filterModifiedFrom').value || null,
+            modifiedAtTo: document.getElementById('filterModifiedTo').value || null
+        };
+        
+        const request = {
+            id: reportId || null,
+            name: name,
+            description: document.getElementById('reportDescription').value || null,
+            serviceAreaIds: serviceAreaIds,
+            filter: filter,
+            columns: columns
+        };
+        
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+        
+        try {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            const response = await fetch('@Url.Action("Save")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(request)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                window.location.href = '@Url.Action("Index")';
+            } else {
+                alert(result.error || 'Failed to save report');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while saving the report');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> ' + (isEdit ? 'Update Report' : 'Create Report');
+        }
+    });
+})();
+</script>
+}

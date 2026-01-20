@@ -1,0 +1,287 @@
+@using Microsoft.AspNetCore.Html
+@model ReportResultViewModel
+@{
+    ViewData["Title"] = Model.ReportName + " - Report Results";
+}
+
+<!-- Sticky Toolbar -->
+<div class="sticky-toolbar">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <h4 class="mb-1">
+                <i class="bi bi-bar-chart me-2"></i>@Model.ReportName
+            </h4>
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <small class="text-muted">@Model.Description</small>
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <a href="@Url.Action("Export", new { id = Model.ReportId })" class="btn btn-success">
+                <i class="bi bi-file-earmark-excel me-1"></i> Export to Excel
+            </a>
+            <a href="@Url.Action("Edit", new { id = Model.ReportId })" class="btn btn-outline-primary">
+                <i class="bi bi-pencil me-1"></i> Edit Report
+            </a>
+            <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back
+            </a>
+        </div>
+    </div>
+    
+    <!-- Results Summary -->
+    <div class="d-flex align-items-center gap-3 text-muted small">
+        <span><strong>@Model.TotalCount</strong> total records</span>
+        <span class="vr"></span>
+        <span>Page @Model.Page of @Math.Max(1, Model.TotalPages)</span>
+        @if (Model.IncludeServiceAreaColumn)
+        {
+            <span class="vr"></span>
+            <span>
+                Service Areas: 
+                @foreach (var sa in Model.ServiceAreaNames.Values.Take(3))
+                {
+                    <span class="badge bg-secondary me-1">@sa</span>
+                }
+                @if (Model.ServiceAreaNames.Count > 3)
+                {
+                    <span class="badge bg-light text-dark">+@(Model.ServiceAreaNames.Count - 3) more</span>
+                }
+            </span>
+        }
+    </div>
+</div>
+
+@if (!Model.Items.Any())
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-inbox display-1 text-muted mb-3"></i>
+            <h5>No Results</h5>
+            <p class="text-muted mb-4">No data matches the report criteria. Try adjusting the filters.</p>
+            <a href="@Url.Action("Edit", new { id = Model.ReportId })" class="btn btn-primary">
+                <i class="bi bi-pencil me-1"></i> Edit Report Filters
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    <!-- Results Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            @if (Model.IncludeServiceAreaColumn)
+                            {
+                                <th class="sortable-header" data-column="serviceArea">
+                                    Service Area
+                                </th>
+                            }
+                            @foreach (var col in Model.Columns.Where(c => c != "select" && c != "actions"))
+                            {
+                                var isSortable = col != "sponsors" && col != "spocs" && col != "resources";
+                                <th class="@(isSortable ? "sortable-header" : "")" data-column="@col">
+                                    @Model.GetColumnLabel(col)
+                                    @if (Model.SortColumn.Equals(col, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <i class="bi bi-caret-@(Model.SortOrder == "asc" ? "up" : "down")-fill ms-1"></i>
+                                    }
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                @if (Model.IncludeServiceAreaColumn)
+                                {
+                                    <td><span class="badge bg-secondary">@item.ServiceAreaName</span></td>
+                                }
+                                @foreach (var col in Model.Columns.Where(c => c != "select" && c != "actions"))
+                                {
+                                    <td>@GetCellValue(item, col)</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        @if (Model.TotalPages > 1)
+        {
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                    Showing @(((Model.Page - 1) * Model.PageSize) + 1) - @Math.Min(Model.Page * Model.PageSize, Model.TotalCount) of @Model.TotalCount
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(!Model.HasPreviousPage ? "disabled" : "")">
+                            <a class="page-link" href="@GetPageUrl(1)" title="First">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item @(!Model.HasPreviousPage ? "disabled" : "")">
+                            <a class="page-link" href="@GetPageUrl(Model.Page - 1)" title="Previous">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        
+                        @{
+                            var startPage = Math.Max(1, Model.Page - 2);
+                            var endPage = Math.Min(Model.TotalPages, Model.Page + 2);
+                        }
+                        
+                        @for (var i = startPage; i <= endPage; i++)
+                        {
+                            <li class="page-item @(i == Model.Page ? "active" : "")">
+                                <a class="page-link" href="@GetPageUrl(i)">@i</a>
+                            </li>
+                        }
+                        
+                        <li class="page-item @(!Model.HasNextPage ? "disabled" : "")">
+                            <a class="page-link" href="@GetPageUrl(Model.Page + 1)" title="Next">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item @(!Model.HasNextPage ? "disabled" : "")">
+                            <a class="page-link" href="@GetPageUrl(Model.TotalPages)" title="Last">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
+    </div>
+}
+
+@functions {
+    string GetPageUrl(int page)
+    {
+        return Url.Action("Run", new { 
+            id = Model.ReportId, 
+            page = page, 
+            pageSize = Model.PageSize,
+            sortColumn = Model.SortColumn,
+            sortOrder = Model.SortOrder
+        })!;
+    }
+    
+    string GetSortUrl(string column)
+    {
+        var newOrder = Model.SortColumn.Equals(column, StringComparison.OrdinalIgnoreCase) && Model.SortOrder == "asc" 
+            ? "desc" 
+            : "asc";
+        return Url.Action("Run", new { 
+            id = Model.ReportId, 
+            page = 1, 
+            pageSize = Model.PageSize,
+            sortColumn = column,
+            sortOrder = newOrder
+        })!;
+    }
+    
+    object? GetCellValue(Tracker.Web.Services.Interfaces.EnhancementExportRow item, string col)
+    {
+        return col switch
+        {
+            "workIdDescription" => $"{item.WorkId} - {item.Description}",
+            "workId" => item.WorkId,
+            "description" => item.Description,
+            "status" => item.Status != null ? new HtmlString($"<span class='badge bg-{GetStatusColor(item.Status)}'>{item.Status}</span>") : null,
+            "estimatedHours" => item.EstimatedHours?.ToString("N1"),
+            "estimatedStartDate" => item.EstimatedStartDate?.ToString("MMM dd, yyyy"),
+            "estimatedEndDate" => item.EstimatedEndDate?.ToString("MMM dd, yyyy"),
+            "estimationNotes" => TruncateText(item.EstimationNotes, 50),
+            "sponsors" => item.Sponsors,
+            "spocs" => item.Spocs,
+            "resources" => item.Resources,
+            "returnedHours" => item.ReturnedHours?.ToString("N1"),
+            "startDate" => item.StartDate?.ToString("MMM dd, yyyy"),
+            "endDate" => item.EndDate?.ToString("MMM dd, yyyy"),
+            "infStatus" => item.InfStatus,
+            "serviceLine" => item.ServiceLine,
+            "infServiceLine" => item.InfServiceLine,
+            "notes" => TruncateText(item.Notes, 50),
+            "timeW1" => item.TimeW1?.ToString("N1"),
+            "timeW2" => item.TimeW2?.ToString("N1"),
+            "timeW3" => item.TimeW3?.ToString("N1"),
+            "timeW4" => item.TimeW4?.ToString("N1"),
+            "timeW5" => item.TimeW5?.ToString("N1"),
+            "timeW6" => item.TimeW6?.ToString("N1"),
+            "timeW7" => item.TimeW7?.ToString("N1"),
+            "timeW8" => item.TimeW8?.ToString("N1"),
+            "timeW9" => item.TimeW9?.ToString("N1"),
+            "createdAt" => item.CreatedAt.ToString("MMM dd, yyyy"),
+            "createdBy" => item.CreatedBy,
+            "modifiedAt" => item.ModifiedAt?.ToString("MMM dd, yyyy"),
+            "modifiedBy" => item.ModifiedBy,
+            _ => null
+        };
+    }
+    
+    string GetStatusColor(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "new" => "primary",
+            "in progress" => "info",
+            "on hold" => "warning",
+            "completed" => "success",
+            "cancelled" => "secondary",
+            _ => "light text-dark"
+        };
+    }
+    
+    string? TruncateText(string? text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        return text.Length <= maxLength ? text : text.Substring(0, maxLength) + "...";
+    }
+}
+
+<style>
+    .sortable-header {
+        cursor: pointer;
+        user-select: none;
+    }
+    .sortable-header:hover {
+        background-color: #e9ecef;
+    }
+    .table th {
+        white-space: nowrap;
+    }
+    .table td {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>
+
+@section Scripts {
+<script>
+(function() {
+    // Sortable column headers
+    document.querySelectorAll('.sortable-header').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.column;
+            if (!column) return;
+            
+            const currentSort = '@Model.SortColumn'.toLowerCase();
+            const currentOrder = '@Model.SortOrder';
+            const newOrder = column.toLowerCase() === currentSort && currentOrder === 'asc' ? 'desc' : 'asc';
+            
+            window.location.href = '@Url.Action("Run", new { id = Model.ReportId })' + 
+                '?page=1&pageSize=@Model.PageSize&sortColumn=' + column + '&sortOrder=' + newOrder;
+        });
+    });
+})();
+</script>
+}

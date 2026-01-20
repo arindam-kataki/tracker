@@ -46,6 +46,8 @@ builder.Services.AddScoped<IEnhancementService, EnhancementService>();
 builder.Services.AddScoped<IUploadService, UploadService>();
 builder.Services.AddScoped<IServiceAreaService, ServiceAreaService>();
 builder.Services.AddScoped<ISavedFilterService, SavedFilterService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IExcelExportService, ExcelExportService>();
 
 // Add MVC
 builder.Services.AddControllersWithViews();
