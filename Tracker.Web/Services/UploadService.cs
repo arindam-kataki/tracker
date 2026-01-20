@@ -45,10 +45,10 @@ public class UploadService : IUploadService
                     Notes = record.Notes?.Trim()
                 };
 
-                // Find potential matches
+                // Find potential matches within the same service area
                 if (!string.IsNullOrEmpty(row.WorkId))
                 {
-                    var matches = await _enhancementService.FindMatchesAsync(row.WorkId, row.Description);
+                    var matches = await _enhancementService.FindMatchesAsync(row.WorkId, row.Description, serviceAreaId);
                     if (matches.Any())
                     {
                         row.HasMatch = true;

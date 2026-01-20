@@ -54,6 +54,25 @@ public class Enhancement
     // Navigation
     public virtual ServiceArea ServiceArea { get; set; } = null!;
     public virtual EstimationBreakdown? EstimationBreakdown { get; set; }
-    public virtual ICollection<EnhancementContact> Contacts { get; set; } = new List<EnhancementContact>();
+    
+    // New resource collections
+    public virtual ICollection<EnhancementSponsor> Sponsors { get; set; } = new List<EnhancementSponsor>();
+    public virtual ICollection<EnhancementSpoc> Spocs { get; set; } = new List<EnhancementSpoc>();
     public virtual ICollection<EnhancementResource> Resources { get; set; } = new List<EnhancementResource>();
+    
+    // Legacy (keep for backward compatibility)
+    public virtual ICollection<EnhancementContact> Contacts { get; set; } = new List<EnhancementContact>();
+    
+    // Helper properties for display (CSV format)
+    public string SponsorsDisplay => Sponsors?.Any() == true 
+        ? string.Join(", ", Sponsors.Select(s => s.Resource?.Name).Where(n => n != null)) 
+        : string.Empty;
+    
+    public string SpocsDisplay => Spocs?.Any() == true 
+        ? string.Join(", ", Spocs.Select(s => s.Resource?.Name).Where(n => n != null)) 
+        : string.Empty;
+    
+    public string ResourcesDisplay => Resources?.Any() == true 
+        ? string.Join(", ", Resources.Select(r => r.Resource?.Name).Where(n => n != null)) 
+        : string.Empty;
 }

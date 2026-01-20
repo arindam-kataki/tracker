@@ -94,9 +94,10 @@ public class EnhancementsController : BaseController
         // Get column preferences
         var visibleColumns = await _savedFilterService.GetUserColumnsAsync(CurrentUserId!, serviceAreaId);
 
-        // Get resources for bulk edit
-        var clientResources = await _resourceService.GetClientResourcesAsync();
-        var internalResources = await _resourceService.GetInternalResourcesAsync();
+        // Get resources for bulk edit by type
+        var sponsors = await _resourceService.GetClientResourcesAsync();
+        var spocs = await _resourceService.GetSpocResourcesAsync();
+        var resources = await _resourceService.GetInternalResourcesAsync();
 
         var model = new EnhancementsViewModel
         {
@@ -127,8 +128,10 @@ public class EnhancementsController : BaseController
             CurrentFilterName = loadedFilter?.Name,
             AllColumns = ColumnDefinition.GetAllColumns(),
             VisibleColumns = visibleColumns,
-            AvailableContacts = clientResources,
-            AvailableResources = internalResources
+            AvailableSponsors = sponsors,
+            AvailableSpocs = spocs,
+            AvailableResources = resources,
+            AvailableContacts = sponsors // Legacy compatibility
         };
 
         ViewBag.Sidebar = await GetSidebarViewModelAsync(serviceAreaId);

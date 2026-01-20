@@ -14,12 +14,12 @@ public class ResourceService : IResourceService
         _db = db;
     }
 
-    public async Task<List<Resource>> GetAllAsync(bool? isClientResource = null, bool? isActive = null)
+    public async Task<List<Resource>> GetAllAsync(ResourceType? type = null, bool? isActive = null)
     {
         var query = _db.Resources.AsQueryable();
 
-        if (isClientResource.HasValue)
-            query = query.Where(r => r.IsClientResource == isClientResource.Value);
+        if (type.HasValue)
+            query = query.Where(r => r.Type == type.Value);
 
         if (isActive.HasValue)
             query = query.Where(r => r.IsActive == isActive.Value);
@@ -32,29 +32,36 @@ public class ResourceService : IResourceService
         return await _db.Resources.FindAsync(id);
     }
 
-    public async Task<List<Resource>> GetClientResourcesAsync()
+    public async Task<List<Resource>> GetByTypeAsync(ResourceType type)
     {
         return await _db.Resources
-            .Where(r => r.IsClientResource && r.IsActive)
+            .Where(r => r.Type == type && r.IsActive)
             .OrderBy(r => r.Name)
             .ToListAsync();
+    }
+
+    public async Task<List<Resource>> GetClientResourcesAsync()
+    {
+        return await GetByTypeAsync(ResourceType.Client);
+    }
+
+    public async Task<List<Resource>> GetSpocResourcesAsync()
+    {
+        return await GetByTypeAsync(ResourceType.SPOC);
     }
 
     public async Task<List<Resource>> GetInternalResourcesAsync()
     {
-        return await _db.Resources
-            .Where(r => !r.IsClientResource && r.IsActive)
-            .OrderBy(r => r.Name)
-            .ToListAsync();
+        return await GetByTypeAsync(ResourceType.Internal);
     }
 
-    public async Task<Resource> CreateAsync(string name, string? email, bool isClientResource)
+    public async Task<Resource> CreateAsync(string name, string? email, ResourceType type)
     {
         var resource = new Resource
         {
             Name = name,
             Email = email,
-            IsClientResource = isClientResource,
+            Type = type,
             IsActive = true
         };
 
@@ -64,7 +71,7 @@ public class ResourceService : IResourceService
         return resource;
     }
 
-    public async Task<Resource?> UpdateAsync(string id, string name, string? email, bool isClientResource, bool isActive)
+    public async Task<Resource?> UpdateAsync(string id, string name, string? email, ResourceType type, bool isActive)
     {
         var resource = await _db.Resources.FindAsync(id);
         if (resource == null)
@@ -72,7 +79,7 @@ public class ResourceService : IResourceService
 
         resource.Name = name;
         resource.Email = email;
-        resource.IsClientResource = isClientResource;
+        resource.Type = type;
         resource.IsActive = isActive;
 
         await _db.SaveChangesAsync();

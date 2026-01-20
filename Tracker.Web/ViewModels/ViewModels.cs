@@ -61,7 +61,7 @@ public class EditResourceViewModel
     [EmailAddress]
     public string? Email { get; set; }
 
-    public bool IsClientResource { get; set; }
+    public ResourceType Type { get; set; } = ResourceType.Internal;
     public bool IsActive { get; set; } = true;
 }
 
@@ -102,8 +102,12 @@ public class EnhancementsViewModel
     public List<string> VisibleColumns { get; set; } = new();
     
     // Resources for bulk edit
+    public List<Resource> AvailableSponsors { get; set; } = new();  // Client resources
+    public List<Resource> AvailableSpocs { get; set; } = new();     // SPOC resources
+    public List<Resource> AvailableResources { get; set; } = new(); // Internal resources
+    
+    // Legacy
     public List<Resource> AvailableContacts { get; set; } = new();
-    public List<Resource> AvailableResources { get; set; } = new();
     
     // Legacy compatibility
     public string? SearchTerm => Filter?.Search;

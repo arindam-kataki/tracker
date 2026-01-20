@@ -30,8 +30,10 @@ public class EnhancementService : IEnhancementService
     {
         var query = _db.Enhancements
             .Include(e => e.ServiceArea)
-            .Include(e => e.Contacts).ThenInclude(c => c.Resource)
+            .Include(e => e.Sponsors).ThenInclude(s => s.Resource)
+            .Include(e => e.Spocs).ThenInclude(s => s.Resource)
             .Include(e => e.Resources).ThenInclude(r => r.Resource)
+            .Include(e => e.Contacts).ThenInclude(c => c.Resource)
             .Where(e => e.ServiceAreaId == serviceAreaId);
 
         // Text search
@@ -149,8 +151,10 @@ public class EnhancementService : IEnhancementService
         return await _db.Enhancements
             .Include(e => e.ServiceArea)
             .Include(e => e.EstimationBreakdown)
-            .Include(e => e.Contacts).ThenInclude(c => c.Resource)
+            .Include(e => e.Sponsors).ThenInclude(s => s.Resource)
+            .Include(e => e.Spocs).ThenInclude(s => s.Resource)
             .Include(e => e.Resources).ThenInclude(r => r.Resource)
+            .Include(e => e.Contacts).ThenInclude(c => c.Resource)
             .FirstOrDefaultAsync(e => e.Id == id);
     }
 
@@ -161,9 +165,10 @@ public class EnhancementService : IEnhancementService
             .FirstOrDefaultAsync(e => e.WorkId.ToLower() == workId.ToLower());
     }
 
-    public async Task<List<Enhancement>> FindMatchesAsync(string workId, string? description)
+    public async Task<List<Enhancement>> FindMatchesAsync(string workId, string? description, string serviceAreaId)
     {
-        var query = _db.Enhancements.AsQueryable();
+        var query = _db.Enhancements
+            .Where(e => e.ServiceAreaId == serviceAreaId);
 
         var exactMatch = await query
             .Where(e => e.WorkId.ToLower() == workId.ToLower())
@@ -267,8 +272,10 @@ public class EnhancementService : IEnhancementService
     public async Task<bool> BulkUpdateAsync(BulkUpdateRequest request, string userId)
     {
         var enhancements = await _db.Enhancements
-            .Include(e => e.Contacts)
+            .Include(e => e.Sponsors)
+            .Include(e => e.Spocs)
             .Include(e => e.Resources)
+            .Include(e => e.Contacts)
             .Where(e => request.SelectedIds.Contains(e.Id))
             .ToListAsync();
 
@@ -305,7 +312,43 @@ public class EnhancementService : IEnhancementService
             else if (request.EstimatedEndDate.HasValue)
                 enhancement.EstimatedEndDate = request.EstimatedEndDate;
 
-            // Update resources
+            // Update Sponsors (Client resources)
+            if (request.ClearSponsors)
+            {
+                enhancement.Sponsors.Clear();
+            }
+            else if (request.SponsorIds != null && request.SponsorIds.Any())
+            {
+                enhancement.Sponsors.Clear();
+                foreach (var sponsorId in request.SponsorIds)
+                {
+                    enhancement.Sponsors.Add(new EnhancementSponsor
+                    {
+                        EnhancementId = enhancement.Id,
+                        ResourceId = sponsorId
+                    });
+                }
+            }
+
+            // Update SPOCs
+            if (request.ClearSpocs)
+            {
+                enhancement.Spocs.Clear();
+            }
+            else if (request.SpocIds != null && request.SpocIds.Any())
+            {
+                enhancement.Spocs.Clear();
+                foreach (var spocId in request.SpocIds)
+                {
+                    enhancement.Spocs.Add(new EnhancementSpoc
+                    {
+                        EnhancementId = enhancement.Id,
+                        ResourceId = spocId
+                    });
+                }
+            }
+
+            // Update Resources (Internal)
             if (request.ClearResources)
             {
                 enhancement.Resources.Clear();
@@ -323,7 +366,7 @@ public class EnhancementService : IEnhancementService
                 }
             }
 
-            // Update contacts
+            // Legacy: Update contacts
             if (request.ClearContacts)
             {
                 enhancement.Contacts.Clear();

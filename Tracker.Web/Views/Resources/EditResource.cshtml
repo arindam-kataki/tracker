@@ -1,4 +1,5 @@
 @model EditResourceViewModel
+@using Tracker.Web.Entities
 
 <div class="modal-header">
     <h5 class="modal-title">
@@ -26,11 +27,17 @@
         </div>
         
         <div class="mb-3">
-            <div class="form-check">
-                <input asp-for="IsClientResource" class="form-check-input" />
-                <label asp-for="IsClientResource" class="form-check-label">Client/Sponsor Resource</label>
-            </div>
-            <small class="text-muted">Check this box if this resource is from the client side (sponsor, stakeholder)</small>
+            <label asp-for="Type" class="form-label">Resource Type</label>
+            <select asp-for="Type" class="form-select">
+                <option value="@ResourceType.Client">Client (Sponsor)</option>
+                <option value="@ResourceType.SPOC">Infy SPOC</option>
+                <option value="@ResourceType.Internal">Infy Internal</option>
+            </select>
+            <small class="text-muted">
+                <strong>Client:</strong> Client-side sponsors/stakeholders &bull;
+                <strong>SPOC:</strong> Infy Single Point of Contact &bull;
+                <strong>Internal:</strong> Infy team members
+            </small>
         </div>
         
         @if (!string.IsNullOrEmpty(Model.Id))

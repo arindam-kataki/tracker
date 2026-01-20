@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Tracker.Web.Entities;
 using Tracker.Web.Services.Interfaces;
 using Tracker.Web.ViewModels;
 
@@ -22,14 +23,15 @@ public class ResourcesController : BaseController
 
     public async Task<IActionResult> Index(string? search, string? type)
     {
-        bool? isClientFilter = type switch
+        ResourceType? typeFilter = type?.ToLower() switch
         {
-            "client" => true,
-            "internal" => false,
+            "client" => ResourceType.Client,
+            "spoc" => ResourceType.SPOC,
+            "internal" => ResourceType.Internal,
             _ => null
         };
 
-        var resources = await _resourceService.GetAllAsync(isClientFilter);
+        var resources = await _resourceService.GetAllAsync(typeFilter);
 
         if (!string.IsNullOrEmpty(search))
         {
@@ -65,7 +67,7 @@ public class ResourcesController : BaseController
             model.Id = resource.Id;
             model.Name = resource.Name;
             model.Email = resource.Email;
-            model.IsClientResource = resource.IsClientResource;
+            model.Type = resource.Type;
             model.IsActive = resource.IsActive;
         }
 
@@ -84,12 +86,12 @@ public class ResourcesController : BaseController
 
         if (string.IsNullOrEmpty(model.Id))
         {
-            await _resourceService.CreateAsync(model.Name, model.Email, model.IsClientResource);
+            await _resourceService.CreateAsync(model.Name, model.Email, model.Type);
             _logger.LogInformation("Resource {Name} created by {User}", model.Name, CurrentUserEmail);
         }
         else
         {
-            await _resourceService.UpdateAsync(model.Id, model.Name, model.Email, model.IsClientResource, model.IsActive);
+            await _resourceService.UpdateAsync(model.Id, model.Name, model.Email, model.Type, model.IsActive);
             _logger.LogInformation("Resource {Name} updated by {User}", model.Name, CurrentUserEmail);
         }
 

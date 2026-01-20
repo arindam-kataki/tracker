@@ -153,6 +153,40 @@
             </div>
             <div class="col-md-6">
                 <div class="bulk-row">
+                    <label class="bulk-label">Sponsors</label>
+                    <div class="d-flex gap-1 align-items-center flex-grow-1">
+                        <select class="form-select form-select-sm" id="bulkSponsors" multiple style="height: 60px;">
+                            @foreach (var s in Model.AvailableSponsors)
+                            {
+                                <option value="@s.Id">@s.Name</option>
+                            }
+                        </select>
+                        <div class="form-check form-check-inline mb-0">
+                            <input type="checkbox" class="form-check-input" id="bulkClearSponsors" />
+                            <label class="form-check-label small" for="bulkClearSponsors">Clear</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="bulk-row">
+                    <label class="bulk-label">Infy SPOC</label>
+                    <div class="d-flex gap-1 align-items-center flex-grow-1">
+                        <select class="form-select form-select-sm" id="bulkSpocs" multiple style="height: 60px;">
+                            @foreach (var sp in Model.AvailableSpocs)
+                            {
+                                <option value="@sp.Id">@sp.Name</option>
+                            }
+                        </select>
+                        <div class="form-check form-check-inline mb-0">
+                            <input type="checkbox" class="form-check-input" id="bulkClearSpocs" />
+                            <label class="form-check-label small" for="bulkClearSpocs">Clear</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="bulk-row">
                     <label class="bulk-label">Resources</label>
                     <div class="d-flex gap-1 align-items-center flex-grow-1">
                         <select class="form-select form-select-sm" id="bulkResources" multiple style="height: 60px;">
@@ -164,23 +198,6 @@
                         <div class="form-check form-check-inline mb-0">
                             <input type="checkbox" class="form-check-input" id="bulkClearResources" />
                             <label class="form-check-label small" for="bulkClearResources">Clear</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="bulk-row">
-                    <label class="bulk-label">Contacts</label>
-                    <div class="d-flex gap-1 align-items-center flex-grow-1">
-                        <select class="form-select form-select-sm" id="bulkContacts" multiple style="height: 60px;">
-                            @foreach (var c in Model.AvailableContacts)
-                            {
-                                <option value="@c.Id">@c.Name</option>
-                            }
-                        </select>
-                        <div class="form-check form-check-inline mb-0">
-                            <input type="checkbox" class="form-check-input" id="bulkClearContacts" />
-                            <label class="form-check-label small" for="bulkClearContacts">Clear</label>
                         </div>
                     </div>
                 </div>
@@ -437,6 +454,15 @@
                                     break;
                                 case "estimatedEndDate":
                                     <td>@item.EstimatedEndDate?.ToString("MMM dd, yyyy")</td>
+                                    break;
+                                case "sponsors":
+                                    <td class="text-truncate" style="max-width: 150px;" title="@item.SponsorsDisplay">@item.SponsorsDisplay</td>
+                                    break;
+                                case "spocs":
+                                    <td class="text-truncate" style="max-width: 150px;" title="@item.SpocsDisplay">@item.SpocsDisplay</td>
+                                    break;
+                                case "resources":
+                                    <td class="text-truncate" style="max-width: 150px;" title="@item.ResourcesDisplay">@item.ResourcesDisplay</td>
                                     break;
                                 case "returnedHours":
                                     <td class="text-end">@item.ReturnedHours?.ToString("N1")</td>
@@ -758,14 +784,16 @@
             endDate: document.getElementById('bulkEndDate').value || null,
             estimatedStartDate: document.getElementById('bulkEstStartDate').value || null,
             estimatedEndDate: document.getElementById('bulkEstEndDate').value || null,
+            sponsorIds: Array.from(document.getElementById('bulkSponsors').selectedOptions).map(o => o.value),
+            spocIds: Array.from(document.getElementById('bulkSpocs').selectedOptions).map(o => o.value),
             resourceIds: Array.from(document.getElementById('bulkResources').selectedOptions).map(o => o.value),
-            contactIds: Array.from(document.getElementById('bulkContacts').selectedOptions).map(o => o.value),
             clearStartDate: document.getElementById('bulkClearStartDate').checked,
             clearEndDate: document.getElementById('bulkClearEndDate').checked,
             clearEstimatedStartDate: document.getElementById('bulkClearEstStartDate').checked,
             clearEstimatedEndDate: document.getElementById('bulkClearEstEndDate').checked,
-            clearResources: document.getElementById('bulkClearResources').checked,
-            clearContacts: document.getElementById('bulkClearContacts').checked
+            clearSponsors: document.getElementById('bulkClearSponsors').checked,
+            clearSpocs: document.getElementById('bulkClearSpocs').checked,
+            clearResources: document.getElementById('bulkClearResources').checked
         };
         
         fetch('@Url.Action("BulkUpdate", "Enhancements")', {

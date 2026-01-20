@@ -124,6 +124,9 @@ public class ColumnDefinition
             new() { Key = "estimatedHours", Label = "Est. Hours", IsDefault = true, IsFrozen = false, CssClass = "text-end" },
             new() { Key = "estimatedStartDate", Label = "Est. Start", IsDefault = true, IsFrozen = false },
             new() { Key = "estimatedEndDate", Label = "Est. End", IsDefault = true, IsFrozen = false },
+            new() { Key = "sponsors", Label = "Sponsors", IsDefault = false, IsFrozen = false },
+            new() { Key = "spocs", Label = "Infy SPOC", IsDefault = false, IsFrozen = false },
+            new() { Key = "resources", Label = "Resources", IsDefault = false, IsFrozen = false },
             new() { Key = "returnedHours", Label = "Ret. Hours", IsDefault = false, IsFrozen = false, CssClass = "text-end" },
             new() { Key = "startDate", Label = "Start Date", IsDefault = false, IsFrozen = false },
             new() { Key = "endDate", Label = "End Date", IsDefault = false, IsFrozen = false },
@@ -182,12 +185,22 @@ public class BulkUpdateRequest
     public DateTime? EndDate { get; set; }
     public DateTime? EstimatedStartDate { get; set; }
     public DateTime? EstimatedEndDate { get; set; }
+    
+    // New resource fields
+    public List<string>? SponsorIds { get; set; }
+    public List<string>? SpocIds { get; set; }
     public List<string>? ResourceIds { get; set; }
+    
+    // Legacy
     public List<string>? ContactIds { get; set; }
+    
+    // Clear flags
     public bool ClearStartDate { get; set; }
     public bool ClearEndDate { get; set; }
     public bool ClearEstimatedStartDate { get; set; }
     public bool ClearEstimatedEndDate { get; set; }
+    public bool ClearSponsors { get; set; }
+    public bool ClearSpocs { get; set; }
     public bool ClearResources { get; set; }
     public bool ClearContacts { get; set; }
 }

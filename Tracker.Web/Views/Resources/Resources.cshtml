@@ -1,4 +1,5 @@
 @model ResourcesViewModel
+@using Tracker.Web.Entities
 @{
     ViewData["Title"] = "Resources";
 }
@@ -32,8 +33,9 @@
             <label class="form-label small">Type</label>
             <select name="type" class="form-select">
                 <option value="">All Types</option>
-                <option value="client" selected="@(Model.TypeFilter == "client")">Client/Sponsor</option>
-                <option value="internal" selected="@(Model.TypeFilter == "internal")">Internal</option>
+                <option value="client" selected="@(Model.TypeFilter == "client")">Client (Sponsor)</option>
+                <option value="spoc" selected="@(Model.TypeFilter == "spoc")">Infy SPOC</option>
+                <option value="internal" selected="@(Model.TypeFilter == "internal")">Infy Internal</option>
             </select>
         </div>
         
@@ -75,13 +77,17 @@
                         <td>@item.Name</td>
                         <td>@item.Email</td>
                         <td>
-                            @if (item.IsClientResource)
+                            @switch (item.Type)
                             {
-                                <span class="badge bg-info">Client/Sponsor</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">Internal</span>
+                                case ResourceType.Client:
+                                    <span class="badge bg-info">Client</span>
+                                    break;
+                                case ResourceType.SPOC:
+                                    <span class="badge bg-primary">Infy SPOC</span>
+                                    break;
+                                case ResourceType.Internal:
+                                    <span class="badge bg-secondary">Infy Internal</span>
+                                    break;
                             }
                         </td>
                         <td>
