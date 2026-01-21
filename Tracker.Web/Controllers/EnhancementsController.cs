@@ -96,9 +96,9 @@ public class EnhancementsController : BaseController
         var visibleColumns = await _savedFilterService.GetUserColumnsAsync(CurrentUserId!, serviceAreaId);
 
         // Get resources for bulk edit by type
-        var sponsors = await _resourceService.GetClientResourcesAsync();
-        var spocs = await _resourceService.GetSpocResourcesAsync();
-        var resources = await _resourceService.GetInternalResourcesAsync();
+        var sponsors = await _resourceService.GetByResourceTypeNameAsync("Client");
+        var spocs = await _resourceService.GetByResourceTypeNameAsync("SPOC");
+        var resources = await _resourceService.GetByResourceTypeNameAsync("Internal");
 
         var model = new EnhancementsViewModel
         {
@@ -144,8 +144,9 @@ public class EnhancementsController : BaseController
     {
         var enhancement = id != null ? await _enhancementService.GetByIdAsync(id) : null;
         var serviceAreas = await _serviceAreaService.GetAllAsync();
-        var clientResources = await _resourceService.GetClientResourcesAsync();
-        var internalResources = await _resourceService.GetInternalResourcesAsync();
+        var clientResources = await _resourceService.GetByResourceTypeNameAsync("Client");
+        var spocResources = await _resourceService.GetByResourceTypeNameAsync("SPOC");
+        var internalResources = await _resourceService.GetByResourceTypeNameAsync("Internal");
 
         var model = new EditEnhancementViewModel
         {

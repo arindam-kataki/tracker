@@ -15,4 +15,5 @@ public interface IResourceService
     Task<List<SelectListItem>> GetResourceTypesSelectListAsync();
     Task<List<SelectListItem>> GetSkillsSelectListAsync(List<string>? selectedIds = null);
     Task<List<string>> GetResourceSkillIdsAsync(string resourceId);
+    Task<List<Resource>> GetByResourceTypeNameAsync(string typeName);
 }

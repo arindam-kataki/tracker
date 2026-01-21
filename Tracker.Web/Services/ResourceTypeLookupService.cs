@@ -35,7 +35,11 @@ public class ResourceTypeLookupService : IResourceTypeLookupService
                 Description = r.Description,
                 DisplayOrder = r.DisplayOrder,
                 IsActive = r.IsActive,
-                ResourceCount = r.Resources.Count
+                ResourceCount = r.Resources.Count,
+                EnhancementColumn = r.EnhancementColumn,
+                EnhancementColumnDisplay = r.EnhancementColumn == EnhancementColumnType.Sponsors ? "Sponsors" :
+                                           r.EnhancementColumn == EnhancementColumnType.SPOCs ? "SPOCs" : "Resources",
+                AllowMultiple = r.AllowMultiple
             })
             .ToListAsync();
     }
@@ -45,13 +49,16 @@ public class ResourceTypeLookupService : IResourceTypeLookupService
         return await _context.ResourceTypeLookups.FindAsync(id);
     }
 
-    public async Task<ResourceTypeLookup> CreateAsync(string name, string? description, int displayOrder)
+    public async Task<ResourceTypeLookup> CreateAsync(string name, string? description, int displayOrder,
+        EnhancementColumnType enhancementColumn, bool allowMultiple)
     {
         var resourceType = new ResourceTypeLookup
         {
             Name = name,
             Description = description,
-            DisplayOrder = displayOrder
+            DisplayOrder = displayOrder,
+            EnhancementColumn = enhancementColumn,
+            AllowMultiple = allowMultiple
         };
 
         _context.ResourceTypeLookups.Add(resourceType);
@@ -59,7 +66,8 @@ public class ResourceTypeLookupService : IResourceTypeLookupService
         return resourceType;
     }
 
-    public async Task UpdateAsync(string id, string name, string? description, int displayOrder, bool isActive)
+    public async Task UpdateAsync(string id, string name, string? description, int displayOrder, bool isActive,
+        EnhancementColumnType enhancementColumn, bool allowMultiple)
     {
         var resourceType = await _context.ResourceTypeLookups.FindAsync(id);
         if (resourceType == null) return;
@@ -68,6 +76,8 @@ public class ResourceTypeLookupService : IResourceTypeLookupService
         resourceType.Description = description;
         resourceType.DisplayOrder = displayOrder;
         resourceType.IsActive = isActive;
+        resourceType.EnhancementColumn = enhancementColumn;
+        resourceType.AllowMultiple = allowMultiple;
 
         await _context.SaveChangesAsync();
     }

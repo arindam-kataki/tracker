@@ -15,20 +15,18 @@ public class LookupsController : BaseController
     private readonly ISkillService _skillService;
     private readonly IServiceAreaService _serviceAreaService;
     private readonly ILogger<LookupsController> _logger;
-    private readonly IAuthService _authService;
 
     public LookupsController(
         IAuthService authService,
         IResourceTypeLookupService resourceTypeService,
         ISkillService skillService,
         IServiceAreaService serviceAreaService,
-        ILogger<LookupsController> logger)
+        ILogger<LookupsController> logger) : base(authService)
     {
         _resourceTypeService = resourceTypeService;
         _skillService = skillService;
         _serviceAreaService = serviceAreaService;
         _logger = logger;
-        _authService = authService;
     }
 
     #region Resource Types
@@ -64,6 +62,8 @@ public class LookupsController : BaseController
             model.Description = resourceType.Description;
             model.DisplayOrder = resourceType.DisplayOrder;
             model.IsActive = resourceType.IsActive;
+            model.EnhancementColumn = resourceType.EnhancementColumn;
+            model.AllowMultiple = resourceType.AllowMultiple;
         }
 
         return PartialView("_EditResourceType", model);
@@ -80,12 +80,24 @@ public class LookupsController : BaseController
 
         if (string.IsNullOrEmpty(model.Id))
         {
-            await _resourceTypeService.CreateAsync(model.Name, model.Description, model.DisplayOrder);
+            await _resourceTypeService.CreateAsync(
+                model.Name, 
+                model.Description, 
+                model.DisplayOrder,
+                model.EnhancementColumn,
+                model.AllowMultiple);
             _logger.LogInformation("Resource type {Name} created by {Admin}", model.Name, CurrentUserEmail);
         }
         else
         {
-            await _resourceTypeService.UpdateAsync(model.Id, model.Name, model.Description, model.DisplayOrder, model.IsActive);
+            await _resourceTypeService.UpdateAsync(
+                model.Id, 
+                model.Name, 
+                model.Description, 
+                model.DisplayOrder, 
+                model.IsActive,
+                model.EnhancementColumn,
+                model.AllowMultiple);
             _logger.LogInformation("Resource type {Name} updated by {Admin}", model.Name, CurrentUserEmail);
         }
 

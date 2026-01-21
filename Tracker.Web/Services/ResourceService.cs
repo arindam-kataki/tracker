@@ -27,7 +27,7 @@ public class ResourceService : IResourceService
         if (!string.IsNullOrWhiteSpace(search))
         {
             search = search.ToLower();
-            query = query.Where(r => r.Name.ToLower().Contains(search) || 
+            query = query.Where(r => r.Name.ToLower().Contains(search) ||
                                      (r.Email != null && r.Email.ToLower().Contains(search)));
         }
 
@@ -94,7 +94,7 @@ public class ResourceService : IResourceService
         var resource = await _context.Resources
             .Include(r => r.Skills)
             .FirstOrDefaultAsync(r => r.Id == id);
-            
+
         if (resource == null) return;
 
         resource.Name = name;
@@ -104,7 +104,7 @@ public class ResourceService : IResourceService
 
         // Update skills - remove all and re-add
         _context.ResourceSkills.RemoveRange(resource.Skills);
-        
+
         if (skillIds?.Any() == true)
         {
             foreach (var skillId in skillIds)
@@ -176,6 +176,15 @@ public class ResourceService : IResourceService
         return await _context.ResourceSkills
             .Where(rs => rs.ResourceId == resourceId)
             .Select(rs => rs.SkillId)
+            .ToListAsync();
+    }
+
+    public async Task<List<Resource>> GetByResourceTypeNameAsync(string typeName)
+    {
+        return await _context.Resources
+            .Include(r => r.ResourceType)
+            .Where(r => r.IsActive && r.ResourceType != null && r.ResourceType.Name == typeName)
+            .OrderBy(r => r.Name)
             .ToListAsync();
     }
 }

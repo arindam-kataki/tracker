@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Tracker.Web.Entities;
 
 namespace Tracker.Web.ViewModels;
 
@@ -16,6 +18,9 @@ public class ResourceTypeLookupDto
     public int DisplayOrder { get; set; }
     public bool IsActive { get; set; }
     public int ResourceCount { get; set; }
+    public EnhancementColumnType EnhancementColumn { get; set; }
+    public string EnhancementColumnDisplay { get; set; } = string.Empty;
+    public bool AllowMultiple { get; set; }
 }
 
 public class EditResourceTypeViewModel
@@ -31,4 +36,17 @@ public class EditResourceTypeViewModel
 
     public int DisplayOrder { get; set; }
     public bool IsActive { get; set; } = true;
+    
+    [Required(ErrorMessage = "Enhancement Column is required")]
+    public EnhancementColumnType EnhancementColumn { get; set; } = EnhancementColumnType.Resources;
+    
+    public bool AllowMultiple { get; set; } = true;
+    
+    // For dropdown
+    public List<SelectListItem> EnhancementColumns { get; set; } = new()
+    {
+        new SelectListItem("Sponsors", "0"),
+        new SelectListItem("SPOCs", "1"),
+        new SelectListItem("Resources", "2")
+    };
 }

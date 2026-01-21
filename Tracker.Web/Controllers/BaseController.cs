@@ -24,8 +24,8 @@ public abstract class BaseController : Controller
     protected async Task<SidebarViewModel> GetSidebarViewModelAsync(string? currentServiceAreaId = null, string currentPage = "")
     {
         var userId = CurrentUserId;
-        var serviceAreas = userId != null 
-            ? await AuthService.GetUserServiceAreasAsync(userId) 
+        var serviceAreas = userId != null
+            ? await AuthService.GetUserServiceAreasAsync(userId)
             : new List<ServiceArea>();
 
         return new SidebarViewModel
@@ -33,7 +33,9 @@ public abstract class BaseController : Controller
             ServiceAreas = serviceAreas,
             CurrentServiceAreaId = currentServiceAreaId,
             IsSuperAdmin = IsSuperAdmin,
-            CurrentPage = currentPage
+            CurrentPage = currentPage,
+            UserEmail = CurrentUserEmail,      // ADD THIS
+            UserRole = IsSuperAdmin ? "SuperAdmin" : (IsReporting ? "Reporting" : "User")  // ADD THIS
         };
     }
 }

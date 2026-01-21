@@ -1,0 +1,66 @@
+@model Tracker.Web.ViewModels.EditResourceTypeViewModel
+
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="bi bi-tag me-2"></i>
+        @(string.IsNullOrEmpty(Model.Id) ? "Add Resource Type" : "Edit Resource Type")
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<form id="editResourceTypeForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    
+    <div class="modal-body">
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label">Name <span class="text-danger">*</span></label>
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="text-danger small"></span>
+        </div>
+        
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label">Description</label>
+            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+            <span asp-validation-for="Description" class="text-danger small"></span>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="EnhancementColumn" class="form-label">Enhancement Column <span class="text-danger">*</span></label>
+                <select asp-for="EnhancementColumn" asp-items="Model.EnhancementColumns" class="form-select">
+                </select>
+                <small class="text-muted">Which column resources of this type appear in</small>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <label asp-for="DisplayOrder" class="form-label">Display Order</label>
+                <input asp-for="DisplayOrder" type="number" class="form-control" />
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="form-check">
+                    <input asp-for="AllowMultiple" class="form-check-input" />
+                    <label asp-for="AllowMultiple" class="form-check-label">Allow Multiple</label>
+                </div>
+                <small class="text-muted">If unchecked, only one resource of this type per enhancement</small>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <div class="form-check">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label">Active</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i>Save
+        </button>
+    </div>
+</form>

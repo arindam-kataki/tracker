@@ -32,14 +32,6 @@
             </a>
         </div>
         
-        <!-- Resources -->
-        <div class="sidebar-section mt-3">
-            <a href="@Url.Action("Index", "Resources")" 
-               class="sidebar-link d-block px-3 py-2 text-decoration-none @(Model.CurrentPage == "resources" ? "active" : "")">
-                <i class="bi bi-people me-2"></i>Resources
-            </a>
-        </div>
-        
         <!-- Reports -->
         <div class="sidebar-section mt-3">
             <a href="@Url.Action("Index", "Reports")" 
@@ -65,6 +57,12 @@
                    class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "serviceareas" ? "active" : "")">
                     <i class="bi bi-diagram-3 me-2"></i>Service Areas
                 </a>
+
+                <a href="@Url.Action("Index", "Resources")" 
+                    class="sidebar-link d-block px-3 py-2 text-decoration-none @(Model.CurrentPage == "resources" ? "active" : "")">
+                    <i class="bi bi-people me-2"></i>Resources
+                </a>
+
             </div>
             
             <!-- Lookups Section (SuperAdmin only) -->
