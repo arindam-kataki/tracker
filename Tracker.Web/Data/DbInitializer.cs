@@ -34,7 +34,31 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
-        
+        // Seed Time Recording Categories (Business Areas)
+        await SeedTimeRecordingCategoriesAsync(context);
+    }
+
+    private static async Task SeedTimeRecordingCategoriesAsync(TrackerDbContext context)
+    {
+        if (await context.TimeRecordingCategories.AnyAsync())
+            return;
+
+        var categories = new List<TimeRecordingCategory>
+        {
+            new() { Id = Guid.NewGuid().ToString(), Name = "Custom Apps", Description = "Custom application development", DisplayOrder = 1, IsActive = true },
+            new() { Id = Guid.NewGuid().ToString(), Name = "SCM", Description = "Supply Chain Management", DisplayOrder = 2, IsActive = true },
+            new() { Id = Guid.NewGuid().ToString(), Name = "ERP", Description = "Enterprise Resource Planning", DisplayOrder = 3, IsActive = true },
+            new() { Id = Guid.NewGuid().ToString(), Name = "MRP", Description = "Material Requirements Planning", DisplayOrder = 4, IsActive = true },
+            new() { Id = Guid.NewGuid().ToString(), Name = "CRM", Description = "Customer Relationship Management", DisplayOrder = 5, IsActive = true },
+            new() { Id = Guid.NewGuid().ToString(), Name = "BI/Analytics", Description = "Business Intelligence & Reporting", DisplayOrder = 6, IsActive = true },
+            new() { Id = Guid.NewGuid().ToString(), Name = "Integration", Description = "API, ETL, system integrations", DisplayOrder = 7, IsActive = true },
+            new() { Id = Guid.NewGuid().ToString(), Name = "Infrastructure", Description = "Servers, networks, cloud", DisplayOrder = 8, IsActive = true },
+            new() { Id = Guid.NewGuid().ToString(), Name = "Security", Description = "Security & compliance work", DisplayOrder = 9, IsActive = true },
+            new() { Id = Guid.NewGuid().ToString(), Name = "Other", Description = "Miscellaneous", DisplayOrder = 10, IsActive = true },
+        };
+
+        context.TimeRecordingCategories.AddRange(categories);
+        await context.SaveChangesAsync();
     }
 
     private static async Task CreateNewTablesIfNeededAsync(TrackerDbContext context)
@@ -48,7 +72,7 @@ public static class DbInitializer
                 "UserId TEXT NOT NULL, " +
                 "ServiceAreaId TEXT NOT NULL, " +
                 "Name TEXT NOT NULL, " +
-                "FilterJson TEXT NOT NULL DEFAULT '{{}}', " +
+                "FilterJson TEXT NOT NULL DEFAULT '{}', " +
                 "IsDefault INTEGER NOT NULL DEFAULT 0, " +
                 "CreatedAt TEXT NOT NULL, " +
                 "ModifiedAt TEXT, " +
@@ -76,43 +100,104 @@ public static class DbInitializer
                 "CREATE UNIQUE INDEX IX_UserColumnPreferences_UserId_ServiceAreaId ON UserColumnPreferences(UserId, ServiceAreaId)");
         }
 
-        // Check if EnhancementSponsors table exists
-        if (!await TableExistsAsync(context, "EnhancementSponsors"))
+        // New tables for Enhancement Details feature
+        
+        // EnhancementNotes table
+        if (!await TableExistsAsync(context, "EnhancementNotes"))
         {
             await context.Database.ExecuteSqlRawAsync(
-                "CREATE TABLE EnhancementSponsors (" +
+                "CREATE TABLE EnhancementNotes (" +
+                "Id TEXT PRIMARY KEY, " +
                 "EnhancementId TEXT NOT NULL, " +
-                "ResourceId TEXT NOT NULL, " +
-                "PRIMARY KEY (EnhancementId, ResourceId), " +
+                "NoteText TEXT NOT NULL, " +
+                "CreatedBy TEXT, " +
+                "CreatedAt TEXT NOT NULL, " +
+                "ModifiedBy TEXT, " +
+                "ModifiedAt TEXT, " +
                 "FOREIGN KEY (EnhancementId) REFERENCES Enhancements(Id) ON DELETE CASCADE, " +
-                "FOREIGN KEY (ResourceId) REFERENCES Resources(Id) ON DELETE CASCADE)");
+                "FOREIGN KEY (CreatedBy) REFERENCES Users(Id) ON DELETE SET NULL)");
+            
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE INDEX IX_EnhancementNotes_EnhancementId ON EnhancementNotes(EnhancementId)");
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE INDEX IX_EnhancementNotes_CreatedAt ON EnhancementNotes(CreatedAt)");
         }
 
-        // Check if EnhancementSpocs table exists
-        if (!await TableExistsAsync(context, "EnhancementSpocs"))
+        // EnhancementAttachments table
+        if (!await TableExistsAsync(context, "EnhancementAttachments"))
         {
             await context.Database.ExecuteSqlRawAsync(
-                "CREATE TABLE EnhancementSpocs (" +
+                "CREATE TABLE EnhancementAttachments (" +
+                "Id TEXT PRIMARY KEY, " +
                 "EnhancementId TEXT NOT NULL, " +
-                "ResourceId TEXT NOT NULL, " +
-                "PRIMARY KEY (EnhancementId, ResourceId), " +
+                "FileName TEXT NOT NULL, " +
+                "StoredFileName TEXT NOT NULL, " +
+                "ContentType TEXT NOT NULL, " +
+                "FileSize INTEGER NOT NULL, " +
+                "StoragePath TEXT NOT NULL, " +
+                "UploadedBy TEXT, " +
+                "UploadedAt TEXT NOT NULL, " +
                 "FOREIGN KEY (EnhancementId) REFERENCES Enhancements(Id) ON DELETE CASCADE, " +
-                "FOREIGN KEY (ResourceId) REFERENCES Resources(Id) ON DELETE CASCADE)");
+                "FOREIGN KEY (UploadedBy) REFERENCES Users(Id) ON DELETE SET NULL)");
+            
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE INDEX IX_EnhancementAttachments_EnhancementId ON EnhancementAttachments(EnhancementId)");
         }
 
-        // Add Type column to Resources if it doesn't exist
-        if (!await ColumnExistsAsync(context, "Resources", "Type"))
+        // TimeRecordingCategories table
+        if (!await TableExistsAsync(context, "TimeRecordingCategories"))
         {
             await context.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE Resources ADD COLUMN Type INTEGER NOT NULL DEFAULT 2"); // Default to Internal
+                "CREATE TABLE TimeRecordingCategories (" +
+                "Id TEXT PRIMARY KEY, " +
+                "Name TEXT NOT NULL, " +
+                "Description TEXT, " +
+                "DisplayOrder INTEGER NOT NULL DEFAULT 0, " +
+                "IsActive INTEGER NOT NULL DEFAULT 1, " +
+                "CreatedAt TEXT NOT NULL)");
+            
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE INDEX IX_TimeRecordingCategories_DisplayOrder ON TimeRecordingCategories(DisplayOrder)");
+        }
+
+        // EnhancementTimeCategories table (junction)
+        if (!await TableExistsAsync(context, "EnhancementTimeCategories"))
+        {
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE EnhancementTimeCategories (" +
+                "EnhancementId TEXT NOT NULL, " +
+                "TimeCategoryId TEXT NOT NULL, " +
+                "DisplayOrder INTEGER NOT NULL DEFAULT 0, " +
+                "PRIMARY KEY (EnhancementId, TimeCategoryId), " +
+                "FOREIGN KEY (EnhancementId) REFERENCES Enhancements(Id) ON DELETE CASCADE, " +
+                "FOREIGN KEY (TimeCategoryId) REFERENCES TimeRecordingCategories(Id) ON DELETE CASCADE)");
+        }
+
+        // EnhancementTimeEntries table
+        if (!await TableExistsAsync(context, "EnhancementTimeEntries"))
+        {
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE EnhancementTimeEntries (" +
+                "Id TEXT PRIMARY KEY, " +
+                "EnhancementId TEXT NOT NULL, " +
+                "PeriodStart TEXT NOT NULL, " +
+                "PeriodEnd TEXT NOT NULL, " +
+                "HoursJson TEXT NOT NULL DEFAULT '{}', " +
+                "Notes TEXT, " +
+                "CreatedBy TEXT, " +
+                "CreatedAt TEXT NOT NULL, " +
+                "ModifiedBy TEXT, " +
+                "ModifiedAt TEXT, " +
+                "FOREIGN KEY (EnhancementId) REFERENCES Enhancements(Id) ON DELETE CASCADE)");
+            
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE INDEX IX_EnhancementTimeEntries_EnhancementId ON EnhancementTimeEntries(EnhancementId)");
         }
     }
 
     private static async Task MigrateResourceTypesAsync(TrackerDbContext context)
     {
         // Migrate old IsClientResource to new Type system
-        // Client resources (IsClientResource = 1) -> Type = 0 (Client)
-        // Non-client resources (IsClientResource = 0) -> Type = 2 (Internal)
         try
         {
             await context.Database.ExecuteSqlRawAsync(
@@ -127,7 +212,8 @@ public static class DbInitializer
     private static async Task<bool> TableExistsAsync(TrackerDbContext context, string tableName)
     {
         var connection = context.Database.GetDbConnection();
-        await connection.OpenAsync();
+        if (connection.State != System.Data.ConnectionState.Open)
+            await connection.OpenAsync();
         
         using var command = connection.CreateCommand();
         command.CommandText = $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{tableName}'";

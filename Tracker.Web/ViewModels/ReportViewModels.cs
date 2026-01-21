@@ -144,12 +144,7 @@ public class NamedReportEditViewModel
     }
 }
 
-public class ServiceAreaOption
-{
-    public string Id { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public bool IsSelected { get; set; }
-}
+
 
 public class ReportColumnOption
 {

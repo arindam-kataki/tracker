@@ -1,0 +1,293 @@
+@model TimeRecordingViewModel
+
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0"><i class="bi bi-clock-history me-1"></i> Time Recording</h6>
+        @if (Model.SelectedCategories.Any())
+        {
+            <button type="button" class="btn btn-primary btn-sm" id="addTimeEntryBtn">
+                <i class="bi bi-plus-lg me-1"></i> Add Time Entry
+            </button>
+        }
+    </div>
+
+    @if (!Model.SelectedCategories.Any())
+    {
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            No time recording categories selected. Go to the <strong>Ticket Details</strong> tab and select business areas in the "Time Recording Categories" section.
+        </div>
+    }
+    else
+    {
+        <!-- Add/Edit Time Entry Form (hidden by default) -->
+        <div id="timeEntryFormContainer" class="card mb-3" style="display: none;">
+            <div class="card-body">
+                <form id="timeEntryForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="Id" id="timeEntryId" value="" />
+                    <input type="hidden" name="EnhancementId" value="@Model.EnhancementId" />
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Period Start <span class="text-danger">*</span></label>
+                            <input type="date" name="PeriodStart" id="periodStart" class="form-control" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Period End <span class="text-danger">*</span></label>
+                            <input type="date" name="PeriodEnd" id="periodEnd" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Notes</label>
+                            <input type="text" name="Notes" id="timeEntryNotes" class="form-control" placeholder="Optional notes..." />
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        @foreach (var cat in Model.SelectedCategories)
+                        {
+                            <div class="col-md-2 col-sm-3 col-4">
+                                <label class="form-label small">@cat.Name</label>
+                                <input type="number" name="Hours_@cat.Id" id="hours_@cat.Id" 
+                                       class="form-control form-control-sm hours-input" 
+                                       step="0.5" min="0" placeholder="0" />
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-check-lg me-1"></i> Save Entry
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="cancelTimeEntryBtn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        @if (!Model.Entries.Any())
+        {
+            <div class="alert alert-light text-center py-4">
+                <i class="bi bi-calendar3 display-6 text-muted"></i>
+                <p class="mb-0 mt-2 text-muted">No time entries yet. Add entries to track hours by business area.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Period</th>
+                            @foreach (var cat in Model.SelectedCategories)
+                            {
+                                <th class="text-end" style="min-width: 70px;">@cat.Name</th>
+                            }
+                            <th class="text-end">Total</th>
+                            <th>Notes</th>
+                            <th style="width: 80px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in Model.Entries)
+                        {
+                            <tr data-id="@entry.Id">
+                                <td class="text-nowrap">@entry.PeriodDisplay</td>
+                                @foreach (var cat in Model.SelectedCategories)
+                                {
+                                    var hours = entry.Hours.ContainsKey(cat.Id) ? entry.Hours[cat.Id] : 0;
+                                    <td class="text-end @(hours > 0 ? "" : "text-muted")">
+                                        @(hours > 0 ? hours.ToString("0.#") : "-")
+                                    </td>
+                                }
+                                <td class="text-end fw-bold">@entry.TotalHours.ToString("0.#")</td>
+                                <td class="text-truncate" style="max-width: 150px;" title="@entry.Notes">
+                                    @entry.Notes
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary edit-time-entry-btn" 
+                                            data-id="@entry.Id" 
+                                            data-start="@entry.PeriodStart.ToString("yyyy-MM-dd")"
+                                            data-end="@entry.PeriodEnd.ToString("yyyy-MM-dd")"
+                                            data-notes="@entry.Notes"
+                                            data-hours="@System.Text.Json.JsonSerializer.Serialize(entry.Hours)"
+                                            title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger delete-time-entry-btn" 
+                                            data-id="@entry.Id" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td>Totals</td>
+                            @foreach (var cat in Model.SelectedCategories)
+                            {
+                                var total = Model.TotalsByCategory.ContainsKey(cat.Id) ? Model.TotalsByCategory[cat.Id] : 0;
+                                <td class="text-end">@total.ToString("0.#")</td>
+                            }
+                            <td class="text-end text-primary">@Model.GrandTotal.ToString("0.#")</td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+    }
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteTimeEntryModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Time Entry</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Delete this time entry?</p>
+                <p class="text-muted small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteTimeEntryBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var formContainer = document.getElementById('timeEntryFormContainer');
+    var form = document.getElementById('timeEntryForm');
+    if (!form) return;
+    
+    var entryIdInput = document.getElementById('timeEntryId');
+    var periodStartInput = document.getElementById('periodStart');
+    var periodEndInput = document.getElementById('periodEnd');
+    var notesInput = document.getElementById('timeEntryNotes');
+    var deleteEntryId = null;
+    
+    var categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SelectedCategories.Select(c => c.Id)));
+    
+    function clearForm() {
+        entryIdInput.value = '';
+        periodStartInput.value = '';
+        periodEndInput.value = '';
+        notesInput.value = '';
+        categories.forEach(function(catId) {
+            var input = document.getElementById('hours_' + catId);
+            if (input) input.value = '';
+        });
+    }
+    
+    // Show add form
+    var addBtn = document.getElementById('addTimeEntryBtn');
+    if (addBtn) {
+        addBtn.addEventListener('click', function() {
+            clearForm();
+            formContainer.style.display = 'block';
+            periodStartInput.focus();
+        });
+    }
+    
+    // Cancel
+    document.getElementById('cancelTimeEntryBtn').addEventListener('click', function() {
+        formContainer.style.display = 'none';
+    });
+    
+    // Edit buttons
+    document.querySelectorAll('.edit-time-entry-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            clearForm();
+            entryIdInput.value = this.dataset.id;
+            periodStartInput.value = this.dataset.start;
+            periodEndInput.value = this.dataset.end;
+            notesInput.value = this.dataset.notes || '';
+            
+            var hours = JSON.parse(this.dataset.hours || '{}');
+            for (var catId in hours) {
+                var input = document.getElementById('hours_' + catId);
+                if (input) input.value = hours[catId] || '';
+            }
+            
+            formContainer.style.display = 'block';
+            window.scrollTo({ top: formContainer.offsetTop - 100, behavior: 'smooth' });
+        });
+    });
+    
+    // Save form
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        var hours = {};
+        categories.forEach(function(catId) {
+            var input = document.getElementById('hours_' + catId);
+            if (input && input.value) {
+                hours[catId] = parseFloat(input.value) || 0;
+            }
+        });
+        
+        var data = {
+            id: entryIdInput.value || null,
+            enhancementId: '@Model.EnhancementId',
+            periodStart: periodStartInput.value,
+            periodEnd: periodEndInput.value,
+            notes: notesInput.value,
+            hours: hours
+        };
+        
+        fetch('@Url.Action("SaveTimeEntry", "Enhancements")', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': antiForgeryToken 
+            },
+            body: JSON.stringify(data)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(result) {
+            if (result.success) {
+                location.reload();
+            } else {
+                alert(result.message || 'Save failed');
+            }
+        });
+    });
+    
+    // Delete buttons
+    document.querySelectorAll('.delete-time-entry-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            deleteEntryId = this.dataset.id;
+            new bootstrap.Modal(document.getElementById('deleteTimeEntryModal')).show();
+        });
+    });
+    
+    // Confirm delete
+    document.getElementById('confirmDeleteTimeEntryBtn').addEventListener('click', function() {
+        if (!deleteEntryId) return;
+        
+        fetch('@Url.Action("DeleteTimeEntry", "Enhancements")', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': antiForgeryToken 
+            },
+            body: JSON.stringify({ id: deleteEntryId })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(result) {
+            if (result.success) {
+                location.reload();
+            } else {
+                alert(result.message || 'Delete failed');
+            }
+        });
+    });
+})();
+</script>

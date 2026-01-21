@@ -1,0 +1,144 @@
+@model EnhancementDetailsViewModel
+@{
+    ViewData["Title"] = Model.IsNew ? "New Enhancement" : $"Enhancement - {Model.TicketDetails.WorkId}";
+}
+
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Enhancements", new { serviceAreaId = Model.ServiceAreaId })">@Model.ServiceAreaName</a></li>
+                    <li class="breadcrumb-item active">@(Model.IsNew ? "New" : Model.TicketDetails.WorkId)</li>
+                </ol>
+            </nav>
+            <h4 class="mb-0">
+                <i class="bi bi-clipboard-data me-2"></i>
+                @(Model.IsNew ? "New Enhancement" : Model.TicketDetails.WorkId)
+                @if (!string.IsNullOrEmpty(Model.TicketDetails.Status))
+                {
+                    <span class="badge @GetStatusBadgeClass(Model.TicketDetails.Status) ms-2">@Model.TicketDetails.Status</span>
+                }
+            </h4>
+        </div>
+        <div>
+            <a href="@Url.Action("Index", "Enhancements", new { serviceAreaId = Model.ServiceAreaId })" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs" id="enhancementTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(Model.ActiveTab == "details" ? "active" : "")" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab">
+                <i class="bi bi-card-text me-1"></i> Ticket Details
+            </button>
+        </li>
+        @if (!Model.IsNew)
+        {
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(Model.ActiveTab == "attachments" ? "active" : "")" id="attachments-tab" data-bs-toggle="tab" data-bs-target="#attachments" type="button" role="tab">
+                    <i class="bi bi-paperclip me-1"></i> Attachments
+                    @if (Model.Attachments.Any())
+                    {
+                        <span class="badge bg-secondary ms-1">@Model.Attachments.Count</span>
+                    }
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(Model.ActiveTab == "notes" ? "active" : "")" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab">
+                    <i class="bi bi-chat-left-text me-1"></i> Notes
+                    @if (Model.Notes.Any())
+                    {
+                        <span class="badge bg-secondary ms-1">@Model.Notes.Count</span>
+                    }
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(Model.ActiveTab == "sharing" ? "active" : "")" id="sharing-tab" data-bs-toggle="tab" data-bs-target="#sharing" type="button" role="tab">
+                    <i class="bi bi-share me-1"></i> Sharing
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(Model.ActiveTab == "timerecording" ? "active" : "")" id="timerecording-tab" data-bs-toggle="tab" data-bs-target="#timerecording" type="button" role="tab">
+                    <i class="bi bi-clock-history me-1"></i> Time Recording
+                    @if (Model.TimeRecording.GrandTotal > 0)
+                    {
+                        <span class="badge bg-info ms-1">@Model.TimeRecording.GrandTotal.ToString("0.#")h</span>
+                    }
+                </button>
+            </li>
+        }
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content border border-top-0 rounded-bottom bg-white p-4" id="enhancementTabContent">
+        <!-- Tab 1: Ticket Details -->
+        <div class="tab-pane fade @(Model.ActiveTab == "details" ? "show active" : "")" id="details" role="tabpanel">
+            @await Html.PartialAsync("_TicketDetails", Model.TicketDetails)
+        </div>
+
+        @if (!Model.IsNew)
+        {
+            <!-- Tab 2: Attachments -->
+            <div class="tab-pane fade @(Model.ActiveTab == "attachments" ? "show active" : "")" id="attachments" role="tabpanel">
+                @await Html.PartialAsync("_Attachments", Model)
+            </div>
+
+            <!-- Tab 3: Notes -->
+            <div class="tab-pane fade @(Model.ActiveTab == "notes" ? "show active" : "")" id="notes" role="tabpanel">
+                @await Html.PartialAsync("_Notes", Model)
+            </div>
+
+            <!-- Tab 4: Sharing -->
+            <div class="tab-pane fade @(Model.ActiveTab == "sharing" ? "show active" : "")" id="sharing" role="tabpanel">
+                @await Html.PartialAsync("_Sharing", Model.Sharing)
+            </div>
+
+            <!-- Tab 5: Time Recording -->
+            <div class="tab-pane fade @(Model.ActiveTab == "timerecording" ? "show active" : "")" id="timerecording" role="tabpanel">
+                @await Html.PartialAsync("_TimeRecording", Model.TimeRecording)
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    var enhancementId = '@Model.Id';
+    var serviceAreaId = '@Model.ServiceAreaId';
+    var antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    
+    // Restore active tab from URL hash
+    var hash = window.location.hash;
+    if (hash) {
+        var tabTrigger = document.querySelector('[data-bs-target="' + hash + '"]');
+        if (tabTrigger) {
+            new bootstrap.Tab(tabTrigger).show();
+        }
+    }
+    
+    // Update URL hash when tab changes
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tab) {
+        tab.addEventListener('shown.bs.tab', function(e) {
+            history.replaceState(null, null, e.target.dataset.bsTarget);
+        });
+    });
+</script>
+}
+
+@functions {
+    string GetStatusBadgeClass(string? status)
+    {
+        return status?.ToLower() switch
+        {
+            "new" => "bg-primary",
+            "in progress" => "bg-info",
+            "on hold" => "bg-warning text-dark",
+            "completed" => "bg-success",
+            "cancelled" => "bg-secondary",
+            _ => "bg-secondary"
+        };
+    }
+}

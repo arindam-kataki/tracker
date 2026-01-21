@@ -1,0 +1,199 @@
+@model EnhancementDetailsViewModel
+
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0"><i class="bi bi-chat-left-text me-1"></i> Notes History</h6>
+        <button type="button" class="btn btn-primary btn-sm" id="addNoteBtn">
+            <i class="bi bi-plus-lg me-1"></i> Add Note
+        </button>
+    </div>
+
+    <!-- Add/Edit Note Form (hidden by default) -->
+    <div id="noteFormContainer" class="card mb-3" style="display: none;">
+        <div class="card-body">
+            <form id="noteForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="noteId" value="" />
+                <input type="hidden" name="EnhancementId" value="@Model.Id" />
+                <div class="mb-3">
+                    <label class="form-label">Note</label>
+                    <textarea name="NoteText" id="noteText" class="form-control" rows="3" required placeholder="Enter your note..."></textarea>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-check-lg me-1"></i> Save
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="cancelNoteBtn">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (!Model.Notes.Any())
+    {
+        <div class="alert alert-light text-center py-4">
+            <i class="bi bi-chat-square-text display-6 text-muted"></i>
+            <p class="mb-0 mt-2 text-muted">No notes yet. Add a note to track important information.</p>
+        </div>
+    }
+    else
+    {
+        <div class="notes-timeline">
+            @foreach (var note in Model.Notes)
+            {
+                <div class="card mb-2 note-card" data-id="@note.Id">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="note-text mb-1" style="white-space: pre-wrap;">@note.NoteText</div>
+                                <small class="text-muted">
+                                    <i class="bi bi-person me-1"></i>@note.CreatedByName
+                                    <i class="bi bi-clock ms-2 me-1"></i>@note.CreatedAt.ToString("g")
+                                    @if (note.IsEdited)
+                                    {
+                                        <span class="ms-2 fst-italic">(edited @note.ModifiedAt?.ToString("g"))</span>
+                                    }
+                                </small>
+                            </div>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary edit-note-btn" 
+                                        data-id="@note.Id" data-text="@note.NoteText" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger delete-note-btn" 
+                                        data-id="@note.Id" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteNoteModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Note</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Delete this note?</p>
+                <p class="text-muted small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteNoteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var noteFormContainer = document.getElementById('noteFormContainer');
+    var noteForm = document.getElementById('noteForm');
+    var noteIdInput = document.getElementById('noteId');
+    var noteTextInput = document.getElementById('noteText');
+    var deleteNoteId = null;
+    
+    // Show add form
+    document.getElementById('addNoteBtn').addEventListener('click', function() {
+        noteIdInput.value = '';
+        noteTextInput.value = '';
+        noteFormContainer.style.display = 'block';
+        noteTextInput.focus();
+    });
+    
+    // Cancel
+    document.getElementById('cancelNoteBtn').addEventListener('click', function() {
+        noteFormContainer.style.display = 'none';
+    });
+    
+    // Edit buttons
+    document.querySelectorAll('.edit-note-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            noteIdInput.value = this.dataset.id;
+            noteTextInput.value = this.dataset.text;
+            noteFormContainer.style.display = 'block';
+            noteTextInput.focus();
+            window.scrollTo({ top: noteFormContainer.offsetTop - 100, behavior: 'smooth' });
+        });
+    });
+    
+    // Save form
+    noteForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        var data = {
+            id: noteIdInput.value || null,
+            enhancementId: '@Model.Id',
+            noteText: noteTextInput.value
+        };
+        
+        fetch('@Url.Action("SaveNote", "Enhancements")', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': antiForgeryToken 
+            },
+            body: JSON.stringify(data)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(result) {
+            if (result.success) {
+                location.reload();
+            } else {
+                alert(result.message || 'Save failed');
+            }
+        });
+    });
+    
+    // Delete buttons
+    document.querySelectorAll('.delete-note-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            deleteNoteId = this.dataset.id;
+            new bootstrap.Modal(document.getElementById('deleteNoteModal')).show();
+        });
+    });
+    
+    // Confirm delete
+    document.getElementById('confirmDeleteNoteBtn').addEventListener('click', function() {
+        if (!deleteNoteId) return;
+        
+        fetch('@Url.Action("DeleteNote", "Enhancements")', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': antiForgeryToken 
+            },
+            body: JSON.stringify({ id: deleteNoteId })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(result) {
+            if (result.success) {
+                location.reload();
+            } else {
+                alert(result.message || 'Delete failed');
+            }
+        });
+    });
+})();
+</script>
+
+<style>
+.notes-timeline .note-card {
+    border-left: 3px solid #dee2e6;
+    transition: border-color 0.2s;
+}
+.notes-timeline .note-card:hover {
+    border-left-color: #0d6efd;
+}
+.note-text {
+    font-size: 0.95rem;
+}
+</style>

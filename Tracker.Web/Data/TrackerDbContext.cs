@@ -9,6 +9,7 @@ public class TrackerDbContext : DbContext
     {
     }
 
+    // Existing DbSets
     public DbSet<User> Users => Set<User>();
     public DbSet<ServiceArea> ServiceAreas => Set<ServiceArea>();
     public DbSet<UserServiceArea> UserServiceAreas => Set<UserServiceArea>();
@@ -27,6 +28,13 @@ public class TrackerDbContext : DbContext
     public DbSet<ResourceSkill> ResourceSkills => Set<ResourceSkill>();
     public DbSet<ResourceTypeLookup> ResourceTypeLookups => Set<ResourceTypeLookup>();
     public DbSet<EnhancementSkill> EnhancementSkills => Set<EnhancementSkill>();
+    
+    // New DbSets for Enhancement Details
+    public DbSet<EnhancementNote> EnhancementNotes => Set<EnhancementNote>();
+    public DbSet<EnhancementAttachment> EnhancementAttachments => Set<EnhancementAttachment>();
+    public DbSet<TimeRecordingCategory> TimeRecordingCategories => Set<TimeRecordingCategory>();
+    public DbSet<EnhancementTimeCategory> EnhancementTimeCategories => Set<EnhancementTimeCategory>();
+    public DbSet<EnhancementTimeEntry> EnhancementTimeEntries => Set<EnhancementTimeEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -96,6 +104,8 @@ public class TrackerDbContext : DbContext
             entity.Ignore(e => e.SponsorsDisplay);
             entity.Ignore(e => e.SpocsDisplay);
             entity.Ignore(e => e.ResourcesDisplay);
+            entity.Ignore(e => e.SkillsDisplay);
+            entity.Ignore(e => e.TotalRecordedHours);
 
             entity.HasIndex(e => e.WorkId);
             entity.HasIndex(e => e.ServiceAreaId);
@@ -218,7 +228,7 @@ public class TrackerDbContext : DbContext
         modelBuilder.Entity<UserColumnPreference>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.ColumnsJson).IsRequired();
+            entity.Property(e => e.ColumnsJson).IsRequired().HasDefaultValue("[]");
 
             entity.HasIndex(e => new { e.UserId, e.ServiceAreaId }).IsUnique();
 
@@ -290,12 +300,107 @@ public class TrackerDbContext : DbContext
         {
             entity.HasKey(e => new { e.EnhancementId, e.SkillId });
             entity.HasOne(e => e.Enhancement)
-                .WithMany()
+                .WithMany(e => e.Skills)
                 .HasForeignKey(e => e.EnhancementId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Skill)
                 .WithMany(s => s.EnhancementSkills)
                 .HasForeignKey(e => e.SkillId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ============================================
+        // NEW: Enhancement Notes
+        // ============================================
+        modelBuilder.Entity<EnhancementNote>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.NoteText).IsRequired();
+            
+            entity.HasIndex(e => e.EnhancementId);
+            entity.HasIndex(e => e.CreatedAt);
+
+            entity.HasOne(e => e.Enhancement)
+                .WithMany(e => e.NoteHistory)
+                .HasForeignKey(e => e.EnhancementId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ============================================
+        // NEW: Enhancement Attachments
+        // ============================================
+        modelBuilder.Entity<EnhancementAttachment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.StoredFileName).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.StoragePath).IsRequired().HasMaxLength(500);
+            
+            entity.HasIndex(e => e.EnhancementId);
+            entity.HasIndex(e => e.UploadedAt);
+
+            entity.HasOne(e => e.Enhancement)
+                .WithMany(e => e.Attachments)
+                .HasForeignKey(e => e.EnhancementId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.UploadedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.UploadedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ============================================
+        // NEW: Time Recording Categories (Business Areas)
+        // ============================================
+        modelBuilder.Entity<TimeRecordingCategory>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            
+            entity.HasIndex(e => e.DisplayOrder);
+            entity.HasIndex(e => e.IsActive);
+        });
+
+        // ============================================
+        // NEW: Enhancement Time Categories (junction)
+        // ============================================
+        modelBuilder.Entity<EnhancementTimeCategory>(entity =>
+        {
+            entity.HasKey(e => new { e.EnhancementId, e.TimeCategoryId });
+
+            entity.HasOne(e => e.Enhancement)
+                .WithMany(e => e.TimeCategories)
+                .HasForeignKey(e => e.EnhancementId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.TimeCategory)
+                .WithMany(tc => tc.EnhancementTimeCategories)
+                .HasForeignKey(e => e.TimeCategoryId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ============================================
+        // NEW: Enhancement Time Entries
+        // ============================================
+        modelBuilder.Entity<EnhancementTimeEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.HoursJson).IsRequired().HasDefaultValue("{}");
+            
+            entity.HasIndex(e => e.EnhancementId);
+            entity.HasIndex(e => new { e.EnhancementId, e.PeriodStart, e.PeriodEnd });
+
+            entity.HasOne(e => e.Enhancement)
+                .WithMany(e => e.TimeEntries)
+                .HasForeignKey(e => e.EnhancementId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

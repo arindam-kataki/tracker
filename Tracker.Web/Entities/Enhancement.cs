@@ -30,7 +30,7 @@ public class Enhancement
     public string? InfStatus { get; set; }
     public string? InfServiceLine { get; set; }
     
-    // Weekly time allocations
+    // Weekly time allocations (legacy - keeping for backward compatibility)
     public decimal? TimeW1 { get; set; }
     public decimal? TimeW2 { get; set; }
     public decimal? TimeW3 { get; set; }
@@ -55,13 +55,28 @@ public class Enhancement
     public virtual ServiceArea ServiceArea { get; set; } = null!;
     public virtual EstimationBreakdown? EstimationBreakdown { get; set; }
     
-    // New resource collections
+    // Resource collections
     public virtual ICollection<EnhancementSponsor> Sponsors { get; set; } = new List<EnhancementSponsor>();
     public virtual ICollection<EnhancementSpoc> Spocs { get; set; } = new List<EnhancementSpoc>();
     public virtual ICollection<EnhancementResource> Resources { get; set; } = new List<EnhancementResource>();
     
     // Legacy (keep for backward compatibility)
     public virtual ICollection<EnhancementContact> Contacts { get; set; } = new List<EnhancementContact>();
+    
+    // Skills
+    public virtual ICollection<EnhancementSkill> Skills { get; set; } = new List<EnhancementSkill>();
+    
+    // New: Notes history
+    public virtual ICollection<EnhancementNote> NoteHistory { get; set; } = new List<EnhancementNote>();
+    
+    // New: Attachments
+    public virtual ICollection<EnhancementAttachment> Attachments { get; set; } = new List<EnhancementAttachment>();
+    
+    // New: Time recording categories (selected business areas)
+    public virtual ICollection<EnhancementTimeCategory> TimeCategories { get; set; } = new List<EnhancementTimeCategory>();
+    
+    // New: Time recording entries
+    public virtual ICollection<EnhancementTimeEntry> TimeEntries { get; set; } = new List<EnhancementTimeEntry>();
     
     // Helper properties for display (CSV format)
     public string SponsorsDisplay => Sponsors?.Any() == true 
@@ -75,4 +90,13 @@ public class Enhancement
     public string ResourcesDisplay => Resources?.Any() == true 
         ? string.Join(", ", Resources.Select(r => r.Resource?.Name).Where(n => n != null)) 
         : string.Empty;
+    
+    public string SkillsDisplay => Skills?.Any() == true
+        ? string.Join(", ", Skills.Select(s => s.Skill?.Name).Where(n => n != null))
+        : string.Empty;
+    
+    /// <summary>
+    /// Total hours from time recording entries.
+    /// </summary>
+    public decimal TotalRecordedHours => TimeEntries?.Sum(te => te.TotalHours) ?? 0;
 }
