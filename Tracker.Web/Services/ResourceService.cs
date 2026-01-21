@@ -1,99 +1,181 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Tracker.Web.Data;
 using Tracker.Web.Entities;
+using Tracker.Web.ViewModels;
 using Tracker.Web.Services.Interfaces;
 
 namespace Tracker.Web.Services;
 
 public class ResourceService : IResourceService
 {
-    private readonly TrackerDbContext _db;
+    private readonly TrackerDbContext _context;
 
-    public ResourceService(TrackerDbContext db)
+    public ResourceService(TrackerDbContext context)
     {
-        _db = db;
+        _context = context;
     }
 
-    public async Task<List<Resource>> GetAllAsync(ResourceType? type = null, bool? isActive = null)
+    public async Task<List<ResourceListItem>> GetAllAsync(string? search = null, string? typeFilter = null)
     {
-        var query = _db.Resources.AsQueryable();
+        var query = _context.Resources
+            .Include(r => r.ResourceType)
+            .Include(r => r.Skills)
+                .ThenInclude(rs => rs.Skill)
+            .AsQueryable();
 
-        if (type.HasValue)
-            query = query.Where(r => r.Type == type.Value);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            search = search.ToLower();
+            query = query.Where(r => r.Name.ToLower().Contains(search) || 
+                                     (r.Email != null && r.Email.ToLower().Contains(search)));
+        }
 
-        if (isActive.HasValue)
-            query = query.Where(r => r.IsActive == isActive.Value);
+        if (!string.IsNullOrWhiteSpace(typeFilter))
+        {
+            query = query.Where(r => r.ResourceTypeId == typeFilter);
+        }
 
-        return await query.OrderBy(r => r.Name).ToListAsync();
+        return await query
+            .OrderBy(r => r.Name)
+            .Select(r => new ResourceListItem
+            {
+                Id = r.Id,
+                Name = r.Name,
+                Email = r.Email,
+                ResourceTypeName = r.ResourceType != null ? r.ResourceType.Name : "Unknown",
+                ResourceTypeId = r.ResourceTypeId,
+                SkillsDisplay = string.Join(", ", r.Skills.Select(s => s.Skill.Name)),
+                IsActive = r.IsActive
+            })
+            .ToListAsync();
     }
 
     public async Task<Resource?> GetByIdAsync(string id)
     {
-        return await _db.Resources.FindAsync(id);
+        return await _context.Resources
+            .Include(r => r.ResourceType)
+            .Include(r => r.Skills)
+                .ThenInclude(rs => rs.Skill)
+            .FirstOrDefaultAsync(r => r.Id == id);
     }
 
-    public async Task<List<Resource>> GetByTypeAsync(ResourceType type)
-    {
-        return await _db.Resources
-            .Where(r => r.Type == type && r.IsActive)
-            .OrderBy(r => r.Name)
-            .ToListAsync();
-    }
-
-    public async Task<List<Resource>> GetClientResourcesAsync()
-    {
-        return await GetByTypeAsync(ResourceType.Client);
-    }
-
-    public async Task<List<Resource>> GetSpocResourcesAsync()
-    {
-        return await GetByTypeAsync(ResourceType.SPOC);
-    }
-
-    public async Task<List<Resource>> GetInternalResourcesAsync()
-    {
-        return await GetByTypeAsync(ResourceType.Internal);
-    }
-
-    public async Task<Resource> CreateAsync(string name, string? email, ResourceType type)
+    public async Task<Resource> CreateAsync(string name, string? email, string? resourceTypeId, List<string>? skillIds = null)
     {
         var resource = new Resource
         {
             Name = name,
             Email = email,
-            Type = type,
-            IsActive = true
+            ResourceTypeId = resourceTypeId
         };
 
-        _db.Resources.Add(resource);
-        await _db.SaveChangesAsync();
+        _context.Resources.Add(resource);
+        await _context.SaveChangesAsync();
+
+        // Add skills
+        if (skillIds?.Any() == true)
+        {
+            foreach (var skillId in skillIds)
+            {
+                _context.ResourceSkills.Add(new ResourceSkill
+                {
+                    ResourceId = resource.Id,
+                    SkillId = skillId
+                });
+            }
+            await _context.SaveChangesAsync();
+        }
 
         return resource;
     }
 
-    public async Task<Resource?> UpdateAsync(string id, string name, string? email, ResourceType type, bool isActive)
+    public async Task UpdateAsync(string id, string name, string? email, string? resourceTypeId, bool isActive, List<string>? skillIds = null)
     {
-        var resource = await _db.Resources.FindAsync(id);
-        if (resource == null)
-            return null;
+        var resource = await _context.Resources
+            .Include(r => r.Skills)
+            .FirstOrDefaultAsync(r => r.Id == id);
+            
+        if (resource == null) return;
 
         resource.Name = name;
         resource.Email = email;
-        resource.Type = type;
+        resource.ResourceTypeId = resourceTypeId;
         resource.IsActive = isActive;
 
-        await _db.SaveChangesAsync();
-        return resource;
+        // Update skills - remove all and re-add
+        _context.ResourceSkills.RemoveRange(resource.Skills);
+        
+        if (skillIds?.Any() == true)
+        {
+            foreach (var skillId in skillIds)
+            {
+                _context.ResourceSkills.Add(new ResourceSkill
+                {
+                    ResourceId = resource.Id,
+                    SkillId = skillId
+                });
+            }
+        }
+
+        await _context.SaveChangesAsync();
     }
 
-    public async Task<bool> DeleteAsync(string id)
+    public async Task DeleteAsync(string id)
     {
-        var resource = await _db.Resources.FindAsync(id);
-        if (resource == null)
-            return false;
+        var resource = await _context.Resources.FindAsync(id);
+        if (resource != null)
+        {
+            _context.Resources.Remove(resource);
+            await _context.SaveChangesAsync();
+        }
+    }
 
-        _db.Resources.Remove(resource);
-        await _db.SaveChangesAsync();
-        return true;
+    public async Task<List<Resource>> GetActiveAsync()
+    {
+        return await _context.Resources
+            .Include(r => r.ResourceType)
+            .Where(r => r.IsActive)
+            .OrderBy(r => r.Name)
+            .ToListAsync();
+    }
+
+    public async Task<List<SelectListItem>> GetResourceTypesSelectListAsync()
+    {
+        return await _context.ResourceTypeLookups
+            .Where(rt => rt.IsActive)
+            .OrderBy(rt => rt.DisplayOrder)
+            .ThenBy(rt => rt.Name)
+            .Select(rt => new SelectListItem
+            {
+                Value = rt.Id,
+                Text = rt.Name
+            })
+            .ToListAsync();
+    }
+
+    public async Task<List<SelectListItem>> GetSkillsSelectListAsync(List<string>? selectedIds = null)
+    {
+        var skills = await _context.Skills
+            .Include(s => s.ServiceArea)
+            .Where(s => s.IsActive)
+            .OrderBy(s => s.ServiceArea.Name)
+            .ThenBy(s => s.Name)
+            .ToListAsync();
+
+        return skills.Select(s => new SelectListItem
+        {
+            Value = s.Id,
+            Text = s.Name,
+            Group = new SelectListGroup { Name = s.ServiceArea.Name },
+            Selected = selectedIds?.Contains(s.Id) ?? false
+        }).ToList();
+    }
+
+    public async Task<List<string>> GetResourceSkillIdsAsync(string resourceId)
+    {
+        return await _context.ResourceSkills
+            .Where(rs => rs.ResourceId == resourceId)
+            .Select(rs => rs.SkillId)
+            .ToListAsync();
     }
 }

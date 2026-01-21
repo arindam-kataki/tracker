@@ -1,5 +1,4 @@
-@model EditResourceViewModel
-@using Tracker.Web.Entities
+@model Tracker.Web.ViewModels.EditResourceViewModel
 
 <div class="modal-header">
     <h5 class="modal-title">
@@ -9,7 +8,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 </div>
 
-<form id="editResourceForm" asp-action="Save" asp-controller="Resources">
+<form id="editResourceForm">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="Id" />
     
@@ -27,34 +26,41 @@
         </div>
         
         <div class="mb-3">
-            <label asp-for="Type" class="form-label">Resource Type</label>
-            <select asp-for="Type" class="form-select">
-                <option value="@ResourceType.Client">Client (Sponsor)</option>
-                <option value="@ResourceType.SPOC">Infy SPOC</option>
-                <option value="@ResourceType.Internal">Infy Internal</option>
+            <label asp-for="ResourceTypeId" class="form-label">Resource Type <span class="text-danger">*</span></label>
+            <select asp-for="ResourceTypeId" asp-items="Model.ResourceTypes" class="form-select">
+                <option value="">-- Select Type --</option>
             </select>
-            <small class="text-muted">
-                <strong>Client:</strong> Client-side sponsors/stakeholders &bull;
-                <strong>SPOC:</strong> Infy Single Point of Contact &bull;
-                <strong>Internal:</strong> Infy team members
-            </small>
+            <span asp-validation-for="ResourceTypeId" class="text-danger small"></span>
         </div>
         
-        @if (!string.IsNullOrEmpty(Model.Id))
-        {
-            <div class="mb-3">
-                <div class="form-check">
-                    <input asp-for="IsActive" class="form-check-input" />
-                    <label asp-for="IsActive" class="form-check-label">Active</label>
-                </div>
+        <div class="mb-3">
+            <label class="form-label">Skills</label>
+            <select asp-for="SkillIds" class="form-select" multiple size="5">
+                @foreach (var group in Model.AvailableSkills.GroupBy(s => s.Group))
+                {
+                    <optgroup label="@group.Key">
+                        @foreach (var skill in group)
+                        {
+                            <option value="@skill.Value" selected="@skill.Selected">@skill.Text</option>
+                        }
+                    </optgroup>
+                }
+            </select>
+            <small class="text-muted">Hold Ctrl/Cmd to select multiple skills</small>
+        </div>
+        
+        <div class="mb-3">
+            <div class="form-check">
+                <input asp-for="IsActive" class="form-check-input" />
+                <label asp-for="IsActive" class="form-check-label">Active</label>
             </div>
-        }
+        </div>
     </div>
     
     <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="submit" class="btn btn-primary">
-            <i class="bi bi-check-lg me-1"></i> Save
+            <i class="bi bi-check-lg me-1"></i>Save
         </button>
     </div>
 </form>

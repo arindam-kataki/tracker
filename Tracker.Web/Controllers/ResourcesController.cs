@@ -1,62 +1,56 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Tracker.Web.Entities;
-using Tracker.Web.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Tracker.Web.Services;
 using Tracker.Web.ViewModels;
+using Tracker.Web.Services.Interfaces;
 
 namespace Tracker.Web.Controllers;
 
 [Authorize]
+[Route("resources")]
 public class ResourcesController : BaseController
 {
     private readonly IResourceService _resourceService;
     private readonly ILogger<ResourcesController> _logger;
 
     public ResourcesController(
-        IAuthService authService,
         IResourceService resourceService,
-        ILogger<ResourcesController> logger) : base(authService)
+        ILogger<ResourcesController> logger)
     {
         _resourceService = resourceService;
         _logger = logger;
     }
 
+    [HttpGet]
     public async Task<IActionResult> Index(string? search, string? type)
     {
-        ResourceType? typeFilter = type?.ToLower() switch
-        {
-            "client" => ResourceType.Client,
-            "spoc" => ResourceType.SPOC,
-            "internal" => ResourceType.Internal,
-            _ => null
-        };
-
-        var resources = await _resourceService.GetAllAsync(typeFilter);
-
-        if (!string.IsNullOrEmpty(search))
-        {
-            var term = search.ToLower();
-            resources = resources
-                .Where(r => r.Name.ToLower().Contains(term) || 
-                           (r.Email?.ToLower().Contains(term) ?? false))
-                .ToList();
-        }
+        var resources = await _resourceService.GetAllAsync(search, type);
+        var resourceTypes = await _resourceService.GetResourceTypesSelectListAsync();
 
         var model = new ResourcesViewModel
         {
             Resources = resources,
             SearchTerm = search,
-            TypeFilter = type
+            TypeFilter = type,
+            ResourceTypes = resourceTypes
         };
 
         ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "resources");
         return View("Resources", model);
     }
 
-    [HttpGet]
+    [HttpGet("edit")]
     public async Task<IActionResult> Edit(string? id)
     {
-        var model = new EditResourceViewModel();
+        var resourceTypes = await _resourceService.GetResourceTypesSelectListAsync();
+        var allSkills = await _resourceService.GetSkillsSelectListAsync();
+        
+        var model = new EditResourceViewModel
+        {
+            ResourceTypes = resourceTypes,
+            AvailableSkills = allSkills
+        };
 
         if (!string.IsNullOrEmpty(id))
         {
@@ -64,41 +58,49 @@ public class ResourcesController : BaseController
             if (resource == null)
                 return NotFound();
 
+            var selectedSkillIds = await _resourceService.GetResourceSkillIdsAsync(id);
+
             model.Id = resource.Id;
             model.Name = resource.Name;
             model.Email = resource.Email;
-            model.Type = resource.Type;
+            model.ResourceTypeId = resource.ResourceTypeId;
             model.IsActive = resource.IsActive;
+            model.SkillIds = selectedSkillIds;
+            
+            // Update selection state
+            model.AvailableSkills = await _resourceService.GetSkillsSelectListAsync(selectedSkillIds);
         }
 
         return PartialView("EditResource", model);
     }
 
-    [HttpPost]
+    [HttpPost("save")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = "SuperAdmin")]
     public async Task<IActionResult> Save(EditResourceViewModel model)
     {
         if (!ModelState.IsValid)
         {
+            model.ResourceTypes = await _resourceService.GetResourceTypesSelectListAsync();
+            model.AvailableSkills = await _resourceService.GetSkillsSelectListAsync(model.SkillIds);
             return PartialView("EditResource", model);
         }
 
         if (string.IsNullOrEmpty(model.Id))
         {
-            await _resourceService.CreateAsync(model.Name, model.Email, model.Type);
+            await _resourceService.CreateAsync(model.Name, model.Email, model.ResourceTypeId, model.SkillIds);
             _logger.LogInformation("Resource {Name} created by {User}", model.Name, CurrentUserEmail);
         }
         else
         {
-            await _resourceService.UpdateAsync(model.Id, model.Name, model.Email, model.Type, model.IsActive);
+            await _resourceService.UpdateAsync(model.Id, model.Name, model.Email, model.ResourceTypeId, model.IsActive, model.SkillIds);
             _logger.LogInformation("Resource {Name} updated by {User}", model.Name, CurrentUserEmail);
         }
 
         return Json(new { success = true });
     }
 
-    [HttpPost]
+    [HttpPost("delete")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = "SuperAdmin")]
     public async Task<IActionResult> Delete(string id)

@@ -1,45 +1,33 @@
-@model Tracker.Web.ViewModels.ResourcesViewModel
+@model Tracker.Web.ViewModels.ResourceTypesViewModel
 @{
-    ViewData["Title"] = "Resources";
+    ViewData["Title"] = "Resource Types";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">
-        <i class="bi bi-people me-2"></i>Resources
+        <i class="bi bi-tag me-2"></i>Resource Types
     </h4>
-    @if (User.IsInRole("SuperAdmin"))
-    {
-        <button type="button" class="btn btn-primary" onclick="loadEditModal('')">
-            <i class="bi bi-plus-lg me-1"></i>Add Resource
-        </button>
-    }
+    <button type="button" class="btn btn-primary" onclick="loadEditModal('')">
+        <i class="bi bi-plus-lg me-1"></i>Add Resource Type
+    </button>
 </div>
 
-<!-- Search & Filter -->
+<!-- Search -->
 <div class="card mb-3">
     <div class="card-body py-2">
         <form method="get" class="row g-2 align-items-center">
             <div class="col-auto">
                 <input type="text" name="search" class="form-control form-control-sm" 
-                       placeholder="Search name or email..." value="@Model.SearchTerm" />
-            </div>
-            <div class="col-auto">
-                <select name="type" class="form-select form-select-sm">
-                    <option value="">All Types</option>
-                    @foreach (var rt in Model.ResourceTypes)
-                    {
-                        <option value="@rt.Value" selected="@(rt.Value == Model.TypeFilter)">@rt.Text</option>
-                    }
-                </select>
+                       placeholder="Search..." value="@Model.SearchTerm" />
             </div>
             <div class="col-auto">
                 <button type="submit" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-search"></i> Filter
+                    <i class="bi bi-search"></i>
                 </button>
-                @if (!string.IsNullOrEmpty(Model.SearchTerm) || !string.IsNullOrEmpty(Model.TypeFilter))
+                @if (!string.IsNullOrEmpty(Model.SearchTerm))
                 {
-                    <a href="@Url.Action("Index")" class="btn btn-sm btn-outline-secondary">
-                        <i class="bi bi-x-lg"></i> Clear
+                    <a href="@Url.Action("ResourceTypes")" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-x-lg"></i>
                     </a>
                 }
             </div>
@@ -54,51 +42,33 @@
             <thead class="table-light">
                 <tr>
                     <th>Name</th>
-                    <th>Email</th>
-                    <th>Type</th>
-                    <th>Skills</th>
+                    <th>Description</th>
+                    <th style="width: 80px;">Order</th>
                     <th style="width: 80px;">Status</th>
-                    @if (User.IsInRole("SuperAdmin"))
-                    {
-                        <th style="width: 100px;">Actions</th>
-                    }
+                    <th style="width: 100px;">Resources</th>
+                    <th style="width: 100px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
-                @if (!Model.Resources.Any())
+                @if (!Model.ResourceTypes.Any())
                 {
                     <tr>
-                        <td colspan="@(User.IsInRole("SuperAdmin") ? 6 : 5)" class="text-center text-muted py-4">
+                        <td colspan="6" class="text-center text-muted py-4">
                             <i class="bi bi-inbox display-6 d-block mb-2"></i>
-                            No resources found.
+                            No resource types found.
                         </td>
                     </tr>
                 }
-                @foreach (var resource in Model.Resources)
+                @foreach (var rt in Model.ResourceTypes)
                 {
                     <tr>
                         <td>
-                            <strong>@resource.Name</strong>
+                            <strong>@rt.Name</strong>
                         </td>
-                        <td class="text-muted">@(resource.Email ?? "-")</td>
+                        <td class="text-muted">@(rt.Description ?? "-")</td>
+                        <td>@rt.DisplayOrder</td>
                         <td>
-                            <span class="badge bg-secondary">@(resource.ResourceTypeName ?? "Unknown")</span>
-                        </td>
-                        <td>
-                            @if (!string.IsNullOrEmpty(resource.SkillsDisplay))
-                            {
-                                @foreach (var skill in resource.SkillsDisplay.Split(", "))
-                                {
-                                    <span class="badge bg-info me-1">@skill</span>
-                                }
-                            }
-                            else
-                            {
-                                <span class="text-muted">-</span>
-                            }
-                        </td>
-                        <td>
-                            @if (resource.IsActive)
+                            @if (rt.IsActive)
                             {
                                 <span class="badge bg-success">Active</span>
                             }
@@ -107,19 +77,22 @@
                                 <span class="badge bg-secondary">Inactive</span>
                             }
                         </td>
-                        @if (User.IsInRole("SuperAdmin"))
-                        {
-                            <td>
-                                <button type="button" class="btn btn-sm btn-outline-primary me-1" 
-                                        onclick="loadEditModal('@resource.Id')" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
+                        <td>
+                            <span class="badge bg-info">@rt.ResourceCount</span>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-primary me-1" 
+                                    onclick="loadEditModal('@rt.Id')" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            @if (rt.ResourceCount == 0)
+                            {
                                 <button type="button" class="btn btn-sm btn-outline-danger delete-btn" 
-                                        data-id="@resource.Id" title="Delete">
+                                        data-id="@rt.Id" title="Delete">
                                     <i class="bi bi-trash"></i>
                                 </button>
-                            </td>
-                        }
+                            }
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -145,8 +118,8 @@
         document.querySelectorAll('.delete-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 var id = this.getAttribute('data-id');
-                if (confirm('Are you sure you want to delete this resource?')) {
-                    deleteResource(id);
+                if (confirm('Are you sure you want to delete this resource type?')) {
+                    deleteResourceType(id);
                 }
             });
         });
@@ -154,8 +127,8 @@
 
     function loadEditModal(id) {
         var url = id 
-            ? '@Url.Action("Edit", "Resources")?id=' + id
-            : '@Url.Action("Edit", "Resources")';
+            ? '@Url.Action("EditResourceType", "Lookups")?id=' + id
+            : '@Url.Action("EditResourceType", "Lookups")';
         
         fetch(url)
             .then(function(r) { return r.text(); })
@@ -168,26 +141,26 @@
     }
 
     function attachFormHandler() {
-        var form = document.getElementById('editResourceForm');
+        var form = document.getElementById('editResourceTypeForm');
         if (form) {
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
-                fetch('@Url.Action("Save", "Resources")', {
+                fetch('@Url.Action("SaveResourceType", "Lookups")', {
                     method: 'POST',
                     body: new FormData(form)
                 })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data.success) location.reload();
-                    else alert('Error saving resource');
+                    else alert('Error saving resource type');
                 })
-                .catch(function() { alert('Error saving resource'); });
+                .catch(function() { alert('Error saving resource type'); });
             });
         }
     }
 
-    function deleteResource(id) {
-        fetch('@Url.Action("Delete", "Resources")', {
+    function deleteResourceType(id) {
+        fetch('@Url.Action("DeleteResourceType", "Lookups")', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -198,7 +171,7 @@
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) location.reload();
-            else alert('Error deleting resource.');
+            else alert('Cannot delete: Resource type is in use.');
         });
     }
 </script>

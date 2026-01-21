@@ -1,18 +1,15 @@
-@model Tracker.Web.ViewModels.ResourcesViewModel
+@model Tracker.Web.ViewModels.SkillsViewModel
 @{
-    ViewData["Title"] = "Resources";
+    ViewData["Title"] = "Skills";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">
-        <i class="bi bi-people me-2"></i>Resources
+        <i class="bi bi-tools me-2"></i>Skills
     </h4>
-    @if (User.IsInRole("SuperAdmin"))
-    {
-        <button type="button" class="btn btn-primary" onclick="loadEditModal('')">
-            <i class="bi bi-plus-lg me-1"></i>Add Resource
-        </button>
-    }
+    <button type="button" class="btn btn-primary" onclick="loadEditModal('')">
+        <i class="bi bi-plus-lg me-1"></i>Add Skill
+    </button>
 </div>
 
 <!-- Search & Filter -->
@@ -21,14 +18,14 @@
         <form method="get" class="row g-2 align-items-center">
             <div class="col-auto">
                 <input type="text" name="search" class="form-control form-control-sm" 
-                       placeholder="Search name or email..." value="@Model.SearchTerm" />
+                       placeholder="Search..." value="@Model.SearchTerm" />
             </div>
             <div class="col-auto">
-                <select name="type" class="form-select form-select-sm">
-                    <option value="">All Types</option>
-                    @foreach (var rt in Model.ResourceTypes)
+                <select name="serviceAreaId" class="form-select form-select-sm">
+                    <option value="">All Service Areas</option>
+                    @foreach (var sa in Model.ServiceAreas)
                     {
-                        <option value="@rt.Value" selected="@(rt.Value == Model.TypeFilter)">@rt.Text</option>
+                        <option value="@sa.Value" selected="@(sa.Value == Model.ServiceAreaFilter)">@sa.Text</option>
                     }
                 </select>
             </div>
@@ -36,9 +33,9 @@
                 <button type="submit" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-search"></i> Filter
                 </button>
-                @if (!string.IsNullOrEmpty(Model.SearchTerm) || !string.IsNullOrEmpty(Model.TypeFilter))
+                @if (!string.IsNullOrEmpty(Model.SearchTerm) || !string.IsNullOrEmpty(Model.ServiceAreaFilter))
                 {
-                    <a href="@Url.Action("Index")" class="btn btn-sm btn-outline-secondary">
+                    <a href="@Url.Action("Skills")" class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-x-lg"></i> Clear
                     </a>
                 }
@@ -54,51 +51,36 @@
             <thead class="table-light">
                 <tr>
                     <th>Name</th>
-                    <th>Email</th>
-                    <th>Type</th>
-                    <th>Skills</th>
+                    <th>Description</th>
+                    <th>Service Area</th>
                     <th style="width: 80px;">Status</th>
-                    @if (User.IsInRole("SuperAdmin"))
-                    {
-                        <th style="width: 100px;">Actions</th>
-                    }
+                    <th style="width: 100px;">Resources</th>
+                    <th style="width: 120px;">Enhancements</th>
+                    <th style="width: 100px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
-                @if (!Model.Resources.Any())
+                @if (!Model.Skills.Any())
                 {
                     <tr>
-                        <td colspan="@(User.IsInRole("SuperAdmin") ? 6 : 5)" class="text-center text-muted py-4">
+                        <td colspan="7" class="text-center text-muted py-4">
                             <i class="bi bi-inbox display-6 d-block mb-2"></i>
-                            No resources found.
+                            No skills found.
                         </td>
                     </tr>
                 }
-                @foreach (var resource in Model.Resources)
+                @foreach (var skill in Model.Skills)
                 {
                     <tr>
                         <td>
-                            <strong>@resource.Name</strong>
+                            <strong>@skill.Name</strong>
                         </td>
-                        <td class="text-muted">@(resource.Email ?? "-")</td>
+                        <td class="text-muted">@(skill.Description ?? "-")</td>
                         <td>
-                            <span class="badge bg-secondary">@(resource.ResourceTypeName ?? "Unknown")</span>
-                        </td>
-                        <td>
-                            @if (!string.IsNullOrEmpty(resource.SkillsDisplay))
-                            {
-                                @foreach (var skill in resource.SkillsDisplay.Split(", "))
-                                {
-                                    <span class="badge bg-info me-1">@skill</span>
-                                }
-                            }
-                            else
-                            {
-                                <span class="text-muted">-</span>
-                            }
+                            <span class="badge bg-secondary">@skill.ServiceAreaName</span>
                         </td>
                         <td>
-                            @if (resource.IsActive)
+                            @if (skill.IsActive)
                             {
                                 <span class="badge bg-success">Active</span>
                             }
@@ -107,19 +89,25 @@
                                 <span class="badge bg-secondary">Inactive</span>
                             }
                         </td>
-                        @if (User.IsInRole("SuperAdmin"))
-                        {
-                            <td>
-                                <button type="button" class="btn btn-sm btn-outline-primary me-1" 
-                                        onclick="loadEditModal('@resource.Id')" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
+                        <td>
+                            <span class="badge bg-info">@skill.ResourceCount</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">@skill.EnhancementCount</span>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-primary me-1" 
+                                    onclick="loadEditModal('@skill.Id')" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            @if (skill.ResourceCount == 0 && skill.EnhancementCount == 0)
+                            {
                                 <button type="button" class="btn btn-sm btn-outline-danger delete-btn" 
-                                        data-id="@resource.Id" title="Delete">
+                                        data-id="@skill.Id" title="Delete">
                                     <i class="bi bi-trash"></i>
                                 </button>
-                            </td>
-                        }
+                            }
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -145,8 +133,8 @@
         document.querySelectorAll('.delete-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 var id = this.getAttribute('data-id');
-                if (confirm('Are you sure you want to delete this resource?')) {
-                    deleteResource(id);
+                if (confirm('Are you sure you want to delete this skill?')) {
+                    deleteSkill(id);
                 }
             });
         });
@@ -154,8 +142,8 @@
 
     function loadEditModal(id) {
         var url = id 
-            ? '@Url.Action("Edit", "Resources")?id=' + id
-            : '@Url.Action("Edit", "Resources")';
+            ? '@Url.Action("EditSkill", "Lookups")?id=' + id
+            : '@Url.Action("EditSkill", "Lookups")';
         
         fetch(url)
             .then(function(r) { return r.text(); })
@@ -168,26 +156,26 @@
     }
 
     function attachFormHandler() {
-        var form = document.getElementById('editResourceForm');
+        var form = document.getElementById('editSkillForm');
         if (form) {
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
-                fetch('@Url.Action("Save", "Resources")', {
+                fetch('@Url.Action("SaveSkill", "Lookups")', {
                     method: 'POST',
                     body: new FormData(form)
                 })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data.success) location.reload();
-                    else alert('Error saving resource');
+                    else alert('Error saving skill');
                 })
-                .catch(function() { alert('Error saving resource'); });
+                .catch(function() { alert('Error saving skill'); });
             });
         }
     }
 
-    function deleteResource(id) {
-        fetch('@Url.Action("Delete", "Resources")', {
+    function deleteSkill(id) {
+        fetch('@Url.Action("DeleteSkill", "Lookups")', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -198,7 +186,7 @@
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) location.reload();
-            else alert('Error deleting resource.');
+            else alert('Cannot delete: Skill is in use.');
         });
     }
 </script>
