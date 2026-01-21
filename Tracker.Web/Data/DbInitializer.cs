@@ -18,20 +18,6 @@ public static class DbInitializer
         // Migrate existing resources to new type system
         await MigrateResourceTypesAsync(context);
 
-        // Seed ServiceAreas
-        if (!await context.ServiceAreas.AnyAsync())
-        {
-            var serviceAreas = new List<ServiceArea>
-            {
-                new() { Id = "sa-infra", Name = "Infrastructure", Code = "INFRA", DisplayOrder = 1 },
-                new() { Id = "sa-apps", Name = "Applications", Code = "APPS", DisplayOrder = 2 },
-                new() { Id = "sa-security", Name = "Security", Code = "SEC", DisplayOrder = 3 },
-                new() { Id = "sa-data", Name = "Data Services", Code = "DATA", DisplayOrder = 4 }
-            };
-            context.ServiceAreas.AddRange(serviceAreas);
-            await context.SaveChangesAsync();
-        }
-
         // Seed SuperAdmin user
         if (!await context.Users.AnyAsync())
         {
@@ -48,25 +34,7 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
-        // Seed Resources with new types
-        if (!await context.Resources.AnyAsync())
-        {
-            var resources = new List<Resource>
-            {
-                // Client sponsors
-                new() { Name = "Sarah Wilson", Email = "sarah.wilson@client.com", Type = ResourceType.Client },
-                new() { Name = "Tom Brown", Email = "tom.brown@client.com", Type = ResourceType.Client },
-                // SPOC resources
-                new() { Name = "Raj Kumar", Email = "raj.kumar@infosys.com", Type = ResourceType.SPOC },
-                new() { Name = "Priya Sharma", Email = "priya.sharma@infosys.com", Type = ResourceType.SPOC },
-                // Internal resources
-                new() { Name = "John Smith", Email = "john.smith@infosys.com", Type = ResourceType.Internal },
-                new() { Name = "Jane Doe", Email = "jane.doe@infosys.com", Type = ResourceType.Internal },
-                new() { Name = "Mike Johnson", Email = "mike.johnson@infosys.com", Type = ResourceType.Internal }
-            };
-            context.Resources.AddRange(resources);
-            await context.SaveChangesAsync();
-        }
+        
     }
 
     private static async Task CreateNewTablesIfNeededAsync(TrackerDbContext context)

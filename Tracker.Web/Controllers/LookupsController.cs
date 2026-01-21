@@ -15,8 +15,10 @@ public class LookupsController : BaseController
     private readonly ISkillService _skillService;
     private readonly IServiceAreaService _serviceAreaService;
     private readonly ILogger<LookupsController> _logger;
+    private readonly IAuthService _authService;
 
     public LookupsController(
+        IAuthService authService,
         IResourceTypeLookupService resourceTypeService,
         ISkillService skillService,
         IServiceAreaService serviceAreaService,
@@ -26,6 +28,7 @@ public class LookupsController : BaseController
         _skillService = skillService;
         _serviceAreaService = serviceAreaService;
         _logger = logger;
+        _authService = authService;
     }
 
     #region Resource Types

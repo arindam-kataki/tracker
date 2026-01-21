@@ -43,27 +43,6 @@ public class EditUserViewModel
     public List<ServiceArea> AvailableServiceAreas { get; set; } = new();
 }
 
-// ===== Resources =====
-public class ResourcesViewModel
-{
-    public List<Resource> Resources { get; set; } = new();
-    public string? SearchTerm { get; set; }
-    public string? TypeFilter { get; set; }
-}
-
-public class EditResourceViewModel
-{
-    public string? Id { get; set; }
-
-    [Required]
-    public string Name { get; set; } = string.Empty;
-
-    [EmailAddress]
-    public string? Email { get; set; }
-
-    public ResourceType Type { get; set; } = ResourceType.Internal;
-    public bool IsActive { get; set; } = true;
-}
 
 // ===== Enhancements =====
 public class EnhancementsViewModel
@@ -240,4 +219,6 @@ public class SidebarViewModel
     public string? CurrentServiceAreaId { get; set; }
     public bool IsSuperAdmin { get; set; }
     public string? CurrentPage { get; set; }
+    public string? UserEmail { get; set; }
+    public string? UserRole { get; set; }
 }

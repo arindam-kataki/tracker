@@ -13,8 +13,10 @@ public class ResourcesController : BaseController
 {
     private readonly IResourceService _resourceService;
     private readonly ILogger<ResourcesController> _logger;
+    private readonly IAuthService _authService;
 
     public ResourcesController(
+        IAuthService authService,
         IResourceService resourceService,
         ILogger<ResourcesController> logger)
     {

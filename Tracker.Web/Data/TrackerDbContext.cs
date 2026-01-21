@@ -23,6 +23,10 @@ public class TrackerDbContext : DbContext
     public DbSet<SavedFilter> SavedFilters => Set<SavedFilter>();
     public DbSet<UserColumnPreference> UserColumnPreferences => Set<UserColumnPreference>();
     public DbSet<NamedReport> NamedReports => Set<NamedReport>();
+    public DbSet<Skill> Skills => Set<Skill>();
+    public DbSet<ResourceSkill> ResourceSkills => Set<ResourceSkill>();
+    public DbSet<ResourceTypeLookup> ResourceTypeLookups => Set<ResourceTypeLookup>();
+    public DbSet<EnhancementSkill> EnhancementSkills => Set<EnhancementSkill>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,12 +56,12 @@ public class TrackerDbContext : DbContext
         modelBuilder.Entity<UserServiceArea>(entity =>
         {
             entity.HasKey(e => new { e.UserId, e.ServiceAreaId });
-            
+
             entity.HasOne(e => e.User)
                 .WithMany(u => u.ServiceAreas)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             entity.HasOne(e => e.ServiceArea)
                 .WithMany(s => s.UserServiceAreas)
                 .HasForeignKey(e => e.ServiceAreaId)
@@ -70,9 +74,10 @@ public class TrackerDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Email).HasMaxLength(200);
-            entity.Property(e => e.Type).HasConversion<int>();
-            entity.Ignore(e => e.IsClientResource); // Computed property
-            entity.HasIndex(e => e.Type);
+            entity.HasOne(e => e.ResourceType)
+                .WithMany(rt => rt.Resources)
+                .HasForeignKey(e => e.ResourceTypeId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Enhancement
@@ -86,12 +91,12 @@ public class TrackerDbContext : DbContext
             entity.Property(e => e.InfStatus).HasMaxLength(50);
             entity.Property(e => e.InfServiceLine).HasMaxLength(100);
             entity.Property(e => e.RowVersion).IsRowVersion();
-            
+
             // Ignore computed display properties
             entity.Ignore(e => e.SponsorsDisplay);
             entity.Ignore(e => e.SpocsDisplay);
             entity.Ignore(e => e.ResourcesDisplay);
-            
+
             entity.HasIndex(e => e.WorkId);
             entity.HasIndex(e => e.ServiceAreaId);
             entity.HasIndex(e => e.Status);
@@ -107,12 +112,12 @@ public class TrackerDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.EnhancementId).IsUnique();
-            
+
             entity.HasOne(e => e.Enhancement)
                 .WithOne(e => e.EstimationBreakdown)
                 .HasForeignKey<EstimationBreakdown>(e => e.EnhancementId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             entity.Ignore(e => e.TotalHours);
         });
 
@@ -120,12 +125,12 @@ public class TrackerDbContext : DbContext
         modelBuilder.Entity<EnhancementContact>(entity =>
         {
             entity.HasKey(e => new { e.EnhancementId, e.ResourceId });
-            
+
             entity.HasOne(e => e.Enhancement)
                 .WithMany(e => e.Contacts)
                 .HasForeignKey(e => e.EnhancementId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             entity.HasOne(e => e.Resource)
                 .WithMany(r => r.EnhancementContacts)
                 .HasForeignKey(e => e.ResourceId)
@@ -136,12 +141,12 @@ public class TrackerDbContext : DbContext
         modelBuilder.Entity<EnhancementResource>(entity =>
         {
             entity.HasKey(e => new { e.EnhancementId, e.ResourceId });
-            
+
             entity.HasOne(e => e.Enhancement)
                 .WithMany(e => e.Resources)
                 .HasForeignKey(e => e.EnhancementId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             entity.HasOne(e => e.Resource)
                 .WithMany(r => r.EnhancementResources)
                 .HasForeignKey(e => e.ResourceId)
@@ -152,12 +157,12 @@ public class TrackerDbContext : DbContext
         modelBuilder.Entity<EnhancementSponsor>(entity =>
         {
             entity.HasKey(e => new { e.EnhancementId, e.ResourceId });
-            
+
             entity.HasOne(e => e.Enhancement)
                 .WithMany(e => e.Sponsors)
                 .HasForeignKey(e => e.EnhancementId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             entity.HasOne(e => e.Resource)
                 .WithMany(r => r.EnhancementSponsors)
                 .HasForeignKey(e => e.ResourceId)
@@ -168,12 +173,12 @@ public class TrackerDbContext : DbContext
         modelBuilder.Entity<EnhancementSpoc>(entity =>
         {
             entity.HasKey(e => new { e.EnhancementId, e.ResourceId });
-            
+
             entity.HasOne(e => e.Enhancement)
                 .WithMany(e => e.Spocs)
                 .HasForeignKey(e => e.EnhancementId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             entity.HasOne(e => e.Resource)
                 .WithMany(r => r.EnhancementSpocs)
                 .HasForeignKey(e => e.ResourceId)
@@ -195,14 +200,14 @@ public class TrackerDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
             entity.Property(e => e.FilterJson).IsRequired();
-            
+
             entity.HasIndex(e => new { e.UserId, e.ServiceAreaId });
-            
+
             entity.HasOne(e => e.User)
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             entity.HasOne(e => e.ServiceArea)
                 .WithMany()
                 .HasForeignKey(e => e.ServiceAreaId)
@@ -214,14 +219,14 @@ public class TrackerDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.ColumnsJson).IsRequired();
-            
+
             entity.HasIndex(e => new { e.UserId, e.ServiceAreaId }).IsUnique();
-            
+
             entity.HasOne(e => e.User)
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             entity.HasOne(e => e.ServiceArea)
                 .WithMany()
                 .HasForeignKey(e => e.ServiceAreaId)
@@ -237,12 +242,60 @@ public class TrackerDbContext : DbContext
             entity.Property(e => e.FilterJson).IsRequired().HasDefaultValue("{}");
             entity.Property(e => e.ColumnsJson).IsRequired().HasDefaultValue("[]");
             entity.Property(e => e.Description).HasMaxLength(500);
-            
+
             entity.HasIndex(e => e.UserId);
-            
+
             entity.HasOne(e => e.User)
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ResourceTypeLookup
+        modelBuilder.Entity<ResourceTypeLookup>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(500);
+        });
+
+        // Skill
+        modelBuilder.Entity<Skill>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.HasOne(e => e.ServiceArea)
+                .WithMany()
+                .HasForeignKey(e => e.ServiceAreaId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ResourceSkill (junction)
+        modelBuilder.Entity<ResourceSkill>(entity =>
+        {
+            entity.HasKey(e => new { e.ResourceId, e.SkillId });
+            entity.HasOne(e => e.Resource)
+                .WithMany(r => r.Skills)
+                .HasForeignKey(e => e.ResourceId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Skill)
+                .WithMany(s => s.ResourceSkills)
+                .HasForeignKey(e => e.SkillId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // EnhancementSkill (junction)
+        modelBuilder.Entity<EnhancementSkill>(entity =>
+        {
+            entity.HasKey(e => new { e.EnhancementId, e.SkillId });
+            entity.HasOne(e => e.Enhancement)
+                .WithMany()
+                .HasForeignKey(e => e.EnhancementId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Skill)
+                .WithMany(s => s.EnhancementSkills)
+                .HasForeignKey(e => e.SkillId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
