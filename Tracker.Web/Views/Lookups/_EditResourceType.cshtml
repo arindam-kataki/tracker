@@ -27,13 +27,29 @@
         
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label asp-for="DisplayOrder" class="form-label">Display Order</label>
-                <input asp-for="DisplayOrder" type="number" class="form-control" />
+                <label asp-for="EnhancementColumn" class="form-label">Enhancement Column <span class="text-danger">*</span></label>
+                <select asp-for="EnhancementColumn" asp-items="Model.EnhancementColumns" class="form-select">
+                </select>
+                <small class="text-muted">Which column resources of this type appear in</small>
             </div>
             
             <div class="col-md-6 mb-3">
-                <label class="form-label">&nbsp;</label>
-                <div class="form-check mt-2">
+                <label asp-for="DisplayOrder" class="form-label">Display Order</label>
+                <input asp-for="DisplayOrder" type="number" class="form-control" />
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="form-check">
+                    <input asp-for="AllowMultiple" class="form-check-input" />
+                    <label asp-for="AllowMultiple" class="form-check-label">Allow Multiple</label>
+                </div>
+                <small class="text-muted">If unchecked, only one resource of this type per enhancement</small>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <div class="form-check">
                     <input asp-for="IsActive" class="form-check-input" />
                     <label asp-for="IsActive" class="form-check-label">Active</label>
                 </div>

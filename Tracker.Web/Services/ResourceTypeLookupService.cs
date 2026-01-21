@@ -25,7 +25,7 @@ public class ResourceTypeLookupService : IResourceTypeLookupService
                                      (r.Description != null && r.Description.ToLower().Contains(search)));
         }
 
-        return await query
+        var items = await query
             .OrderBy(r => r.DisplayOrder)
             .ThenBy(r => r.Name)
             .Select(r => new ResourceTypeLookupDto
@@ -37,11 +37,17 @@ public class ResourceTypeLookupService : IResourceTypeLookupService
                 IsActive = r.IsActive,
                 ResourceCount = r.Resources.Count,
                 EnhancementColumn = r.EnhancementColumn,
-                EnhancementColumnDisplay = r.EnhancementColumn == EnhancementColumnType.Sponsors ? "Sponsors" :
-                                           r.EnhancementColumn == EnhancementColumnType.SPOCs ? "SPOCs" : "Resources",
                 AllowMultiple = r.AllowMultiple
             })
             .ToListAsync();
+        
+        // Set display text for each item
+        foreach (var item in items)
+        {
+            item.EnhancementColumnDisplay = GetColumnDisplayName(item.EnhancementColumn);
+        }
+        
+        return items;
     }
 
     public async Task<ResourceTypeLookup?> GetByIdAsync(string id)
@@ -106,5 +112,37 @@ public class ResourceTypeLookupService : IResourceTypeLookupService
             .OrderBy(r => r.DisplayOrder)
             .ThenBy(r => r.Name)
             .ToListAsync();
+    }
+    
+    private static string GetColumnDisplayName(EnhancementColumnType column)
+    {
+        return column switch
+        {
+            EnhancementColumnType.Sponsors => "Sponsors",
+            EnhancementColumnType.SPOCs => "SPOCs",
+            EnhancementColumnType.Resources => "Resources",
+            EnhancementColumnType.Status => "Status",
+            EnhancementColumnType.ServiceLine => "Service Line",
+            EnhancementColumnType.InfStatus => "INF Status",
+            EnhancementColumnType.InfServiceLine => "INF Service Line",
+            EnhancementColumnType.Notes => "Notes",
+            EnhancementColumnType.EstimationNotes => "Estimation Notes",
+            EnhancementColumnType.EstimatedHours => "Estimated Hours",
+            EnhancementColumnType.ReturnedHours => "Returned Hours",
+            EnhancementColumnType.TimeW1 => "Time W1",
+            EnhancementColumnType.TimeW2 => "Time W2",
+            EnhancementColumnType.TimeW3 => "Time W3",
+            EnhancementColumnType.TimeW4 => "Time W4",
+            EnhancementColumnType.TimeW5 => "Time W5",
+            EnhancementColumnType.TimeW6 => "Time W6",
+            EnhancementColumnType.TimeW7 => "Time W7",
+            EnhancementColumnType.TimeW8 => "Time W8",
+            EnhancementColumnType.TimeW9 => "Time W9",
+            EnhancementColumnType.EstimatedStartDate => "Est. Start Date",
+            EnhancementColumnType.EstimatedEndDate => "Est. End Date",
+            EnhancementColumnType.StartDate => "Start Date",
+            EnhancementColumnType.EndDate => "End Date",
+            _ => "Unknown"
+        };
     }
 }
