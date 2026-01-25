@@ -15,17 +15,20 @@ public class LookupsController : BaseController
     private readonly ISkillService _skillService;
     private readonly IServiceAreaService _serviceAreaService;
     private readonly ILogger<LookupsController> _logger;
+    private readonly IWorkPhaseService _workPhaseService;
 
     public LookupsController(
         IAuthService authService,
         IResourceTypeLookupService resourceTypeService,
         ISkillService skillService,
         IServiceAreaService serviceAreaService,
+        IWorkPhaseService workPhaseService,
         ILogger<LookupsController> logger) : base(authService)
     {
         _resourceTypeService = resourceTypeService;
         _skillService = skillService;
         _serviceAreaService = serviceAreaService;
+        _workPhaseService = workPhaseService;
         _logger = logger;
     }
 
@@ -81,8 +84,8 @@ public class LookupsController : BaseController
         if (string.IsNullOrEmpty(model.Id))
         {
             await _resourceTypeService.CreateAsync(
-                model.Name, 
-                model.Description, 
+                model.Name,
+                model.Description,
                 model.DisplayOrder,
                 model.EnhancementColumn,
                 model.AllowMultiple);
@@ -91,10 +94,10 @@ public class LookupsController : BaseController
         else
         {
             await _resourceTypeService.UpdateAsync(
-                model.Id, 
-                model.Name, 
-                model.Description, 
-                model.DisplayOrder, 
+                model.Id,
+                model.Name,
+                model.Description,
+                model.DisplayOrder,
                 model.IsActive,
                 model.EnhancementColumn,
                 model.AllowMultiple);
@@ -228,4 +231,118 @@ public class LookupsController : BaseController
     }
 
     #endregion
+
+
+    #region Work Phases
+
+    [HttpGet("work-phases")]
+    public async Task<IActionResult> WorkPhases(string? search)
+    {
+        var workPhases = await _workPhaseService.GetAllAsync(activeOnly: false);
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            workPhases = workPhases
+                .Where(wp => wp.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                             wp.Code.Contains(search, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        var model = new WorkPhasesViewModel
+        {
+            WorkPhases = workPhases,
+            SearchTerm = search
+        };
+
+        ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "workphases");
+        return View(model);
+    }
+
+    [HttpGet("work-phases/edit")]
+    public async Task<IActionResult> EditWorkPhase(string? id)
+    {
+        var model = new EditWorkPhaseViewModel();
+
+        if (!string.IsNullOrEmpty(id))
+        {
+            var workPhase = await _workPhaseService.GetByIdAsync(id);
+            if (workPhase == null)
+                return NotFound();
+
+            model.Id = workPhase.Id;
+            model.Name = workPhase.Name;
+            model.Code = workPhase.Code;
+            model.Description = workPhase.Description;
+            model.DefaultContributionPercent = workPhase.DefaultContributionPercent;
+            model.DisplayOrder = workPhase.DisplayOrder;
+            model.IsActive = workPhase.IsActive;
+            model.ForEstimation = workPhase.ForEstimation;
+            model.ForTimeRecording = workPhase.ForTimeRecording;
+            model.ForConsolidation = workPhase.ForConsolidation;
+        }
+
+        return PartialView("_EditWorkPhase", model);
+    }
+
+    [HttpPost("work-phases/save")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveWorkPhase(EditWorkPhaseViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return PartialView("_EditWorkPhase", model);
+        }
+
+        if (string.IsNullOrEmpty(model.Id))
+        {
+            await _workPhaseService.CreateAsync(
+                model.Name,
+                model.Code,
+                model.Description,
+                model.DefaultContributionPercent,
+                model.DisplayOrder,
+                model.ForEstimation,
+                model.ForTimeRecording,
+                model.ForConsolidation);
+            _logger.LogInformation("Work phase {Name} created by {Admin}", model.Name, CurrentUserEmail);
+        }
+        else
+        {
+            await _workPhaseService.UpdateAsync(
+                model.Id,
+                model.Name,
+                model.Code,
+                model.Description,
+                model.DefaultContributionPercent,
+                model.DisplayOrder,
+                model.IsActive,
+                model.ForEstimation,
+                model.ForTimeRecording,
+                model.ForConsolidation);
+            _logger.LogInformation("Work phase {Name} updated by {Admin}", model.Name, CurrentUserEmail);
+        }
+
+        return Json(new { success = true });
+    }
+
+    [HttpPost("work-phases/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteWorkPhase(string id)
+    {
+        var workPhase = await _workPhaseService.GetByIdAsync(id);
+        if (workPhase == null)
+            return NotFound();
+
+        var result = await _workPhaseService.DeleteAsync(id);
+        if (!result.success)
+        {
+            return BadRequest(result.error);
+        }
+
+        _logger.LogInformation("Work phase {Name} deleted by {Admin}", workPhase.Name, CurrentUserEmail);
+        return Json(new { success = true });
+    }
+
+    #endregion
+
 }

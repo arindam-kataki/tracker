@@ -1,0 +1,113 @@
+@model TimeEntryEditViewModel
+
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="bi bi-clock me-2"></i>
+        @(string.IsNullOrEmpty(Model.Id) ? "Log Time" : "Edit Time Entry")
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<form onsubmit="return saveEntry(this);">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Id" value="@Model.Id" />
+    <input type="hidden" name="ResourceId" value="@Model.ResourceId" />
+    
+    <div class="modal-body">
+        @if (Model.IsConsolidated)
+        {
+            <div class="alert alert-warning">
+                <i class="bi bi-lock me-1"></i>
+                This entry has been consolidated and can only have its notes edited.
+            </div>
+        }
+        
+        <div class="row g-3">
+            <!-- Enhancement -->
+            <div class="col-12">
+                <label class="form-label">Enhancement <span class="text-danger">*</span></label>
+                <select name="EnhancementId" class="form-select" required @(Model.IsConsolidated ? "disabled" : "")>
+                    <option value="">-- Select Enhancement --</option>
+                    @foreach (var enh in Model.AvailableEnhancements)
+                    {
+                        var desc = enh.Description?.Length > 50 ? enh.Description.Substring(0, 50) + "..." : enh.Description;
+                        <option value="@enh.Id" selected="@(enh.Id == Model.EnhancementId)">
+                            @enh.WorkId - @desc
+                        </option>
+                    }
+                </select>
+            </div>
+            
+            <!-- Work Phase -->
+            <div class="col-12">
+                <label class="form-label">Type of Work <span class="text-danger">*</span></label>
+                <select name="WorkPhaseId" class="form-select" required onchange="onWorkPhaseChange(this)" @(Model.IsConsolidated ? "disabled" : "")>
+                    <option value="">-- Select Type --</option>
+                    @foreach (var phase in Model.AvailableWorkPhases)
+                    {
+                        <option value="@phase.Id" 
+                                data-contribution="@phase.DefaultContributionPercent"
+                                selected="@(phase.Id == Model.WorkPhaseId)">
+                            @phase.Name (@phase.DefaultContributionPercent% contribution)
+                        </option>
+                    }
+                </select>
+            </div>
+            
+            <!-- Dates -->
+            <div class="col-md-6">
+                <label class="form-label">Start Date <span class="text-danger">*</span></label>
+                <input type="date" name="StartDate" value="@Model.StartDate.ToString("yyyy-MM-dd")" 
+                       class="form-control" required @(Model.IsConsolidated ? "disabled" : "") />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">End Date <span class="text-danger">*</span></label>
+                <input type="date" name="EndDate" value="@Model.EndDate.ToString("yyyy-MM-dd")" 
+                       class="form-control" required @(Model.IsConsolidated ? "disabled" : "") />
+            </div>
+            
+            <!-- Hours -->
+            <div class="col-md-6">
+                <label class="form-label">Hours Worked <span class="text-danger">*</span></label>
+                <input type="number" name="Hours" value="@Model.Hours" step="0.25" min="0.25" 
+                       class="form-control" required onchange="onHoursChange(this)" @(Model.IsConsolidated ? "disabled" : "") />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">
+                    Contributed Hours
+                    <i class="bi bi-info-circle text-muted" 
+                       title="Hours that count toward billable work. Defaults based on work type."></i>
+                </label>
+                <input type="number" name="ContributedHours" value="@Model.ContributedHours" step="0.25" min="0" 
+                       class="form-control" @(Model.IsConsolidated ? "disabled" : "") />
+            </div>
+            
+            <!-- Notes -->
+            <div class="col-12">
+                <label class="form-label">Notes</label>
+                <textarea name="Notes" class="form-control" rows="2" 
+                          placeholder="Optional description of work performed">@Model.Notes</textarea>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i> Save
+        </button>
+    </div>
+</form>
+
+<script>
+    // Initialize contributed hours if creating new entry
+    document.addEventListener('DOMContentLoaded', function() {
+        var isNew = !document.querySelector('input[name="Id"]').value;
+        if (isNew) {
+            var phaseSelect = document.querySelector('select[name="WorkPhaseId"]');
+            if (phaseSelect && phaseSelect.value) {
+                onWorkPhaseChange(phaseSelect);
+            }
+        }
+    });
+</script>

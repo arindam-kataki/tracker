@@ -18,4 +18,7 @@ public interface IEnhancementService
     Task<EstimationBreakdown?> GetBreakdownAsync(string enhancementId);
     Task<EstimationBreakdown> SaveBreakdownAsync(EstimationBreakdown breakdown);
     Task<List<string>> GetDistinctStatusesAsync();
+    Task UpdateSponsorsAsync(string enhancementId, List<string>? sponsorIds, string userId);
+    Task UpdateSpocsAsync(string enhancementId, List<string>? spocIds, string userId);
+    Task UpdateResourcesAsync(string enhancementId, List<string>? resourceIds, string userId);
 }

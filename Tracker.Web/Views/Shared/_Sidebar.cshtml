@@ -32,6 +32,26 @@
             </a>
         </div>
         
+        <!-- Timesheet Section -->
+        <div class="sidebar-section mt-3 border-top border-secondary pt-3">
+            <div class="sidebar-header px-3 py-2 text-uppercase small text-secondary">
+                <i class="bi bi-clock-history me-2"></i>Time Management
+            </div>
+            
+            <a href="@Url.Action("MyTimesheet", "Timesheet")" 
+               class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "timesheet" ? "active" : "")">
+                <i class="bi bi-clock me-2"></i>My Timesheet
+            </a>
+            
+            @if (Model.CanConsolidate)
+            {
+                <a href="@Url.Action("Index", "Consolidation")" 
+                   class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "consolidation" ? "active" : "")">
+                    <i class="bi bi-calculator me-2"></i>Consolidation
+                </a>
+            }
+        </div>
+        
         <!-- Reports -->
         <div class="sidebar-section mt-3">
             <a href="@Url.Action("Index", "Reports")" 
@@ -59,10 +79,14 @@
                 </a>
 
                 <a href="@Url.Action("Index", "Resources")" 
-                    class="sidebar-link d-block px-3 py-2 text-decoration-none @(Model.CurrentPage == "resources" ? "active" : "")">
+                    class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "resources" ? "active" : "")">
                     <i class="bi bi-people me-2"></i>Resources
                 </a>
-
+                
+                <a href="@Url.Action("AdminView", "Timesheet")" 
+                   class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "timesheet-admin" ? "active" : "")">
+                    <i class="bi bi-clock-fill me-2"></i>All Timesheets
+                </a>
             </div>
             
             <!-- Lookups Section (SuperAdmin only) -->
@@ -79,6 +103,11 @@
                 <a href="@Url.Action("Skills", "Lookups")" 
                    class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "skills" ? "active" : "")">
                     <i class="bi bi-tools me-2"></i>Skills
+                </a>
+                
+                <a href="@Url.Action("WorkPhases", "Lookups")" 
+                   class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "workphases" ? "active" : "")">
+                    <i class="bi bi-diagram-2 me-2"></i>Work Phases
                 </a>
             </div>
         }

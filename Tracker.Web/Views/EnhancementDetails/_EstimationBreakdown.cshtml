@@ -1,0 +1,92 @@
+@model EstimationBreakdownViewModel
+
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="bi bi-calculator me-2"></i>
+        Estimation Breakdown - @Model.WorkId
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<form id="breakdownForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="EnhancementId" />
+    
+    <div class="modal-body">
+        <table class="table table-sm">
+            <thead class="table-light">
+                <tr>
+                    <th>Phase</th>
+                    <th style="width: 120px;">Hours</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Requirements & Estimation</td>
+                    <td><input asp-for="RequirementsAndEstimation" type="number" step="0.5" class="form-control form-control-sm phase-hours" /></td>
+                    <td><input asp-for="RequirementsAndEstimationNotes" class="form-control form-control-sm" /></td>
+                </tr>
+                <tr>
+                    <td>Vendor Coordination</td>
+                    <td><input asp-for="VendorCoordination" type="number" step="0.5" class="form-control form-control-sm phase-hours" /></td>
+                    <td><input asp-for="VendorCoordinationNotes" class="form-control form-control-sm" /></td>
+                </tr>
+                <tr>
+                    <td>Design (Functional/Technical)</td>
+                    <td><input asp-for="DesignFunctionalTechnical" type="number" step="0.5" class="form-control form-control-sm phase-hours" /></td>
+                    <td><input asp-for="DesignFunctionalTechnicalNotes" class="form-control form-control-sm" /></td>
+                </tr>
+                <tr>
+                    <td>Testing - STI</td>
+                    <td><input asp-for="TestingSTI" type="number" step="0.5" class="form-control form-control-sm phase-hours" /></td>
+                    <td><input asp-for="TestingSTINotes" class="form-control form-control-sm" /></td>
+                </tr>
+                <tr>
+                    <td>Testing - UAT</td>
+                    <td><input asp-for="TestingUAT" type="number" step="0.5" class="form-control form-control-sm phase-hours" /></td>
+                    <td><input asp-for="TestingUATNotes" class="form-control form-control-sm" /></td>
+                </tr>
+                <tr>
+                    <td>Go-Live / Deployment / Validation</td>
+                    <td><input asp-for="GoLiveDeploymentValidation" type="number" step="0.5" class="form-control form-control-sm phase-hours" /></td>
+                    <td><input asp-for="GoLiveDeploymentValidationNotes" class="form-control form-control-sm" /></td>
+                </tr>
+                <tr>
+                    <td>Hypercare</td>
+                    <td><input asp-for="Hypercare" type="number" step="0.5" class="form-control form-control-sm phase-hours" /></td>
+                    <td><input asp-for="HypercareNotes" class="form-control form-control-sm" /></td>
+                </tr>
+                <tr>
+                    <td>Documentation</td>
+                    <td><input asp-for="Documentation" type="number" step="0.5" class="form-control form-control-sm phase-hours" /></td>
+                    <td><input asp-for="DocumentationNotes" class="form-control form-control-sm" /></td>
+                </tr>
+                <tr>
+                    <td>PM / Lead</td>
+                    <td><input asp-for="PMLead" type="number" step="0.5" class="form-control form-control-sm phase-hours" /></td>
+                    <td><input asp-for="PMLeadNotes" class="form-control form-control-sm" /></td>
+                </tr>
+                <tr>
+                    <td>Contingency</td>
+                    <td><input asp-for="Contingency" type="number" step="0.5" class="form-control form-control-sm phase-hours" /></td>
+                    <td><input asp-for="ContingencyNotes" class="form-control form-control-sm" /></td>
+                </tr>
+            </tbody>
+            <tfoot class="table-light">
+                <tr>
+                    <th>Total</th>
+                    <th id="totalHours">@Model.TotalHours.ToString("N1")</th>
+                    <th></th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i> Save Breakdown
+        </button>
+    </div>
+</form>

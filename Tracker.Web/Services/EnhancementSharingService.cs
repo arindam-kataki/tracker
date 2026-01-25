@@ -114,7 +114,7 @@ public class EnhancementSharingService : IEnhancementSharingService
 
         foreach (var note in sourceNotes)
         {
-            var noteCopy = new EnhancementNote
+            var noteCopy = new Note
             {
                 Id = Guid.NewGuid().ToString(),
                 EnhancementId = copy.Id,
@@ -128,7 +128,7 @@ public class EnhancementSharingService : IEnhancementSharingService
         }
 
         // Add sharing note
-        var sharingNote = new EnhancementNote
+        var sharingNote = new Note
         {
             Id = Guid.NewGuid().ToString(),
             EnhancementId = copy.Id,

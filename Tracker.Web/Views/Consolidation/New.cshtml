@@ -1,0 +1,342 @@
+@model ConsolidationFromTimesheetsViewModel
+@{
+    ViewData["Title"] = "New Consolidation";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="bi bi-calculator me-2"></i>New Consolidation
+    </h4>
+    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to List
+    </a>
+</div>
+
+<!-- Filter Section -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Service Area</label>
+                <select id="serviceAreaFilter" class="form-select">
+                    <option value="">All Service Areas</option>
+                    @foreach (var sa in Model.AvailableServiceAreas)
+                    {
+                        <option value="@sa.Id" selected="@(sa.Id == Model.ServiceAreaId)">@sa.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" id="startDateFilter" value="@Model.StartDate.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">End Date</label>
+                <input type="date" id="endDateFilter" value="@Model.EndDate.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-primary w-100" onclick="loadEnhancements()">
+                    <i class="bi bi-search me-1"></i> Search
+                </button>
+            </div>
+        </div>
+        <div class="mt-2">
+            <small class="text-muted">
+                <i class="bi bi-info-circle me-1"></i>
+                Date range must be within the same month.
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="timesheets-tab" data-bs-toggle="tab" 
+                data-bs-target="#timesheets-panel" type="button" role="tab">
+            <i class="bi bi-clock-history me-1"></i> From Timesheets
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="manual-tab" data-bs-toggle="tab" 
+                data-bs-target="#manual-panel" type="button" role="tab">
+            <i class="bi bi-pencil-square me-1"></i> Manual Entry
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- From Timesheets Tab -->
+    <div class="tab-pane fade show active" id="timesheets-panel" role="tabpanel">
+        <div class="card border-top-0 rounded-top-0">
+            <div class="card-body">
+                <!-- Enhancement Selection -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Enhancement <span class="text-danger">*</span></label>
+                        <select id="enhancementSelect" class="form-select" onchange="loadTimeEntries()">
+                            <option value="">-- Select Enhancement --</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Time Entries Grid -->
+                <div id="timeEntriesSection" style="display: none;">
+                    <h6 class="mb-3"><i class="bi bi-list-check me-1"></i> Select Time Entries</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="timeEntriesTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40px;">
+                                        <input type="checkbox" class="form-check-input" id="selectAllEntries" onchange="toggleAllEntries(this)">
+                                    </th>
+                                    <th>Resource</th>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th class="text-end">Hours</th>
+                                    <th class="text-end">Contributed</th>
+                                    <th class="text-end">Available</th>
+                                    <th style="width: 120px;">Pull</th>
+                                </tr>
+                            </thead>
+                            <tbody id="timeEntriesBody"></tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th colspan="6" class="text-end">Total to Pull:</th>
+                                    <th id="totalPullHours" class="text-end">0.00</th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div id="noEntriesMessage" class="text-center text-muted py-4" style="display: none;">
+                        <i class="bi bi-inbox display-4"></i>
+                        <p class="mt-2">No time entries found for this enhancement.</p>
+                    </div>
+                </div>
+                
+                <!-- Billable Hours -->
+                <div id="billableSection" class="mt-4 pt-4 border-top" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">Billable Hours <span class="text-danger">*</span></label>
+                            <input type="number" id="billableHours" class="form-control" step="0.25" min="0.01" />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Notes</label>
+                            <textarea id="consolidationNotes" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="button" class="btn btn-primary btn-lg" onclick="createFromTimesheets()">
+                            <i class="bi bi-check-lg me-1"></i> Create Consolidation
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Manual Entry Tab -->
+    <div class="tab-pane fade" id="manual-panel" role="tabpanel">
+        <div class="card border-top-0 rounded-top-0">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Enhancement <span class="text-danger">*</span></label>
+                        <select id="manualEnhancementSelect" class="form-select">
+                            <option value="">-- Select Enhancement --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Billable Hours <span class="text-danger">*</span></label>
+                        <input type="number" id="manualBillableHours" class="form-control" step="0.25" min="0.01" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Notes <span class="text-danger">*</span></label>
+                        <textarea id="manualNotes" class="form-control" rows="3" 
+                                  placeholder="Required - explain the basis for this manual entry"></textarea>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button type="button" class="btn btn-primary btn-lg" onclick="createManual()">
+                        <i class="bi bi-check-lg me-1"></i> Create Manual Consolidation
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let timeEntries = [];
+    
+    function loadEnhancements() {
+        const serviceAreaId = document.getElementById('serviceAreaFilter').value;
+        const startDate = document.getElementById('startDateFilter').value;
+        const endDate = document.getElementById('endDateFilter').value;
+        
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        if (start.getMonth() !== end.getMonth() || start.getFullYear() !== end.getFullYear()) {
+            alert('Date range must be within the same month.');
+            return;
+        }
+        
+        fetch(`/consolidation/enhancements?serviceAreaId=${serviceAreaId}&startDate=${startDate}&endDate=${endDate}`)
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('enhancementSelect');
+                select.innerHTML = '<option value="">-- Select Enhancement --</option>';
+                data.forEach(enh => {
+                    select.innerHTML += `<option value="${enh.id}">${enh.workId} - ${enh.description} (${enh.totalContributedHours.toFixed(1)} hrs)</option>`;
+                });
+                loadAllEnhancements(serviceAreaId);
+                document.getElementById('timeEntriesSection').style.display = 'none';
+                document.getElementById('billableSection').style.display = 'none';
+            });
+    }
+    
+    function loadAllEnhancements(serviceAreaId) {
+        fetch(`/consolidation/enhancements/all?serviceAreaId=${serviceAreaId}`)
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('manualEnhancementSelect');
+                select.innerHTML = '<option value="">-- Select Enhancement --</option>';
+                data.forEach(enh => {
+                    select.innerHTML += `<option value="${enh.id}">${enh.workId} - ${enh.description}</option>`;
+                });
+            });
+    }
+    
+    function loadTimeEntries() {
+        const enhancementId = document.getElementById('enhancementSelect').value;
+        if (!enhancementId) {
+            document.getElementById('timeEntriesSection').style.display = 'none';
+            document.getElementById('billableSection').style.display = 'none';
+            return;
+        }
+        const startDate = document.getElementById('startDateFilter').value;
+        const endDate = document.getElementById('endDateFilter').value;
+        
+        fetch(`/consolidation/entries?enhancementId=${enhancementId}&startDate=${startDate}&endDate=${endDate}`)
+            .then(response => response.json())
+            .then(data => {
+                timeEntries = data;
+                renderTimeEntries();
+                document.getElementById('timeEntriesSection').style.display = 'block';
+                document.getElementById('noEntriesMessage').style.display = data.length === 0 ? 'block' : 'none';
+                document.getElementById('billableSection').style.display = data.length > 0 ? 'block' : 'none';
+            });
+    }
+    
+    function renderTimeEntries() {
+        const tbody = document.getElementById('timeEntriesBody');
+        tbody.innerHTML = '';
+        timeEntries.forEach((entry, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input type="checkbox" class="form-check-input entry-checkbox" data-index="${index}" ${entry.availableHours > 0 ? 'checked' : ''} onchange="updatePullHours(${index})"></td>
+                <td>${entry.resourceName}</td>
+                <td>${entry.dateRangeDisplay}</td>
+                <td><span class="badge bg-secondary">${entry.workPhaseName}</span></td>
+                <td class="text-end">${entry.hours.toFixed(2)}</td>
+                <td class="text-end">${entry.contributedHours.toFixed(2)}</td>
+                <td class="text-end">${entry.availableHours.toFixed(2)}</td>
+                <td><input type="number" class="form-control form-control-sm pull-input" data-index="${index}" value="${entry.availableHours.toFixed(2)}" step="0.25" min="0" max="${entry.availableHours}" onchange="onPullChange(${index}, this.value)"></td>
+            `;
+            tbody.appendChild(row);
+        });
+        updateTotals();
+    }
+    
+    function toggleAllEntries(checkbox) {
+        document.querySelectorAll('.entry-checkbox').forEach((cb, index) => {
+            cb.checked = checkbox.checked;
+            updatePullHours(index);
+        });
+    }
+    
+    function updatePullHours(index) {
+        const checkbox = document.querySelector(`.entry-checkbox[data-index="${index}"]`);
+        const pullInput = document.querySelector(`.pull-input[data-index="${index}"]`);
+        pullInput.value = checkbox.checked ? timeEntries[index].availableHours.toFixed(2) : '0.00';
+        updateTotals();
+    }
+    
+    function onPullChange(index, value) {
+        document.querySelector(`.entry-checkbox[data-index="${index}"]`).checked = parseFloat(value) > 0;
+        updateTotals();
+    }
+    
+    function updateTotals() {
+        let total = 0;
+        document.querySelectorAll('.pull-input').forEach(input => { total += parseFloat(input.value) || 0; });
+        document.getElementById('totalPullHours').textContent = total.toFixed(2);
+        document.getElementById('billableHours').value = total.toFixed(2);
+    }
+    
+    function createFromTimesheets() {
+        const enhancementId = document.getElementById('enhancementSelect').value;
+        const startDate = document.getElementById('startDateFilter').value;
+        const endDate = document.getElementById('endDateFilter').value;
+        const billableHours = parseFloat(document.getElementById('billableHours').value);
+        const notes = document.getElementById('consolidationNotes').value;
+        
+        if (!enhancementId || !billableHours || billableHours <= 0) {
+            alert('Please select an enhancement and enter valid billable hours.');
+            return;
+        }
+        
+        const sources = [];
+        document.querySelectorAll('.pull-input').forEach((input, index) => {
+            const hours = parseFloat(input.value) || 0;
+            if (hours > 0) sources.push({ timeEntryId: timeEntries[index].id, pulledHours: hours });
+        });
+        
+        if (sources.length === 0) {
+            alert('Please select at least one time entry.');
+            return;
+        }
+        
+        fetch('/consolidation/create-from-timesheets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value },
+            body: JSON.stringify({ enhancementId, startDate, endDate, billableHours, notes, sources })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) window.location.href = '/consolidation/' + result.id;
+            else alert(result.message || 'Error creating consolidation');
+        });
+    }
+    
+    function createManual() {
+        const enhancementId = document.getElementById('manualEnhancementSelect').value;
+        const startDate = document.getElementById('startDateFilter').value;
+        const endDate = document.getElementById('endDateFilter').value;
+        const billableHours = parseFloat(document.getElementById('manualBillableHours').value);
+        const notes = document.getElementById('manualNotes').value;
+        
+        if (!enhancementId || !billableHours || !notes?.trim()) {
+            alert('Please fill in all required fields.');
+            return;
+        }
+        
+        fetch('/consolidation/create-manual', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value },
+            body: JSON.stringify({ enhancementId, startDate, endDate, billableHours, notes })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) window.location.href = '/consolidation/' + result.id;
+            else alert(result.message || 'Error creating consolidation');
+        });
+    }
+    
+    document.addEventListener('DOMContentLoaded', loadEnhancements);
+</script>
+@Html.AntiForgeryToken()
+}

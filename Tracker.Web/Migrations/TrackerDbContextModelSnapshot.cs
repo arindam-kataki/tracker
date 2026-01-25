@@ -17,15 +17,115 @@ namespace Tracker.Web.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.1");
 
+            modelBuilder.Entity("Tracker.Web.Entities.Consolidation", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("BillableHours")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnhancementId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InvoiceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ModifiedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ServiceAreaId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SourceHours")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("EnhancementId");
+
+                    b.HasIndex("ModifiedById");
+
+                    b.HasIndex("ServiceAreaId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("StartDate", "EndDate");
+
+                    b.ToTable("Consolidations");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.ConsolidationSource", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConsolidationId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("PulledHours")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TimeEntryId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConsolidationId");
+
+                    b.HasIndex("TimeEntryId");
+
+                    b.ToTable("ConsolidationSources");
+                });
+
             modelBuilder.Entity("Tracker.Web.Entities.Enhancement", b =>
                 {
                     b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("ActivityType")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Dependencies")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
@@ -48,12 +148,30 @@ namespace Tracker.Web.Migrations
                     b.Property<string>("EstimationNotes")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("InfCostCenter")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("InfEstimatedHours")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InfPriority")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("InfServiceLine")
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("InfStatus")
                         .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("LaborType")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LockedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LockedBy")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ModifiedAt")
@@ -63,6 +181,12 @@ namespace Tracker.Web.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Priority")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RequestRaisedDate")
                         .HasColumnType("TEXT");
 
                     b.Property<decimal?>("ReturnedHours")
@@ -79,6 +203,16 @@ namespace Tracker.Web.Migrations
 
                     b.Property<string>("ServiceLine")
                         .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SignITReference")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Source")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SpawnedFromId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("StartDate")
@@ -129,6 +263,55 @@ namespace Tracker.Web.Migrations
                     b.HasIndex("WorkId");
 
                     b.ToTable("Enhancements");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.EnhancementAttachment", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnhancementId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StoredFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UploadedBy")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EnhancementId");
+
+                    b.HasIndex("UploadedAt");
+
+                    b.HasIndex("UploadedBy");
+
+                    b.ToTable("EnhancementAttachments");
                 });
 
             modelBuilder.Entity("Tracker.Web.Entities.EnhancementContact", b =>
@@ -262,6 +445,37 @@ namespace Tracker.Web.Migrations
                     b.ToTable("EnhancementHistory");
                 });
 
+            modelBuilder.Entity("Tracker.Web.Entities.EnhancementNotificationRecipient", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnhancementId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResourceId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EnhancementId");
+
+                    b.HasIndex("ResourceId");
+
+                    b.HasIndex("EnhancementId", "ResourceId")
+                        .IsUnique();
+
+                    b.ToTable("EnhancementNotificationRecipients");
+                });
+
             modelBuilder.Entity("Tracker.Web.Entities.EnhancementResource", b =>
                 {
                     b.Property<string>("EnhancementId")
@@ -326,6 +540,69 @@ namespace Tracker.Web.Migrations
                     b.HasIndex("ResourceId");
 
                     b.ToTable("EnhancementSponsors");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.EnhancementTimeCategory", b =>
+                {
+                    b.Property<string>("EnhancementId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TimeCategoryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("EnhancementId", "TimeCategoryId");
+
+                    b.HasIndex("TimeCategoryId");
+
+                    b.ToTable("EnhancementTimeCategories");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.EnhancementTimeEntry", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnhancementId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HoursJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("PeriodEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("PeriodStart")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EnhancementId");
+
+                    b.HasIndex("EnhancementId", "PeriodStart", "PeriodEnd");
+
+                    b.ToTable("EnhancementTimeEntries");
                 });
 
             modelBuilder.Entity("Tracker.Web.Entities.EstimationBreakdown", b =>
@@ -405,6 +682,39 @@ namespace Tracker.Web.Migrations
                     b.ToTable("EstimationBreakdowns");
                 });
 
+            modelBuilder.Entity("Tracker.Web.Entities.EstimationBreakdownItem", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnhancementId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Hours")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WorkPhaseId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EnhancementId");
+
+                    b.HasIndex("WorkPhaseId");
+
+                    b.HasIndex("EnhancementId", "WorkPhaseId")
+                        .IsUnique();
+
+                    b.ToTable("EstimationBreakdownItems");
+                });
+
             modelBuilder.Entity("Tracker.Web.Entities.NamedReport", b =>
                 {
                     b.Property<string>("Id")
@@ -452,6 +762,42 @@ namespace Tracker.Web.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("NamedReports");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.Note", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnhancementId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NoteText")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("EnhancementId");
+
+                    b.ToTable("EnhancementNotes");
                 });
 
             modelBuilder.Entity("Tracker.Web.Entities.Resource", b =>
@@ -636,10 +982,109 @@ namespace Tracker.Web.Migrations
                     b.ToTable("Skills");
                 });
 
+            modelBuilder.Entity("Tracker.Web.Entities.TimeEntry", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ContributedHours")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnhancementId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Hours")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ModifiedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResourceId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WorkPhaseId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("EnhancementId");
+
+                    b.HasIndex("ModifiedById");
+
+                    b.HasIndex("ResourceId");
+
+                    b.HasIndex("WorkPhaseId");
+
+                    b.HasIndex("StartDate", "EndDate");
+
+                    b.ToTable("TimeEntries");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.TimeRecordingCategory", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DisplayOrder");
+
+                    b.HasIndex("IsActive");
+
+                    b.ToTable("TimeRecordingCategories");
+                });
+
             modelBuilder.Entity("Tracker.Web.Entities.User", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("CanConsolidate")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
@@ -684,7 +1129,9 @@ namespace Tracker.Web.Migrations
 
                     b.Property<string>("ColumnsJson")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("[]");
 
                     b.Property<DateTime>("ModifiedAt")
                         .HasColumnType("TEXT");
@@ -722,6 +1169,118 @@ namespace Tracker.Web.Migrations
                     b.ToTable("UserServiceAreas");
                 });
 
+            modelBuilder.Entity("Tracker.Web.Entities.WorkPhase", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DefaultContributionPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(100);
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ForConsolidation")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("ForEstimation")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("ForTimeRecording")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("DisplayOrder");
+
+                    b.ToTable("WorkPhases");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.Consolidation", b =>
+                {
+                    b.HasOne("Tracker.Web.Entities.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Tracker.Web.Entities.Enhancement", "Enhancement")
+                        .WithMany("Consolidations")
+                        .HasForeignKey("EnhancementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Tracker.Web.Entities.User", "ModifiedBy")
+                        .WithMany()
+                        .HasForeignKey("ModifiedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Tracker.Web.Entities.ServiceArea", "ServiceArea")
+                        .WithMany()
+                        .HasForeignKey("ServiceAreaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Enhancement");
+
+                    b.Navigation("ModifiedBy");
+
+                    b.Navigation("ServiceArea");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.ConsolidationSource", b =>
+                {
+                    b.HasOne("Tracker.Web.Entities.Consolidation", "Consolidation")
+                        .WithMany("Sources")
+                        .HasForeignKey("ConsolidationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Tracker.Web.Entities.TimeEntry", "TimeEntry")
+                        .WithMany("ConsolidationSources")
+                        .HasForeignKey("TimeEntryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Consolidation");
+
+                    b.Navigation("TimeEntry");
+                });
+
             modelBuilder.Entity("Tracker.Web.Entities.Enhancement", b =>
                 {
                     b.HasOne("Tracker.Web.Entities.ServiceArea", "ServiceArea")
@@ -731,6 +1290,24 @@ namespace Tracker.Web.Migrations
                         .IsRequired();
 
                     b.Navigation("ServiceArea");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.EnhancementAttachment", b =>
+                {
+                    b.HasOne("Tracker.Web.Entities.Enhancement", "Enhancement")
+                        .WithMany("Attachments")
+                        .HasForeignKey("EnhancementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Tracker.Web.Entities.User", "UploadedByUser")
+                        .WithMany()
+                        .HasForeignKey("UploadedBy")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Enhancement");
+
+                    b.Navigation("UploadedByUser");
                 });
 
             modelBuilder.Entity("Tracker.Web.Entities.EnhancementContact", b =>
@@ -743,6 +1320,25 @@ namespace Tracker.Web.Migrations
 
                     b.HasOne("Tracker.Web.Entities.Resource", "Resource")
                         .WithMany("EnhancementContacts")
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Enhancement");
+
+                    b.Navigation("Resource");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.EnhancementNotificationRecipient", b =>
+                {
+                    b.HasOne("Tracker.Web.Entities.Enhancement", "Enhancement")
+                        .WithMany("NotificationRecipients")
+                        .HasForeignKey("EnhancementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Tracker.Web.Entities.Resource", "Resource")
+                        .WithMany()
                         .HasForeignKey("ResourceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -774,7 +1370,7 @@ namespace Tracker.Web.Migrations
             modelBuilder.Entity("Tracker.Web.Entities.EnhancementSkill", b =>
                 {
                     b.HasOne("Tracker.Web.Entities.Enhancement", "Enhancement")
-                        .WithMany()
+                        .WithMany("Skills")
                         .HasForeignKey("EnhancementId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -828,6 +1424,36 @@ namespace Tracker.Web.Migrations
                     b.Navigation("Resource");
                 });
 
+            modelBuilder.Entity("Tracker.Web.Entities.EnhancementTimeCategory", b =>
+                {
+                    b.HasOne("Tracker.Web.Entities.Enhancement", "Enhancement")
+                        .WithMany("TimeCategories")
+                        .HasForeignKey("EnhancementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Tracker.Web.Entities.TimeRecordingCategory", "TimeCategory")
+                        .WithMany("EnhancementTimeCategories")
+                        .HasForeignKey("TimeCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Enhancement");
+
+                    b.Navigation("TimeCategory");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.EnhancementTimeEntry", b =>
+                {
+                    b.HasOne("Tracker.Web.Entities.Enhancement", "Enhancement")
+                        .WithMany("TimeEntries")
+                        .HasForeignKey("EnhancementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Enhancement");
+                });
+
             modelBuilder.Entity("Tracker.Web.Entities.EstimationBreakdown", b =>
                 {
                     b.HasOne("Tracker.Web.Entities.Enhancement", "Enhancement")
@@ -839,6 +1465,25 @@ namespace Tracker.Web.Migrations
                     b.Navigation("Enhancement");
                 });
 
+            modelBuilder.Entity("Tracker.Web.Entities.EstimationBreakdownItem", b =>
+                {
+                    b.HasOne("Tracker.Web.Entities.Enhancement", "Enhancement")
+                        .WithMany("EstimationBreakdownItems")
+                        .HasForeignKey("EnhancementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Tracker.Web.Entities.WorkPhase", "WorkPhase")
+                        .WithMany("EstimationItems")
+                        .HasForeignKey("WorkPhaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Enhancement");
+
+                    b.Navigation("WorkPhase");
+                });
+
             modelBuilder.Entity("Tracker.Web.Entities.NamedReport", b =>
                 {
                     b.HasOne("Tracker.Web.Entities.User", "User")
@@ -848,6 +1493,24 @@ namespace Tracker.Web.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.Note", b =>
+                {
+                    b.HasOne("Tracker.Web.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Tracker.Web.Entities.Enhancement", "Enhancement")
+                        .WithMany("NoteHistory")
+                        .HasForeignKey("EnhancementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Enhancement");
                 });
 
             modelBuilder.Entity("Tracker.Web.Entities.Resource", b =>
@@ -909,6 +1572,47 @@ namespace Tracker.Web.Migrations
                     b.Navigation("ServiceArea");
                 });
 
+            modelBuilder.Entity("Tracker.Web.Entities.TimeEntry", b =>
+                {
+                    b.HasOne("Tracker.Web.Entities.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Tracker.Web.Entities.Enhancement", "Enhancement")
+                        .WithMany("TimeEntriesNew")
+                        .HasForeignKey("EnhancementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Tracker.Web.Entities.User", "ModifiedBy")
+                        .WithMany()
+                        .HasForeignKey("ModifiedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Tracker.Web.Entities.Resource", "Resource")
+                        .WithMany("TimeEntries")
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Tracker.Web.Entities.WorkPhase", "WorkPhase")
+                        .WithMany("TimeEntries")
+                        .HasForeignKey("WorkPhaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Enhancement");
+
+                    b.Navigation("ModifiedBy");
+
+                    b.Navigation("Resource");
+
+                    b.Navigation("WorkPhase");
+                });
+
             modelBuilder.Entity("Tracker.Web.Entities.UserColumnPreference", b =>
                 {
                     b.HasOne("Tracker.Web.Entities.ServiceArea", "ServiceArea")
@@ -947,17 +1651,40 @@ namespace Tracker.Web.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Tracker.Web.Entities.Consolidation", b =>
+                {
+                    b.Navigation("Sources");
+                });
+
             modelBuilder.Entity("Tracker.Web.Entities.Enhancement", b =>
                 {
+                    b.Navigation("Attachments");
+
+                    b.Navigation("Consolidations");
+
                     b.Navigation("Contacts");
 
                     b.Navigation("EstimationBreakdown");
 
+                    b.Navigation("EstimationBreakdownItems");
+
+                    b.Navigation("NoteHistory");
+
+                    b.Navigation("NotificationRecipients");
+
                     b.Navigation("Resources");
+
+                    b.Navigation("Skills");
 
                     b.Navigation("Spocs");
 
                     b.Navigation("Sponsors");
+
+                    b.Navigation("TimeCategories");
+
+                    b.Navigation("TimeEntries");
+
+                    b.Navigation("TimeEntriesNew");
                 });
 
             modelBuilder.Entity("Tracker.Web.Entities.Resource", b =>
@@ -971,6 +1698,8 @@ namespace Tracker.Web.Migrations
                     b.Navigation("EnhancementSponsors");
 
                     b.Navigation("Skills");
+
+                    b.Navigation("TimeEntries");
                 });
 
             modelBuilder.Entity("Tracker.Web.Entities.ResourceTypeLookup", b =>
@@ -992,9 +1721,26 @@ namespace Tracker.Web.Migrations
                     b.Navigation("ResourceSkills");
                 });
 
+            modelBuilder.Entity("Tracker.Web.Entities.TimeEntry", b =>
+                {
+                    b.Navigation("ConsolidationSources");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.TimeRecordingCategory", b =>
+                {
+                    b.Navigation("EnhancementTimeCategories");
+                });
+
             modelBuilder.Entity("Tracker.Web.Entities.User", b =>
                 {
                     b.Navigation("ServiceAreas");
+                });
+
+            modelBuilder.Entity("Tracker.Web.Entities.WorkPhase", b =>
+                {
+                    b.Navigation("EstimationItems");
+
+                    b.Navigation("TimeEntries");
                 });
 #pragma warning restore 612, 618
         }

@@ -10,6 +10,10 @@ public class User
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
+    /// <summary>
+    /// Whether this user can access the Consolidation feature
+    /// </summary>
+    public bool CanConsolidate { get; set; } = false;
 
     // Navigation
     public virtual ICollection<UserServiceArea> ServiceAreas { get; set; } = new List<UserServiceArea>();

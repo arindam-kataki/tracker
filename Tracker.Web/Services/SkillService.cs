@@ -25,7 +25,7 @@ public class SkillService : ISkillService
         if (!string.IsNullOrWhiteSpace(search))
         {
             search = search.ToLower();
-            query = query.Where(s => s.Name.ToLower().Contains(search) || 
+            query = query.Where(s => s.Name.ToLower().Contains(search) ||
                                      (s.Description != null && s.Description.ToLower().Contains(search)));
         }
 
@@ -120,5 +120,29 @@ public class SkillService : ISkillService
             Text = s.Name,
             Selected = selectedIds?.Contains(s.Id) ?? false
         }).ToList();
+    }
+
+    public async Task UpdateEnhancementSkillsAsync(string enhancementId, List<string>? skillIds)
+    {
+        var enhancement = await _context.Enhancements
+            .Include(e => e.Skills)
+            .FirstOrDefaultAsync(e => e.Id == enhancementId);
+
+        if (enhancement == null) return;
+
+        enhancement.Skills.Clear();
+        if (skillIds != null)
+        {
+            foreach (var skillId in skillIds)
+            {
+                enhancement.Skills.Add(new EnhancementSkill
+                {
+                    EnhancementId = enhancementId,
+                    SkillId = skillId
+                });
+            }
+        }
+
+        await _context.SaveChangesAsync();
     }
 }

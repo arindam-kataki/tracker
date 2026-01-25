@@ -1,0 +1,96 @@
+@model EditWorkPhaseViewModel
+
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="bi bi-diagram-2 me-2"></i>
+        @(string.IsNullOrEmpty(Model.Id) ? "Add Work Phase" : "Edit Work Phase")
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<form onsubmit="return saveWorkPhase(this);">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Id" value="@Model.Id" />
+    
+    <div class="modal-body">
+        <div class="row g-3">
+            <!-- Name -->
+            <div class="col-md-8">
+                <label class="form-label">Name <span class="text-danger">*</span></label>
+                <input type="text" name="Name" value="@Model.Name" class="form-control" required maxlength="100" 
+                       placeholder="e.g., Requirements & Estimation" />
+            </div>
+            
+            <!-- Code -->
+            <div class="col-md-4">
+                <label class="form-label">Code <span class="text-danger">*</span></label>
+                <input type="text" name="Code" value="@Model.Code" class="form-control" required maxlength="20" 
+                       placeholder="e.g., REQ" style="text-transform: uppercase;" />
+                <small class="text-muted">Short identifier</small>
+            </div>
+            
+            <!-- Description -->
+            <div class="col-12">
+                <label class="form-label">Description</label>
+                <textarea name="Description" class="form-control" rows="2" maxlength="500"
+                          placeholder="Optional description of this work phase">@Model.Description</textarea>
+            </div>
+            
+            <!-- Contribution Percent -->
+            <div class="col-md-6">
+                <label class="form-label">Default Contribution %</label>
+                <div class="input-group">
+                    <input type="number" name="DefaultContributionPercent" value="@Model.DefaultContributionPercent" 
+                           class="form-control" min="0" max="100" />
+                    <span class="input-group-text">%</span>
+                </div>
+                <small class="text-muted">How much of logged hours count toward billable by default</small>
+            </div>
+            
+            <!-- Display Order -->
+            <div class="col-md-6">
+                <label class="form-label">Display Order</label>
+                <input type="number" name="DisplayOrder" value="@Model.DisplayOrder" class="form-control" min="0" />
+            </div>
+            
+            <!-- Flags -->
+            <div class="col-12">
+                <label class="form-label d-block">Show In:</label>
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" name="ForEstimation" value="true" class="form-check-input" 
+                           id="forEstimation" checked="@Model.ForEstimation" />
+                    <label class="form-check-label" for="forEstimation">Estimation Breakdown</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" name="ForTimeRecording" value="true" class="form-check-input" 
+                           id="forTimeRecording" checked="@Model.ForTimeRecording" />
+                    <label class="form-check-label" for="forTimeRecording">Timesheet Entry</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" name="ForConsolidation" value="true" class="form-check-input" 
+                           id="forConsolidation" checked="@Model.ForConsolidation" />
+                    <label class="form-check-label" for="forConsolidation">Consolidation</label>
+                </div>
+            </div>
+            
+            <!-- Is Active (only for existing) -->
+            @if (!string.IsNullOrEmpty(Model.Id))
+            {
+                <div class="col-12">
+                    <div class="form-check">
+                        <input type="checkbox" name="IsActive" value="true" class="form-check-input" 
+                               id="isActive" checked="@Model.IsActive" />
+                        <label class="form-check-label" for="isActive">Active</label>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+    
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i> Save
+        </button>
+    </div>
+</form>

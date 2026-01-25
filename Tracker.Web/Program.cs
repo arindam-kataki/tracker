@@ -50,6 +50,14 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IExcelExportService, ExcelExportService>();
 builder.Services.AddScoped<IResourceTypeLookupService, ResourceTypeLookupService>();
 builder.Services.AddScoped<ISkillService, SkillService>();
+builder.Services.AddScoped<IEnhancementNoteService, EnhancementNoteService>();
+builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+builder.Services.AddScoped<ITimeRecordingService, TimeRecordingService>();
+builder.Services.AddScoped<IEnhancementSharingService, EnhancementSharingService>();
+builder.Services.AddScoped<IWorkPhaseService, WorkPhaseService>();
+builder.Services.AddScoped<ITimesheetService, TimesheetService>();
+builder.Services.AddScoped<IConsolidationService, ConsolidationService>();
+builder.Services.AddScoped<IEstimationService, EstimationService>();
 
 // Add MVC
 builder.Services.AddControllersWithViews();

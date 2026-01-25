@@ -21,10 +21,13 @@ public class EnhancementDetailsViewModel
     // Tab 3: Notes
     public List<NoteViewModel> Notes { get; set; } = new();
     
-    // Tab 4: Sharing
+    // Tab 4: Notifications (NEW)
+    public NotificationsViewModel Notifications { get; set; } = new();
+    
+    // Tab 5: Sharing
     public SharingViewModel Sharing { get; set; } = new();
     
-    // Tab 5: Time Recording
+    // Tab 6: Time Recording
     public TimeRecordingViewModel TimeRecording { get; set; } = new();
     
     // Active tab (for returning to same tab after save)
@@ -76,35 +79,32 @@ public class TicketDetailsViewModel
     public decimal? TimeW8 { get; set; }
     public decimal? TimeW9 { get; set; }
     
-    // Resources
-    public List<string> SelectedSponsorIds { get; set; } = new();
-    public List<string> SelectedSpocIds { get; set; } = new();
-    public List<string> SelectedResourceIds { get; set; } = new();
-    public List<string> SelectedSkillIds { get; set; } = new();
+    // Audit
+    public string? CreatedBy { get; set; }
+    public DateTime? CreatedAt { get; set; }
+    public string? ModifiedBy { get; set; }
+    public DateTime? ModifiedAt { get; set; }
     
-    // Time recording categories (business areas) selected for this enhancement
-    public List<string> SelectedTimeCategoryIds { get; set; } = new();
-    
-    // Dropdowns
+    // Available options for dropdowns
     public List<ServiceArea> AvailableServiceAreas { get; set; } = new();
     public List<Resource> AvailableSponsors { get; set; } = new();
     public List<Resource> AvailableSpocs { get; set; } = new();
     public List<Resource> AvailableResources { get; set; } = new();
     public List<Skill> AvailableSkills { get; set; } = new();
     public List<TimeRecordingCategory> AvailableTimeCategories { get; set; } = new();
-    public List<string> AvailableStatuses { get; set; } = new() { "New", "In Progress", "On Hold", "Completed", "Cancelled" };
     public List<string> AvailableServiceLines { get; set; } = new();
     public List<string> AvailableInfStatuses { get; set; } = new();
     
-    // Audit
-    public string? CreatedBy { get; set; }
-    public DateTime? CreatedAt { get; set; }
-    public string? ModifiedBy { get; set; }
-    public DateTime? ModifiedAt { get; set; }
+    // Selected IDs
+    public List<string> SelectedSponsorIds { get; set; } = new();
+    public List<string> SelectedSpocIds { get; set; } = new();
+    public List<string> SelectedResourceIds { get; set; } = new();
+    public List<string> SelectedSkillIds { get; set; } = new();
+    public List<string> SelectedTimeCategoryIds { get; set; } = new();
 }
 
 /// <summary>
-/// Tab 2: Attachment item
+/// Tab 2: Attachments
 /// </summary>
 public class AttachmentViewModel
 {
@@ -112,27 +112,23 @@ public class AttachmentViewModel
     public string FileName { get; set; } = string.Empty;
     public string ContentType { get; set; } = string.Empty;
     public long FileSize { get; set; }
-    public string FileSizeFormatted => FormatFileSize(FileSize);
     public string? UploadedBy { get; set; }
     public string? UploadedByName { get; set; }
     public DateTime UploadedAt { get; set; }
     
-    private static string FormatFileSize(long bytes)
+    public string FileSizeDisplay => FileSize switch
     {
-        string[] sizes = { "B", "KB", "MB", "GB" };
-        int order = 0;
-        double size = bytes;
-        while (size >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            size /= 1024;
-        }
-        return $"{size:0.##} {sizes[order]}";
-    }
+        < 1024 => $"{FileSize} B",
+        < 1024 * 1024 => $"{FileSize / 1024.0:F1} KB",
+        _ => $"{FileSize / (1024.0 * 1024.0):F1} MB"
+    };
+    
+    // Alias for views that use FileSizeFormatted
+    public string FileSizeFormatted => FileSizeDisplay;
 }
 
 /// <summary>
-/// Tab 3: Note item
+/// Tab 3: Notes
 /// </summary>
 public class NoteViewModel
 {
@@ -147,7 +143,49 @@ public class NoteViewModel
 }
 
 /// <summary>
-/// Tab 4: Sharing
+/// Tab 4: Notifications - Persisted notification recipients (NEW)
+/// </summary>
+public class NotificationsViewModel
+{
+    public string EnhancementId { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Currently selected recipient resource IDs
+    /// </summary>
+    public List<string> SelectedRecipientIds { get; set; } = new();
+    
+    /// <summary>
+    /// All available resources for the service area (for selection)
+    /// </summary>
+    public List<NotificationRecipientOption> AvailableResources { get; set; } = new();
+    
+    /// <summary>
+    /// Currently assigned recipients with details
+    /// </summary>
+    public List<NotificationRecipientViewModel> CurrentRecipients { get; set; } = new();
+}
+
+public class NotificationRecipientOption
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? ResourceType { get; set; }
+}
+
+public class NotificationRecipientViewModel
+{
+    public string Id { get; set; } = string.Empty;  // EnhancementNotificationRecipient.Id
+    public string ResourceId { get; set; } = string.Empty;
+    public string ResourceName { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? ResourceType { get; set; }
+    public DateTime AddedAt { get; set; }
+    public string? AddedBy { get; set; }
+}
+
+/// <summary>
+/// Tab 5: Sharing
 /// </summary>
 public class SharingViewModel
 {
@@ -170,7 +208,7 @@ public class ServiceAreaOption
 }
 
 /// <summary>
-/// Tab 5: Time Recording
+/// Tab 6: Time Recording
 /// </summary>
 public class TimeRecordingViewModel
 {
@@ -278,4 +316,21 @@ public class ShareEnhancementRequest
 {
     public string EnhancementId { get; set; } = string.Empty;
     public string TargetServiceAreaId { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Request model for adding a notification recipient
+/// </summary>
+public class AddNotificationRecipientRequest
+{
+    public string EnhancementId { get; set; } = string.Empty;
+    public string ResourceId { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Request model for removing a notification recipient
+/// </summary>
+public class RemoveNotificationRecipientRequest
+{
+    public string RecipientId { get; set; } = string.Empty;
 }

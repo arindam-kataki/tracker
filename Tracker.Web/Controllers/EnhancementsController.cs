@@ -1,10 +1,8 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Tracker.Web.Entities;
 using Tracker.Web.Services.Interfaces;
 using Tracker.Web.ViewModels;
-using Tracker.Web.Services.Interfaces;
 
 namespace Tracker.Web.Controllers;
 
@@ -378,4 +376,7 @@ public class EnhancementsController : BaseController
         await _savedFilterService.SaveUserColumnsAsync(CurrentUserId!, request.ServiceAreaId, request.Columns);
         return Json(new { success = true });
     }
+
+
+    
 }

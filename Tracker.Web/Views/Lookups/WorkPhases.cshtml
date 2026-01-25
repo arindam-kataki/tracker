@@ -1,0 +1,213 @@
+@model WorkPhasesViewModel
+@{
+    ViewData["Title"] = "Work Phases";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="bi bi-diagram-2 me-2"></i>Work Phases
+    </h4>
+    <button type="button" class="btn btn-primary" onclick="openEditModal()">
+        <i class="bi bi-plus-lg me-1"></i> Add Work Phase
+    </button>
+</div>
+
+<!-- Search -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-auto">
+                <input type="text" name="search" value="@Model.SearchTerm" class="form-control form-control-sm" 
+                       placeholder="Search by name or code..." style="width: 250px;" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.SearchTerm))
+            {
+                <div class="col-auto">
+                    <a href="@Url.Action("WorkPhases")" class="btn btn-sm btn-outline-secondary">Clear</a>
+                </div>
+            }
+        </form>
+    </div>
+</div>
+
+<!-- Work Phases Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 60px;">Order</th>
+                        <th style="width: 80px;">Code</th>
+                        <th>Name</th>
+                        <th style="width: 100px;" class="text-center">Contribution %</th>
+                        <th style="width: 80px;" class="text-center">Estimation</th>
+                        <th style="width: 80px;" class="text-center">Timesheet</th>
+                        <th style="width: 80px;" class="text-center">Consolidation</th>
+                        <th style="width: 80px;" class="text-center">Status</th>
+                        <th style="width: 100px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.WorkPhases.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox display-4"></i>
+                                <p class="mt-2">No work phases found.</p>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var wp in Model.WorkPhases.OrderBy(w => w.DisplayOrder))
+                        {
+                            <tr class="@(!wp.IsActive ? "table-secondary" : "")">
+                                <td>@wp.DisplayOrder</td>
+                                <td><code>@wp.Code</code></td>
+                                <td>
+                                    <strong>@wp.Name</strong>
+                                    @if (!string.IsNullOrEmpty(wp.Description))
+                                    {
+                                        <br /><small class="text-muted">@wp.Description</small>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge @(wp.DefaultContributionPercent == 100 ? "bg-success" : wp.DefaultContributionPercent == 0 ? "bg-secondary" : "bg-warning text-dark")">
+                                        @wp.DefaultContributionPercent%
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    @if (wp.ForEstimation)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle text-muted"></i>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (wp.ForTimeRecording)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle text-muted"></i>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (wp.ForConsolidation)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle text-muted"></i>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (wp.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    }
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" 
+                                            onclick="openEditModal('@wp.Id')" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            onclick="deleteWorkPhase('@wp.Id', '@wp.Name')" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" id="editModalContent">
+            <!-- Loaded via AJAX -->
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function openEditModal(id) {
+        var url = '/lookups/work-phases/edit';
+        if (id) url += '?id=' + id;
+        
+        fetch(url)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('editModalContent').innerHTML = html;
+                var modal = new bootstrap.Modal(document.getElementById('editModal'));
+                modal.show();
+            });
+    }
+    
+    function saveWorkPhase(form) {
+        var formData = new FormData(form);
+        
+        fetch('/lookups/work-phases/save', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                location.reload();
+            } else {
+                alert(data.message || 'Error saving work phase');
+            }
+        });
+        
+        return false;
+    }
+    
+    function deleteWorkPhase(id, name) {
+        if (!confirm('Are you sure you want to delete "' + name + '"?')) return;
+        
+        fetch('/lookups/work-phases/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: 'id=' + encodeURIComponent(id)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message || 'Cannot delete work phase that is in use.');
+            }
+        })
+        .catch(() => {
+            alert('Cannot delete work phase that is in use.');
+        });
+    }
+</script>
+@Html.AntiForgeryToken()
+}

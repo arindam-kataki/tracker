@@ -13,4 +13,5 @@ public interface ISkillService
     Task<bool> DeleteAsync(string id);
     Task<List<Skill>> GetActiveByServiceAreaAsync(string serviceAreaId);
     Task<List<SelectListItem>> GetSkillsSelectListAsync(string serviceAreaId, List<string>? selectedIds = null);
+    Task UpdateEnhancementSkillsAsync(string enhancementId, List<string>? skillIds);
 }

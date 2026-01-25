@@ -3,7 +3,7 @@ namespace Tracker.Web.Entities;
 /// <summary>
 /// Represents a timestamped note entry for an enhancement.
 /// </summary>
-public class EnhancementNote
+public class Note
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     

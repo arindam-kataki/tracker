@@ -1,0 +1,349 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">
+            <i class="bi bi-speedometer2 me-2"></i>Dashboard
+        </h4>
+        <small class="text-muted">Overview of enhancements across your service areas</small>
+    </div>
+</div>
+
+<!-- Summary Cards Row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-primary h-100">
+            <div class="card-body text-center">
+                <div class="display-5 text-primary fw-bold">@Model.TotalEnhancements</div>
+                <div class="text-muted small">Total Items</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-info h-100">
+            <div class="card-body text-center">
+                <div class="display-5 text-info fw-bold">@Model.NewCount</div>
+                <div class="text-muted small">New</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-warning h-100">
+            <div class="card-body text-center">
+                <div class="display-5 text-warning fw-bold">@Model.InProgressCount</div>
+                <div class="text-muted small">In Progress</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-secondary h-100">
+            <div class="card-body text-center">
+                <div class="display-5 text-secondary fw-bold">@Model.OnHoldCount</div>
+                <div class="text-muted small">On Hold</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-success h-100">
+            <div class="card-body text-center">
+                <div class="display-5 text-success fw-bold">@Model.CompletedCount</div>
+                <div class="text-muted small">Completed</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-danger h-100">
+            <div class="card-body text-center">
+                <div class="display-5 text-danger fw-bold">@Model.CancelledCount</div>
+                <div class="text-muted small">Cancelled</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hours Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card bg-light h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                        <i class="bi bi-calculator fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="h3 mb-0">@Model.TotalEstimatedHours.ToString("N0")</div>
+                        <div class="text-muted small">Estimated Hours</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-light h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                        <i class="bi bi-check2-circle fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="h3 mb-0">@Model.TotalReturnedHours.ToString("N0")</div>
+                        <div class="text-muted small">Returned Hours</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-light h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="@(Model.TotalEstimatedHours > 0 && Model.TotalReturnedHours <= Model.TotalEstimatedHours ? "bg-info" : "bg-warning") text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                        <i class="bi bi-percent fs-4"></i>
+                    </div>
+                    <div>
+                        @{
+                            var utilizationPct = Model.TotalEstimatedHours > 0 
+                                ? (Model.TotalReturnedHours / Model.TotalEstimatedHours * 100) 
+                                : 0;
+                        }
+                        <div class="h3 mb-0">@utilizationPct.ToString("N1")%</div>
+                        <div class="text-muted small">Hours Utilization</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+    <!-- Status Pie Chart -->
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Status Distribution</h6>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <div style="max-width: 300px; width: 100%;">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hours by Service Area Bar Chart -->
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Hours by Service Area</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="hoursChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Service Area Table & Recent Activity -->
+<div class="row g-4">
+    <!-- Service Area Breakdown -->
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-table me-2"></i>Service Area Summary</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Service Area</th>
+                                <th class="text-center">Total</th>
+                                <th class="text-center">New</th>
+                                <th class="text-center">In Progress</th>
+                                <th class="text-center">Completed</th>
+                                <th class="text-end">Est. Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var sa in Model.ByServiceArea)
+                            {
+                                <tr>
+                                    <td>
+                                        <a href="@Url.Action("Index", "Enhancements", new { serviceAreaId = sa.ServiceAreaId })" class="text-decoration-none">
+                                            @sa.ServiceAreaName
+                                        </a>
+                                    </td>
+                                    <td class="text-center"><span class="badge bg-secondary">@sa.TotalCount</span></td>
+                                    <td class="text-center"><span class="badge bg-info">@sa.NewCount</span></td>
+                                    <td class="text-center"><span class="badge bg-warning">@sa.InProgressCount</span></td>
+                                    <td class="text-center"><span class="badge bg-success">@sa.CompletedCount</span></td>
+                                    <td class="text-end">@sa.EstimatedHours.ToString("N0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th>Total</th>
+                                <th class="text-center">@Model.ByServiceArea.Sum(s => s.TotalCount)</th>
+                                <th class="text-center">@Model.ByServiceArea.Sum(s => s.NewCount)</th>
+                                <th class="text-center">@Model.ByServiceArea.Sum(s => s.InProgressCount)</th>
+                                <th class="text-center">@Model.ByServiceArea.Sum(s => s.CompletedCount)</th>
+                                <th class="text-end">@Model.ByServiceArea.Sum(s => s.EstimatedHours).ToString("N0")</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Activity</h6>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.RecentEnhancements.Any())
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var item in Model.RecentEnhancements.Take(8))
+                        {
+                            <a href="@Url.Action("Details", "EnhancementDetails", new { id = item.Id, serviceAreaId = item.ServiceAreaId })" 
+                               class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="fw-medium">@item.WorkId</div>
+                                        <small class="text-muted text-truncate d-block" style="max-width: 250px;">@item.Description</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge @GetStatusBadgeClass(item.Status)">@item.Status</span>
+                                        <div class="small text-muted mt-1">
+                                            @((item.ModifiedAt ?? item.CreatedAt).ToString("MMM d"))
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p class="mt-2 mb-0">No recent activity</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetStatusBadgeClass(string? status)
+    {
+        return status switch
+        {
+            "New" => "bg-info",
+            "In Progress" => "bg-warning text-dark",
+            "On Hold" => "bg-secondary",
+            "Completed" => "bg-success",
+            "Cancelled" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Status Pie Chart
+    var statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['New', 'In Progress', 'On Hold', 'Completed', 'Cancelled'],
+            datasets: [{
+                data: [@Model.NewCount, @Model.InProgressCount, @Model.OnHoldCount, @Model.CompletedCount, @Model.CancelledCount],
+                backgroundColor: [
+                    'rgba(13, 202, 240, 0.8)',   // info - New
+                    'rgba(255, 193, 7, 0.8)',    // warning - In Progress
+                    'rgba(108, 117, 125, 0.8)',  // secondary - On Hold
+                    'rgba(25, 135, 84, 0.8)',    // success - Completed
+                    'rgba(220, 53, 69, 0.8)'     // danger - Cancelled
+                ],
+                borderColor: [
+                    'rgb(13, 202, 240)',
+                    'rgb(255, 193, 7)',
+                    'rgb(108, 117, 125)',
+                    'rgb(25, 135, 84)',
+                    'rgb(220, 53, 69)'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+    
+    // Hours by Service Area Bar Chart
+    var hoursCtx = document.getElementById('hoursChart').getContext('2d');
+    new Chart(hoursCtx, {
+        type: 'bar',
+        data: {
+            labels: [@Html.Raw(string.Join(",", Model.ByServiceArea.Select(s => $"'{s.ServiceAreaName}'")))],
+            datasets: [
+                {
+                    label: 'Estimated Hours',
+                    data: [@string.Join(",", Model.ByServiceArea.Select(s => s.EstimatedHours.ToString("F0")))],
+                    backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                    borderColor: 'rgb(13, 110, 253)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Returned Hours',
+                    data: [@string.Join(",", Model.ByServiceArea.Select(s => s.ReturnedHours.ToString("F0")))],
+                    backgroundColor: 'rgba(25, 135, 84, 0.7)',
+                    borderColor: 'rgb(25, 135, 84)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Hours'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+}

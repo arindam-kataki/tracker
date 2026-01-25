@@ -40,8 +40,8 @@ public class EnhancementService : IEnhancementService
         if (!string.IsNullOrEmpty(filter.Search))
         {
             var term = filter.Search.ToLower();
-            query = query.Where(e => 
-                e.WorkId.ToLower().Contains(term) || 
+            query = query.Where(e =>
+                e.WorkId.ToLower().Contains(term) ||
                 e.Description.ToLower().Contains(term) ||
                 (e.Notes != null && e.Notes.ToLower().Contains(term)));
         }
@@ -131,7 +131,7 @@ public class EnhancementService : IEnhancementService
         // Apply paging
         var page = Math.Max(1, filter.Page);
         var pageSize = filter.PageSize > 0 ? filter.PageSize : 25;
-        
+
         var items = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -284,10 +284,10 @@ public class EnhancementService : IEnhancementService
             // Update simple fields if provided
             if (!string.IsNullOrEmpty(request.Status))
                 enhancement.Status = request.Status;
-            
+
             if (!string.IsNullOrEmpty(request.InfStatus))
                 enhancement.InfStatus = request.InfStatus;
-            
+
             if (!string.IsNullOrEmpty(request.ServiceLine))
                 enhancement.ServiceLine = request.ServiceLine;
 
@@ -494,6 +494,84 @@ public class EnhancementService : IEnhancementService
         };
 
         _db.EnhancementHistory.Add(history);
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task UpdateSponsorsAsync(string enhancementId, List<string>? sponsorIds, string userId)
+    {
+        var enhancement = await _db.Enhancements
+            .Include(e => e.Sponsors)
+            .FirstOrDefaultAsync(e => e.Id == enhancementId);
+
+        if (enhancement == null) return;
+
+        enhancement.Sponsors.Clear();
+        if (sponsorIds != null)
+        {
+            foreach (var sponsorId in sponsorIds)
+            {
+                enhancement.Sponsors.Add(new EnhancementSponsor
+                {
+                    EnhancementId = enhancementId,
+                    ResourceId = sponsorId
+                });
+            }
+        }
+
+        enhancement.ModifiedBy = userId;
+        enhancement.ModifiedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task UpdateSpocsAsync(string enhancementId, List<string>? spocIds, string userId)
+    {
+        var enhancement = await _db.Enhancements
+            .Include(e => e.Spocs)
+            .FirstOrDefaultAsync(e => e.Id == enhancementId);
+
+        if (enhancement == null) return;
+
+        enhancement.Spocs.Clear();
+        if (spocIds != null)
+        {
+            foreach (var spocId in spocIds)
+            {
+                enhancement.Spocs.Add(new EnhancementSpoc
+                {
+                    EnhancementId = enhancementId,
+                    ResourceId = spocId
+                });
+            }
+        }
+
+        enhancement.ModifiedBy = userId;
+        enhancement.ModifiedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task UpdateResourcesAsync(string enhancementId, List<string>? resourceIds, string userId)
+    {
+        var enhancement = await _db.Enhancements
+            .Include(e => e.Resources)
+            .FirstOrDefaultAsync(e => e.Id == enhancementId);
+
+        if (enhancement == null) return;
+
+        enhancement.Resources.Clear();
+        if (resourceIds != null)
+        {
+            foreach (var resourceId in resourceIds)
+            {
+                enhancement.Resources.Add(new EnhancementResource
+                {
+                    EnhancementId = enhancementId,
+                    ResourceId = resourceId
+                });
+            }
+        }
+
+        enhancement.ModifiedBy = userId;
+        enhancement.ModifiedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
     }
 }

@@ -20,10 +20,12 @@ public abstract class BaseController : Controller
     protected string? CurrentUserName => User.FindFirstValue(ClaimTypes.Name);
     protected bool IsSuperAdmin => User.IsInRole(UserRole.SuperAdmin.ToString());
     protected bool IsReporting => User.IsInRole(UserRole.Reporting.ToString()) || IsSuperAdmin;
+    public bool CanConsolidate { get; set; }
 
     protected async Task<SidebarViewModel> GetSidebarViewModelAsync(string? currentServiceAreaId = null, string currentPage = "")
     {
         var userId = CurrentUserId;
+        var user = userId != null ? await AuthService.GetUserByIdAsync(userId) : null;
         var serviceAreas = userId != null
             ? await AuthService.GetUserServiceAreasAsync(userId)
             : new List<ServiceArea>();
@@ -34,8 +36,9 @@ public abstract class BaseController : Controller
             CurrentServiceAreaId = currentServiceAreaId,
             IsSuperAdmin = IsSuperAdmin,
             CurrentPage = currentPage,
-            UserEmail = CurrentUserEmail,      // ADD THIS
-            UserRole = IsSuperAdmin ? "SuperAdmin" : (IsReporting ? "Reporting" : "User")  // ADD THIS
+            UserEmail = CurrentUserEmail,
+            UserRole = IsSuperAdmin ? "SuperAdmin" : (IsReporting ? "Reporting" : "User"),
+            CanConsolidate = IsSuperAdmin || (user?.CanConsolidate ?? false)  // <-- ADD THIS
         };
     }
 }

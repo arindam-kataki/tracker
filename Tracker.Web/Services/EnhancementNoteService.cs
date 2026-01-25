@@ -14,7 +14,7 @@ public class EnhancementNoteService : IEnhancementNoteService
         _db = db;
     }
 
-    public async Task<List<EnhancementNote>> GetByEnhancementIdAsync(string enhancementId)
+    public async Task<List<Note>> GetByEnhancementIdAsync(string enhancementId)
     {
         return await _db.EnhancementNotes
             .Include(n => n.CreatedByUser)
@@ -23,16 +23,16 @@ public class EnhancementNoteService : IEnhancementNoteService
             .ToListAsync();
     }
 
-    public async Task<EnhancementNote?> GetByIdAsync(string id)
+    public async Task<Note?> GetByIdAsync(string id)
     {
         return await _db.EnhancementNotes
             .Include(n => n.CreatedByUser)
             .FirstOrDefaultAsync(n => n.Id == id);
     }
 
-    public async Task<EnhancementNote> CreateAsync(string enhancementId, string noteText, string userId)
+    public async Task<Note> CreateAsync(string enhancementId, string noteText, string userId)
     {
-        var note = new EnhancementNote
+        var note = new Note
         {
             Id = Guid.NewGuid().ToString(),
             EnhancementId = enhancementId,
@@ -48,7 +48,7 @@ public class EnhancementNoteService : IEnhancementNoteService
         return (await GetByIdAsync(note.Id))!;
     }
 
-    public async Task<EnhancementNote?> UpdateAsync(string id, string noteText, string userId)
+    public async Task<Note?> UpdateAsync(string id, string noteText, string userId)
     {
         var note = await _db.EnhancementNotes.FindAsync(id);
         if (note == null)

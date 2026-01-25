@@ -72,7 +72,7 @@ public static class DbInitializer
                 "UserId TEXT NOT NULL, " +
                 "ServiceAreaId TEXT NOT NULL, " +
                 "Name TEXT NOT NULL, " +
-                "FilterJson TEXT NOT NULL DEFAULT '{}', " +
+                "FilterJson TEXT NOT NULL, " +
                 "IsDefault INTEGER NOT NULL DEFAULT 0, " +
                 "CreatedAt TEXT NOT NULL, " +
                 "ModifiedAt TEXT, " +
@@ -91,7 +91,7 @@ public static class DbInitializer
                 "Id TEXT PRIMARY KEY, " +
                 "UserId TEXT NOT NULL, " +
                 "ServiceAreaId TEXT NOT NULL, " +
-                "ColumnsJson TEXT NOT NULL DEFAULT '[]', " +
+                "ColumnsJson TEXT NOT NULL, " +
                 "ModifiedAt TEXT NOT NULL, " +
                 "FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE, " +
                 "FOREIGN KEY (ServiceAreaId) REFERENCES ServiceAreas(Id) ON DELETE CASCADE)");
@@ -182,7 +182,7 @@ public static class DbInitializer
                 "EnhancementId TEXT NOT NULL, " +
                 "PeriodStart TEXT NOT NULL, " +
                 "PeriodEnd TEXT NOT NULL, " +
-                "HoursJson TEXT NOT NULL DEFAULT '{}', " +
+                "HoursJson TEXT NOT NULL, " +
                 "Notes TEXT, " +
                 "CreatedBy TEXT, " +
                 "CreatedAt TEXT NOT NULL, " +

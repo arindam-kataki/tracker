@@ -1,0 +1,22 @@
+@{
+    ViewData["Title"] = "My Timesheet";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="bi bi-clock-history me-2"></i>My Timesheet
+    </h4>
+</div>
+
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-person-x display-1 text-muted"></i>
+        <h4 class="mt-4">Account Not Linked</h4>
+        <p class="text-muted mb-4">
+            @(ViewBag.Message ?? "Your user account is not linked to a resource profile. You need to be set up as a resource to log time.")
+        </p>
+        <p class="text-muted">
+            Please contact your administrator to link your account to a resource.
+        </p>
+    </div>
+</div>

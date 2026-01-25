@@ -221,4 +221,5 @@ public class SidebarViewModel
     public string? CurrentPage { get; set; }
     public string? UserEmail { get; set; }
     public string? UserRole { get; set; }
+    public bool CanConsolidate { get; set; }
 }

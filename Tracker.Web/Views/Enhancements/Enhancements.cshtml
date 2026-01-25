@@ -9,18 +9,22 @@
     .bulk-edit-row {
         background-color: #fff3cd !important;
     }
+
     .bulk-edit-row th {
         background-color: #fff3cd !important;
         padding: 0.5rem !important;
         vertical-align: middle !important;
     }
+
     .bulk-edit-row .form-control,
     .bulk-edit-row .form-select {
         font-size: 0.75rem;
     }
+
     .bulk-edit-row input[type="date"] {
         min-width: 120px;
     }
+
     #toggleBulkBtn.active {
         background-color: #ffca2c;
         border-color: #ffc720;
@@ -36,18 +40,18 @@
         <button class="btn btn-primary" id="addBtn">
             <i class="bi bi-plus-lg me-1"></i> Add
         </button>
-        
+
         <button class="btn btn-warning" id="toggleBulkBtn" disabled>
             <i class="bi bi-pencil-square me-1"></i> Bulk Edit
             <span class="bulk-count badge bg-dark ms-1" style="display: none;">0</span>
         </button>
-        
+
         <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#columnsModal">
             <i class="bi bi-layout-three-columns me-1"></i> Columns
         </button>
-        
+
         <div class="vr mx-2"></div>
-        
+
         <!-- Sorting -->
         <div class="d-flex align-items-center gap-2">
             <label class="form-label mb-0 small text-muted">Sort:</label>
@@ -62,9 +66,9 @@
                 <option value="desc" selected="@(Model.SortOrder == "desc")">Desc</option>
             </select>
         </div>
-        
+
         <div class="vr mx-2"></div>
-        
+
         <!-- Page Size -->
         <div class="d-flex align-items-center gap-2">
             <label class="form-label mb-0 small text-muted">Show:</label>
@@ -83,8 +87,9 @@
 <!-- Tabbed Interface -->
 <ul class="nav nav-tabs mb-3" id="enhancementsTabs" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link @(hasActiveFilter ? "active" : "")" id="filters-tab" data-bs-toggle="tab" data-bs-target="#filters-panel" 
-                type="button" role="tab" aria-controls="filters-panel" aria-selected="@(hasActiveFilter ? "true" : "false")">
+        <button class="nav-link @(hasActiveFilter ? "active" : "")" id="filters-tab" data-bs-toggle="tab"
+            data-bs-target="#filters-panel" type="button" role="tab" aria-controls="filters-panel"
+            aria-selected="@(hasActiveFilter ? "true" : "false")">
             <i class="bi bi-funnel me-1"></i> Filters
             @if (hasActiveFilter)
             {
@@ -93,8 +98,9 @@
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link @(!hasActiveFilter ? "active" : "")" id="workitems-tab" data-bs-toggle="tab" data-bs-target="#workitems-panel" 
-                type="button" role="tab" aria-controls="workitems-panel" aria-selected="@(!hasActiveFilter ? "true" : "false")">
+        <button class="nav-link @(!hasActiveFilter ? "active" : "")" id="workitems-tab" data-bs-toggle="tab"
+            data-bs-target="#workitems-panel" type="button" role="tab" aria-controls="workitems-panel"
+            aria-selected="@(!hasActiveFilter ? "true" : "false")">
             <i class="bi bi-list-task me-1"></i> Work Items
             <span class="badge bg-secondary ms-1">@Model.TotalItems</span>
         </button>
@@ -103,7 +109,8 @@
 
 <div class="tab-content" id="enhancementsTabContent">
     <!-- Filters Tab -->
-    <div class="tab-pane fade @(hasActiveFilter ? "show active" : "")" id="filters-panel" role="tabpanel" aria-labelledby="filters-tab">
+    <div class="tab-pane fade @(hasActiveFilter ? "show active" : "")" id="filters-panel" role="tabpanel"
+        aria-labelledby="filters-tab">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span class="fw-bold"><i class="bi bi-funnel me-2"></i>Filter Criteria</span>
@@ -132,15 +139,15 @@
             <div class="card-body">
                 <form id="filterForm" method="get">
                     <input type="hidden" name="serviceAreaId" value="@Model.ServiceAreaId" />
-                    
+
                     <div class="row g-3">
                         <!-- Search -->
                         <div class="col-md-6">
                             <label class="form-label">Search</label>
-                            <input type="text" name="filter.Search" value="@Model.Filter.Search" 
-                                   class="form-control" placeholder="Work ID, Description, Notes..." />
+                            <input type="text" name="filter.Search" value="@Model.Filter.Search" class="form-control"
+                                placeholder="Work ID, Description, Notes..." />
                         </div>
-                        
+
                         <!-- Status -->
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
@@ -152,18 +159,20 @@
                                     <div class="form-check">
                                         @if (isChecked)
                                         {
-                                            <input type="checkbox" class="form-check-input" name="filter.Statuses" value="@status" id="@statusId" checked />
+                                            <input type="checkbox" class="form-check-input" name="filter.Statuses"
+                                                value="@status" id="@statusId" checked />
                                         }
                                         else
                                         {
-                                            <input type="checkbox" class="form-check-input" name="filter.Statuses" value="@status" id="@statusId" />
+                                            <input type="checkbox" class="form-check-input" name="filter.Statuses"
+                                                value="@status" id="@statusId" />
                                         }
                                         <label class="form-check-label" for="@statusId">@status</label>
                                     </div>
                                 }
                             </div>
                         </div>
-                        
+
                         <!-- INF Status -->
                         @if (Model.AvailableInfStatuses.Any())
                         {
@@ -177,11 +186,13 @@
                                         <div class="form-check">
                                             @if (isChecked)
                                             {
-                                                <input type="checkbox" class="form-check-input" name="filter.InfStatuses" value="@infStatus" id="@infId" checked />
+                                                <input type="checkbox" class="form-check-input" name="filter.InfStatuses"
+                                                    value="@infStatus" id="@infId" checked />
                                             }
                                             else
                                             {
-                                                <input type="checkbox" class="form-check-input" name="filter.InfStatuses" value="@infStatus" id="@infId" />
+                                                <input type="checkbox" class="form-check-input" name="filter.InfStatuses"
+                                                    value="@infStatus" id="@infId" />
                                             }
                                             <label class="form-check-label" for="@infId">@infStatus</label>
                                         </div>
@@ -189,7 +200,7 @@
                                 </div>
                             </div>
                         }
-                        
+
                         <!-- Service Lines -->
                         @if (Model.AvailableServiceLines.Any())
                         {
@@ -203,11 +214,13 @@
                                         <div class="form-check">
                                             @if (isChecked)
                                             {
-                                                <input type="checkbox" class="form-check-input" name="filter.ServiceLines" value="@sl" id="@slId" checked />
+                                                <input type="checkbox" class="form-check-input" name="filter.ServiceLines"
+                                                    value="@sl" id="@slId" checked />
                                             }
                                             else
                                             {
-                                                <input type="checkbox" class="form-check-input" name="filter.ServiceLines" value="@sl" id="@slId" />
+                                                <input type="checkbox" class="form-check-input" name="filter.ServiceLines"
+                                                    value="@sl" id="@slId" />
                                             }
                                             <label class="form-check-label" for="@slId">@sl</label>
                                         </div>
@@ -215,73 +228,80 @@
                                 </div>
                             </div>
                         }
-                        
+
                         <!-- Estimated Hours Range -->
                         <div class="col-md-6">
                             <label class="form-label">Est. Hours Range</label>
                             <div class="d-flex align-items-center gap-2">
-                                <input type="number" name="filter.EstimatedHoursMin" value="@Model.Filter.EstimatedHoursMin" 
-                                       class="form-control" placeholder="Min" step="0.5" />
+                                <input type="number" name="filter.EstimatedHoursMin"
+                                    value="@Model.Filter.EstimatedHoursMin" class="form-control" placeholder="Min"
+                                    step="0.5" />
                                 <span class="text-muted">-</span>
-                                <input type="number" name="filter.EstimatedHoursMax" value="@Model.Filter.EstimatedHoursMax" 
-                                       class="form-control" placeholder="Max" step="0.5" />
+                                <input type="number" name="filter.EstimatedHoursMax"
+                                    value="@Model.Filter.EstimatedHoursMax" class="form-control" placeholder="Max"
+                                    step="0.5" />
                             </div>
                         </div>
-                        
+
                         <!-- Estimated Start Date -->
                         <div class="col-md-6">
                             <label class="form-label">Est. Start Date</label>
                             <div class="d-flex align-items-center gap-2">
-                                <input type="date" name="filter.EstimatedStartDateFrom" value="@Model.Filter.EstimatedStartDateFrom?.ToString("yyyy-MM-dd")" 
-                                       class="form-control" />
+                                <input type="date" name="filter.EstimatedStartDateFrom"
+                                    value="@Model.Filter.EstimatedStartDateFrom?.ToString("yyyy-MM-dd")"
+                                    class="form-control" />
                                 <span class="text-muted">-</span>
-                                <input type="date" name="filter.EstimatedStartDateTo" value="@Model.Filter.EstimatedStartDateTo?.ToString("yyyy-MM-dd")" 
-                                       class="form-control" />
+                                <input type="date" name="filter.EstimatedStartDateTo"
+                                    value="@Model.Filter.EstimatedStartDateTo?.ToString("yyyy-MM-dd")"
+                                    class="form-control" />
                             </div>
                         </div>
-                        
+
                         <!-- Estimated End Date -->
                         <div class="col-md-6">
                             <label class="form-label">Est. End Date</label>
                             <div class="d-flex align-items-center gap-2">
-                                <input type="date" name="filter.EstimatedEndDateFrom" value="@Model.Filter.EstimatedEndDateFrom?.ToString("yyyy-MM-dd")" 
-                                       class="form-control" />
+                                <input type="date" name="filter.EstimatedEndDateFrom"
+                                    value="@Model.Filter.EstimatedEndDateFrom?.ToString("yyyy-MM-dd")"
+                                    class="form-control" />
                                 <span class="text-muted">-</span>
-                                <input type="date" name="filter.EstimatedEndDateTo" value="@Model.Filter.EstimatedEndDateTo?.ToString("yyyy-MM-dd")" 
-                                       class="form-control" />
+                                <input type="date" name="filter.EstimatedEndDateTo"
+                                    value="@Model.Filter.EstimatedEndDateTo?.ToString("yyyy-MM-dd")"
+                                    class="form-control" />
                             </div>
                         </div>
-                        
+
                         <!-- Start Date -->
                         <div class="col-md-6">
                             <label class="form-label">Start Date</label>
                             <div class="d-flex align-items-center gap-2">
-                                <input type="date" name="filter.StartDateFrom" value="@Model.Filter.StartDateFrom?.ToString("yyyy-MM-dd")" 
-                                       class="form-control" />
+                                <input type="date" name="filter.StartDateFrom"
+                                    value="@Model.Filter.StartDateFrom?.ToString("yyyy-MM-dd")" class="form-control" />
                                 <span class="text-muted">-</span>
-                                <input type="date" name="filter.StartDateTo" value="@Model.Filter.StartDateTo?.ToString("yyyy-MM-dd")" 
-                                       class="form-control" />
+                                <input type="date" name="filter.StartDateTo"
+                                    value="@Model.Filter.StartDateTo?.ToString("yyyy-MM-dd")" class="form-control" />
                             </div>
                         </div>
-                        
+
                         <!-- End Date -->
                         <div class="col-md-6">
                             <label class="form-label">End Date</label>
                             <div class="d-flex align-items-center gap-2">
-                                <input type="date" name="filter.EndDateFrom" value="@Model.Filter.EndDateFrom?.ToString("yyyy-MM-dd")" 
-                                       class="form-control" />
+                                <input type="date" name="filter.EndDateFrom"
+                                    value="@Model.Filter.EndDateFrom?.ToString("yyyy-MM-dd")" class="form-control" />
                                 <span class="text-muted">-</span>
-                                <input type="date" name="filter.EndDateTo" value="@Model.Filter.EndDateTo?.ToString("yyyy-MM-dd")" 
-                                       class="form-control" />
+                                <input type="date" name="filter.EndDateTo"
+                                    value="@Model.Filter.EndDateTo?.ToString("yyyy-MM-dd")" class="form-control" />
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="mt-4 d-flex gap-2">
                         <button type="submit" class="btn btn-warning">
                             <i class="bi bi-funnel me-1"></i> Apply Filters
                         </button>
-                        <a href="@Url.Action("Index", new { serviceAreaId = Model.ServiceAreaId })" class="btn btn-outline-secondary">
+                        <a href="@Url.Action("Index", new { serviceAreaId = Model.ServiceAreaId })"
+                            class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg me-1"></i> Clear All
                         </a>
                     </div>
@@ -289,9 +309,10 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Work Items Tab -->
-    <div class="tab-pane fade @(!hasActiveFilter ? "show active" : "")" id="workitems-panel" role="tabpanel" aria-labelledby="workitems-tab">
+    <div class="tab-pane fade @(!hasActiveFilter ? "show active" : "")" id="workitems-panel" role="tabpanel"
+        aria-labelledby="workitems-tab">
         <!-- Data Table -->
         <div class="card">
             <div class="table-wrapper">
@@ -338,10 +359,12 @@
                                     case "workIdDescription":
                                         <th class="@frozenClass bulk-edit-cell">
                                             <div class="d-flex gap-1">
-                                                <button type="button" class="btn btn-warning btn-sm" id="applyBulkBtn" title="Apply changes">
+                                                <button type="button" class="btn btn-warning btn-sm" id="applyBulkBtn"
+                                                    title="Apply changes">
                                                     <i class="bi bi-check-lg"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-outline-secondary btn-sm" id="cancelBulkBtn" title="Cancel">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" id="cancelBulkBtn"
+                                                    title="Cancel">
                                                     <i class="bi bi-x-lg"></i>
                                                 </button>
                                             </div>
@@ -360,7 +383,8 @@
                                         break;
                                     case "estimatedHours":
                                         <th class="bulk-edit-cell">
-                                            <input type="number" class="form-control form-control-sm" id="bulkEstimatedHours" placeholder="--" step="0.5" style="width: 70px;" />
+                                            <input type="number" class="form-control form-control-sm" id="bulkEstimatedHours"
+                                                placeholder="--" step="0.5" style="width: 70px;" />
                                         </th>
                                         break;
                                     case "estimatedStartDate":
@@ -375,7 +399,8 @@
                                         break;
                                     case "returnedHours":
                                         <th class="bulk-edit-cell">
-                                            <input type="number" class="form-control form-control-sm" id="bulkReturnedHours" placeholder="--" step="0.5" style="width: 70px;" />
+                                            <input type="number" class="form-control form-control-sm" id="bulkReturnedHours"
+                                                placeholder="--" step="0.5" style="width: 70px;" />
                                         </th>
                                         break;
                                     case "startDate":
@@ -390,30 +415,35 @@
                                         break;
                                     case "serviceLine":
                                         <th class="bulk-edit-cell">
-                                            <input type="text" class="form-control form-control-sm" id="bulkServiceLine" placeholder="--" />
+                                            <input type="text" class="form-control form-control-sm" id="bulkServiceLine"
+                                                placeholder="--" />
                                         </th>
                                         break;
                                     case "infStatus":
                                         <th class="bulk-edit-cell">
-                                            <input type="text" class="form-control form-control-sm" id="bulkInfStatus" placeholder="--" />
+                                            <input type="text" class="form-control form-control-sm" id="bulkInfStatus"
+                                                placeholder="--" />
                                         </th>
                                         break;
                                     case "infServiceLine":
                                         <th class="bulk-edit-cell">
-                                            <input type="text" class="form-control form-control-sm" id="bulkInfServiceLine" placeholder="--" />
+                                            <input type="text" class="form-control form-control-sm" id="bulkInfServiceLine"
+                                                placeholder="--" />
                                         </th>
                                         break;
                                     case "sponsors":
                                         <th class="bulk-edit-cell">
                                             <div class="d-flex align-items-center gap-1">
-                                                <select class="form-select form-select-sm" id="bulkSponsor" style="min-width: 100px;">
+                                                <select class="form-select form-select-sm" id="bulkSponsor"
+                                                    style="min-width: 100px;">
                                                     <option value="">--</option>
                                                     @foreach (var sponsor in Model.AvailableSponsors)
                                                     {
                                                         <option value="@sponsor.Id">@sponsor.Name</option>
                                                     }
                                                 </select>
-                                                <input type="checkbox" class="form-check-input" id="bulkClearSponsors" title="Clear" />
+                                                <input type="checkbox" class="form-check-input" id="bulkClearSponsors"
+                                                    title="Clear" />
                                             </div>
                                         </th>
                                         break;
@@ -434,14 +464,16 @@
                                     case "resources":
                                         <th class="bulk-edit-cell">
                                             <div class="d-flex align-items-center gap-1">
-                                                <select class="form-select form-select-sm" id="bulkResource" style="min-width: 100px;">
+                                                <select class="form-select form-select-sm" id="bulkResource"
+                                                    style="min-width: 100px;">
                                                     <option value="">--</option>
                                                     @foreach (var resource in Model.AvailableResources)
                                                     {
                                                         <option value="@resource.Id">@resource.Name</option>
                                                     }
                                                 </select>
-                                                <input type="checkbox" class="form-check-input" id="bulkClearResources" title="Clear" />
+                                                <input type="checkbox" class="form-check-input" id="bulkClearResources"
+                                                    title="Clear" />
                                             </div>
                                         </th>
                                         break;
@@ -487,8 +519,10 @@
                                             break;
                                         case "workIdDescription":
                                             <td class="@frozenClass">
-                                                <a href="#" class="text-decoration-none edit-link fw-medium" data-id="@item.Id">@item.WorkId</a>
-                                                <div class="text-muted small text-truncate" style="max-width: 300px;" title="@item.Description">@item.Description</div>
+                                                <a href="@Url.Action("Details", "Enhancements", new { id = item.Id, serviceAreaId = Model.ServiceAreaId })"
+                                                    class="text-decoration-none fw-medium" target="_blank">@item.WorkId</a>
+                                                <div class="text-muted small text-truncate" style="max-width: 300px;"
+                                                    title="@item.Description">@item.Description</div>
                                             </td>
                                             break;
                                         case "status":
@@ -503,7 +537,8 @@
                                             <td class="text-end">
                                                 @if (item.EstimatedHours.HasValue)
                                                 {
-                                                    <a href="#" class="breakdown-link" data-id="@item.Id">@item.EstimatedHours.Value.ToString("0.#")</a>
+                                                    <a href="#" class="breakdown-link"
+                                                        data-id="@item.Id">@item.EstimatedHours.Value.ToString("0.#")</a>
                                                 }
                                             </td>
                                             break;
@@ -514,7 +549,8 @@
                                             <td>@item.EstimatedEndDate?.ToString("MM/dd/yyyy")</td>
                                             break;
                                         case "estimationNotes":
-                                            <td class="text-truncate" style="max-width: 200px;" title="@item.EstimationNotes">@item.EstimationNotes</td>
+                                            <td class="text-truncate" style="max-width: 200px;" title="@item.EstimationNotes">
+                                                @item.EstimationNotes</td>
                                             break;
                                         case "returnedHours":
                                             <td class="text-end">@item.ReturnedHours?.ToString("0.#")</td>
@@ -619,7 +655,7 @@
                     </tbody>
                 </table>
             </div>
-            
+
             <!-- Pagination -->
             @if (Model.TotalPages > 1)
             {
@@ -636,14 +672,15 @@
                                 <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
                                     <a class="page-link" href="@GetPageUrl(Model.PageNumber - 1)">Prev</a>
                                 </li>
-                                
-                                @for (var p = Math.Max(1, Model.PageNumber - 2); p <= Math.Min(Model.TotalPages, Model.PageNumber + 2); p++)
+
+                                @for (var p = Math.Max(1, Model.PageNumber - 2); p <= Math.Min(Model.TotalPages,
+                                                            Model.PageNumber + 2); p++)
                                 {
                                     <li class="page-item @(p == Model.PageNumber ? "active" : "")">
                                         <a class="page-link" href="@GetPageUrl(p)">@p</a>
                                     </li>
                                 }
-                                
+
                                 <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
                                     <a class="page-link" href="@GetPageUrl(Model.PageNumber + 1)">Next</a>
                                 </li>
@@ -662,16 +699,46 @@
 @functions {
     string GetPageUrl(int page)
     {
-        return Url.Action("Index", new { 
-            serviceAreaId = Model.ServiceAreaId, 
-            filterId = Model.CurrentFilterId,
-            filter = new { 
-                Page = page, 
-                PageSize = Model.PageSize,
-                SortColumn = Model.SortColumn,
-                SortOrder = Model.SortOrder
+        var queryString = new List<string>
+        {
+            $"serviceAreaId={Model.ServiceAreaId}",
+            $"filter.Page={page}",
+            $"filter.PageSize={Model.PageSize}",
+            $"filter.SortColumn={Model.SortColumn}",
+            $"filter.SortOrder={Model.SortOrder}"
+        };
+        
+        if (!string.IsNullOrEmpty(Model.CurrentFilterId))
+        {
+            queryString.Add($"filterId={Model.CurrentFilterId}");
+        }
+        
+        // Preserve any active filter values
+        if (Model.Filter != null)
+        {
+            if (!string.IsNullOrEmpty(Model.Filter.Search))
+                queryString.Add($"filter.Search={Uri.EscapeDataString(Model.Filter.Search)}");
+            
+            if (Model.Filter.Statuses?.Any() == true)
+            {
+                foreach (var status in Model.Filter.Statuses)
+                    queryString.Add($"filter.Statuses={Uri.EscapeDataString(status)}");
             }
-        }) ?? "#";
+            
+            if (Model.Filter.InfStatuses?.Any() == true)
+            {
+                foreach (var status in Model.Filter.InfStatuses)
+                    queryString.Add($"filter.InfStatuses={Uri.EscapeDataString(status)}");
+            }
+            
+            if (Model.Filter.ServiceLines?.Any() == true)
+            {
+                foreach (var sl in Model.Filter.ServiceLines)
+                    queryString.Add($"filter.ServiceLines={Uri.EscapeDataString(sl)}");
+            }
+        }
+        
+        return $"{Url.Action("Index", "Enhancements")}?{string.Join("&", queryString)}";
     }
 }
 
@@ -693,15 +760,18 @@
                             <div class="form-check">
                                 @if (col.IsFrozen)
                                 {
-                                    <input type="checkbox" class="form-check-input column-checkbox" value="@col.Key" id="@colId" checked disabled />
+                                    <input type="checkbox" class="form-check-input column-checkbox" value="@col.Key" id="@colId"
+                                        checked disabled />
                                 }
                                 else if (isChecked)
                                 {
-                                    <input type="checkbox" class="form-check-input column-checkbox" value="@col.Key" id="@colId" checked />
+                                    <input type="checkbox" class="form-check-input column-checkbox" value="@col.Key" id="@colId"
+                                        checked />
                                 }
                                 else
                                 {
-                                    <input type="checkbox" class="form-check-input column-checkbox" value="@col.Key" id="@colId" />
+                                    <input type="checkbox" class="form-check-input column-checkbox" value="@col.Key"
+                                        id="@colId" />
                                 }
                                 <label class="form-check-label" for="@colId">
                                     @col.Label @(col.IsFrozen ? "(Frozen)" : "")
@@ -761,364 +831,364 @@
 @await Html.PartialAsync("_ConfirmModal")
 
 @section Scripts {
-<script>
-    var serviceAreaId = '@Model.ServiceAreaId';
-    var currentFilterId = '@Model.CurrentFilterId';
-    var antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
-    
-    // Column widths persistence
-    var columnWidthsKey = 'columnWidths_' + serviceAreaId;
-    var columnWidths = JSON.parse(sessionStorage.getItem(columnWidthsKey) || '{}');
-    
-    // Restore column widths
-    document.querySelectorAll('th[data-col]').forEach(function(th) {
-        var col = th.dataset.col;
-        if (columnWidths[col]) {
-            th.style.width = columnWidths[col] + 'px';
-        }
-    });
-    
-    // Column resizing
-    var resizing = null;
-    document.querySelectorAll('.resize-handle').forEach(function(handle) {
-        handle.addEventListener('mousedown', function(e) {
-            e.preventDefault();
-            var th = this.parentElement;
-            resizing = { th: th, startX: e.pageX, startWidth: th.offsetWidth };
-            th.classList.add('resizing');
-            document.body.style.cursor = 'col-resize';
+    <script>
+        var serviceAreaId = '@Model.ServiceAreaId';
+        var currentFilterId = '@Model.CurrentFilterId';
+        var antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        // Column widths persistence
+        var columnWidthsKey = 'columnWidths_' + serviceAreaId;
+        var columnWidths = JSON.parse(sessionStorage.getItem(columnWidthsKey) || '{}');
+
+        // Restore column widths
+        document.querySelectorAll('th[data-col]').forEach(function (th) {
+            var col = th.dataset.col;
+            if (columnWidths[col]) {
+                th.style.width = columnWidths[col] + 'px';
+            }
         });
-    });
-    
-    document.addEventListener('mousemove', function(e) {
-        if (!resizing) return;
-        var newWidth = Math.max(50, resizing.startWidth + (e.pageX - resizing.startX));
-        resizing.th.style.width = newWidth + 'px';
-        
-        // Update frozen column positions if needed
-        updateFrozenPositions();
-    });
-    
-    document.addEventListener('mouseup', function(e) {
-        if (!resizing) return;
-        var col = resizing.th.dataset.col;
-        if (col) {
-            columnWidths[col] = resizing.th.offsetWidth;
-            sessionStorage.setItem(columnWidthsKey, JSON.stringify(columnWidths));
-        }
-        resizing.th.classList.remove('resizing');
-        document.body.style.cursor = '';
-        resizing = null;
-    });
-    
-    function updateFrozenPositions() {
-        var firstFrozen = document.querySelector('.frozen-col:nth-child(1)');
-        var secondFrozen = document.querySelector('.frozen-col:nth-child(2)');
-        if (firstFrozen && secondFrozen) {
-            secondFrozen.style.left = firstFrozen.offsetWidth + 'px';
-        }
-    }
-    
-    // Bulk Edit Row
-    var bulkEditRow = document.getElementById('bulkEditRow');
-    var bulkEditMode = false;
-    
-    document.getElementById('toggleBulkBtn').addEventListener('click', function() {
-        bulkEditMode = !bulkEditMode;
-        bulkEditRow.style.display = bulkEditMode ? 'table-row' : 'none';
-        this.classList.toggle('active', bulkEditMode);
-    });
-    
-    document.getElementById('cancelBulkBtn').addEventListener('click', function() {
-        bulkEditMode = false;
-        bulkEditRow.style.display = 'none';
-        document.getElementById('toggleBulkBtn').classList.remove('active');
-        // Clear all bulk edit inputs
-        bulkEditRow.querySelectorAll('input, select').forEach(function(el) {
-            if (el.type === 'checkbox') el.checked = false;
-            else el.value = '';
+
+        // Column resizing
+        var resizing = null;
+        document.querySelectorAll('.resize-handle').forEach(function (handle) {
+            handle.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                var th = this.parentElement;
+                resizing = { th: th, startX: e.pageX, startWidth: th.offsetWidth };
+                th.classList.add('resizing');
+                document.body.style.cursor = 'col-resize';
+            });
         });
-    });
-    
-    // Select All / Row Selection
-    document.getElementById('selectAll').addEventListener('change', function() {
-        document.querySelectorAll('.row-select').forEach(function(cb) { cb.checked = this.checked; }.bind(this));
-        updateSelectionCount();
-    });
-    
-    document.querySelectorAll('.row-select').forEach(function(cb) {
-        cb.addEventListener('change', updateSelectionCount);
-    });
-    
-    function updateSelectionCount() {
-        var count = document.querySelectorAll('.row-select:checked').length;
-        var bulkBtn = document.getElementById('toggleBulkBtn');
-        bulkBtn.disabled = count === 0;
-        bulkBtn.querySelector('.bulk-count').style.display = count > 0 ? 'inline' : 'none';
-        bulkBtn.querySelector('.bulk-count').textContent = count;
-        document.getElementById('bulkSelectedCount').textContent = count;
-        
-        // Hide bulk edit row if no items selected
-        if (count === 0 && bulkEditMode) {
+
+        document.addEventListener('mousemove', function (e) {
+            if (!resizing) return;
+            var newWidth = Math.max(50, resizing.startWidth + (e.pageX - resizing.startX));
+            resizing.th.style.width = newWidth + 'px';
+
+            // Update frozen column positions if needed
+            updateFrozenPositions();
+        });
+
+        document.addEventListener('mouseup', function (e) {
+            if (!resizing) return;
+            var col = resizing.th.dataset.col;
+            if (col) {
+                columnWidths[col] = resizing.th.offsetWidth;
+                sessionStorage.setItem(columnWidthsKey, JSON.stringify(columnWidths));
+            }
+            resizing.th.classList.remove('resizing');
+            document.body.style.cursor = '';
+            resizing = null;
+        });
+
+        function updateFrozenPositions() {
+            var firstFrozen = document.querySelector('.frozen-col:nth-child(1)');
+            var secondFrozen = document.querySelector('.frozen-col:nth-child(2)');
+            if (firstFrozen && secondFrozen) {
+                secondFrozen.style.left = firstFrozen.offsetWidth + 'px';
+            }
+        }
+
+        // Bulk Edit Row
+        var bulkEditRow = document.getElementById('bulkEditRow');
+        var bulkEditMode = false;
+
+        document.getElementById('toggleBulkBtn').addEventListener('click', function () {
+            bulkEditMode = !bulkEditMode;
+            bulkEditRow.style.display = bulkEditMode ? 'table-row' : 'none';
+            this.classList.toggle('active', bulkEditMode);
+        });
+
+        document.getElementById('cancelBulkBtn').addEventListener('click', function () {
             bulkEditMode = false;
             bulkEditRow.style.display = 'none';
-            bulkBtn.classList.remove('active');
+            document.getElementById('toggleBulkBtn').classList.remove('active');
+            // Clear all bulk edit inputs
+            bulkEditRow.querySelectorAll('input, select').forEach(function (el) {
+                if (el.type === 'checkbox') el.checked = false;
+                else el.value = '';
+            });
+        });
+
+        // Select All / Row Selection
+        document.getElementById('selectAll').addEventListener('change', function () {
+            document.querySelectorAll('.row-select').forEach(function (cb) { cb.checked = this.checked; }.bind(this));
+            updateSelectionCount();
+        });
+
+        document.querySelectorAll('.row-select').forEach(function (cb) {
+            cb.addEventListener('change', updateSelectionCount);
+        });
+
+        function updateSelectionCount() {
+            var count = document.querySelectorAll('.row-select:checked').length;
+            var bulkBtn = document.getElementById('toggleBulkBtn');
+            bulkBtn.disabled = count === 0;
+            bulkBtn.querySelector('.bulk-count').style.display = count > 0 ? 'inline' : 'none';
+            bulkBtn.querySelector('.bulk-count').textContent = count;
+            document.getElementById('bulkSelectedCount').textContent = count;
+
+            // Hide bulk edit row if no items selected
+            if (count === 0 && bulkEditMode) {
+                bulkEditMode = false;
+                bulkEditRow.style.display = 'none';
+                bulkBtn.classList.remove('active');
+            }
         }
-    }
-    
-    // Bulk Update
-    document.getElementById('applyBulkBtn').addEventListener('click', function() {
-        var ids = [];
-        document.querySelectorAll('.row-select:checked').forEach(function(cb) { ids.push(cb.value); });
-        if (ids.length === 0) return;
-        
-        var request = {
-            selectedIds: ids,
-            status: document.getElementById('bulkStatus')?.value || null,
-            infStatus: document.getElementById('bulkInfStatus')?.value || null,
-            infServiceLine: document.getElementById('bulkInfServiceLine')?.value || null,
-            serviceLine: document.getElementById('bulkServiceLine')?.value || null,
-            startDate: document.getElementById('bulkStartDate')?.value || null,
-            endDate: document.getElementById('bulkEndDate')?.value || null,
-            estimatedStartDate: document.getElementById('bulkEstStartDate')?.value || null,
-            estimatedEndDate: document.getElementById('bulkEstEndDate')?.value || null,
-            estimatedHours: document.getElementById('bulkEstimatedHours')?.value || null,
-            returnedHours: document.getElementById('bulkReturnedHours')?.value || null,
-            sponsorId: document.getElementById('bulkSponsor')?.value || null,
-            clearSponsors: document.getElementById('bulkClearSponsors')?.checked || false,
-            spocId: document.getElementById('bulkSpoc')?.value || null,
-            clearSpocs: document.getElementById('bulkClearSpocs')?.checked || false,
-            resourceId: document.getElementById('bulkResource')?.value || null,
-            clearResources: document.getElementById('bulkClearResources')?.checked || false
-        };
-        
-        fetch('@Url.Action("BulkUpdate", "Enhancements")', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgeryToken },
-            body: JSON.stringify(request)
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.success) location.reload();
-            else alert(data.message || 'Update failed');
-        });
-    });
-    
-    // Sorting
-    document.getElementById('sortColumn').addEventListener('change', applySort);
-    document.getElementById('sortOrder').addEventListener('change', applySort);
-    document.getElementById('pageSize').addEventListener('change', applySort);
-    
-    function applySort() {
-        var params = {
-            page: 1,
-            pageSize: document.getElementById('pageSize').value,
-            sortColumn: document.getElementById('sortColumn').value,
-            sortOrder: document.getElementById('sortOrder').value
-        };
-        var url = new URL(window.location.href);
-        url.searchParams.set('serviceAreaId', serviceAreaId);
-        if (currentFilterId) url.searchParams.set('filterId', currentFilterId);
-        Object.keys(params).forEach(function(key) {
-            url.searchParams.set('filter.' + key.charAt(0).toUpperCase() + key.slice(1), params[key]);
-        });
-        window.location.href = url.toString();
-    }
-    
-    // Columns modal
-    document.getElementById('saveColumnsBtn').addEventListener('click', function() {
-        var columns = ['select'];
-        document.querySelectorAll('.column-checkbox:checked').forEach(function(cb) {
-            columns.push(cb.value);
-        });
-        columns.push('actions');
-        
-        fetch('@Url.Action("SaveColumns", "Enhancements")', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgeryToken },
-            body: JSON.stringify({ serviceAreaId: serviceAreaId, columns: columns })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.success) location.reload();
-        });
-    });
-    
-    // Edit/Delete/Add handlers
-    document.getElementById('addBtn').addEventListener('click', function() { loadEditModal(null); });
-    
-    document.querySelectorAll('.edit-btn, .edit-link').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            loadEditModal(this.dataset.id);
-        });
-    });
-    
-    document.querySelectorAll('.breakdown-link').forEach(function(link) {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            loadBreakdownModal(this.dataset.id);
-        });
-    });
-    
-    document.querySelectorAll('.delete-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var id = this.dataset.id;
-            showConfirm('Delete', 'Delete this enhancement?', function() {
-                fetch('@Url.Action("Delete", "Enhancements")', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': antiForgeryToken },
-                    body: 'id=' + id + '&serviceAreaId=' + serviceAreaId
-                }).then(function(r) { return r.json(); }).then(function(data) {
+
+        // Bulk Update
+        document.getElementById('applyBulkBtn').addEventListener('click', function () {
+            var ids = [];
+            document.querySelectorAll('.row-select:checked').forEach(function (cb) { ids.push(cb.value); });
+            if (ids.length === 0) return;
+
+            var request = {
+                selectedIds: ids,
+                status: document.getElementById('bulkStatus')?.value || null,
+                infStatus: document.getElementById('bulkInfStatus')?.value || null,
+                infServiceLine: document.getElementById('bulkInfServiceLine')?.value || null,
+                serviceLine: document.getElementById('bulkServiceLine')?.value || null,
+                startDate: document.getElementById('bulkStartDate')?.value || null,
+                endDate: document.getElementById('bulkEndDate')?.value || null,
+                estimatedStartDate: document.getElementById('bulkEstStartDate')?.value || null,
+                estimatedEndDate: document.getElementById('bulkEstEndDate')?.value || null,
+                estimatedHours: document.getElementById('bulkEstimatedHours')?.value || null,
+                returnedHours: document.getElementById('bulkReturnedHours')?.value || null,
+                sponsorId: document.getElementById('bulkSponsor')?.value || null,
+                clearSponsors: document.getElementById('bulkClearSponsors')?.checked || false,
+                spocId: document.getElementById('bulkSpoc')?.value || null,
+                clearSpocs: document.getElementById('bulkClearSpocs')?.checked || false,
+                resourceId: document.getElementById('bulkResource')?.value || null,
+                clearResources: document.getElementById('bulkClearResources')?.checked || false
+            };
+
+            fetch('@Url.Action("BulkUpdate", "Enhancements")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgeryToken },
+                body: JSON.stringify(request)
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
                     if (data.success) location.reload();
+                    else alert(data.message || 'Update failed');
+                });
+        });
+
+        // Sorting
+        document.getElementById('sortColumn').addEventListener('change', applySort);
+        document.getElementById('sortOrder').addEventListener('change', applySort);
+        document.getElementById('pageSize').addEventListener('change', applySort);
+
+        function applySort() {
+            var params = {
+                page: 1,
+                pageSize: document.getElementById('pageSize').value,
+                sortColumn: document.getElementById('sortColumn').value,
+                sortOrder: document.getElementById('sortOrder').value
+            };
+            var url = new URL(window.location.href);
+            url.searchParams.set('serviceAreaId', serviceAreaId);
+            if (currentFilterId) url.searchParams.set('filterId', currentFilterId);
+            Object.keys(params).forEach(function (key) {
+                url.searchParams.set('filter.' + key.charAt(0).toUpperCase() + key.slice(1), params[key]);
+            });
+            window.location.href = url.toString();
+        }
+
+        // Columns modal
+        document.getElementById('saveColumnsBtn').addEventListener('click', function () {
+            var columns = ['select'];
+            document.querySelectorAll('.column-checkbox:checked').forEach(function (cb) {
+                columns.push(cb.value);
+            });
+            columns.push('actions');
+
+            fetch('@Url.Action("SaveColumns", "Enhancements")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgeryToken },
+                body: JSON.stringify({ serviceAreaId: serviceAreaId, columns: columns })
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.success) location.reload();
+                });
+        });
+
+        // Edit/Delete/Add handlers
+        document.getElementById('addBtn').addEventListener('click', function () { loadEditModal(null); });
+
+        document.querySelectorAll('.edit-btn, .edit-link').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                loadEditModal(this.dataset.id);
+            });
+        });
+
+        document.querySelectorAll('.breakdown-link').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                loadBreakdownModal(this.dataset.id);
+            });
+        });
+
+        document.querySelectorAll('.delete-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var id = this.dataset.id;
+                showConfirm('Delete', 'Delete this enhancement?', function () {
+                    fetch('@Url.Action("Delete", "Enhancements")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': antiForgeryToken },
+                        body: 'id=' + id + '&serviceAreaId=' + serviceAreaId
+                    }).then(function (r) { return r.json(); }).then(function (data) {
+                        if (data.success) location.reload();
+                    });
                 });
             });
         });
-    });
-    
-    function loadEditModal(id) {
-        var url = '@Url.Action("Edit", "Enhancements")' + '?serviceAreaId=' + serviceAreaId + (id ? '&id=' + id : '');
-        fetch(url)
-            .then(function(r) { return r.text(); })
-            .then(function(html) {
-                document.getElementById('editModalContent').innerHTML = html;
-                new bootstrap.Modal(document.getElementById('editModal')).show();
-                
-                var form = document.getElementById('editEnhancementForm');
-                if (form) {
-                    form.addEventListener('submit', function(e) {
-                        e.preventDefault();
-                        fetch('@Url.Action("Save", "Enhancements")', { method: 'POST', body: new FormData(form) })
-                        .then(function(r) { return r.json(); })
-                        .then(function(data) {
-                            if (data.success) {
-                                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-                                location.reload();
-                            } else {
-                                alert(data.message || 'Save failed');
-                            }
+
+        function loadEditModal(id) {
+            var url = '@Url.Action("Edit", "Enhancements")' + '?serviceAreaId=' + serviceAreaId + (id ? '&id=' + id : '');
+            fetch(url)
+                .then(function (r) { return r.text(); })
+                .then(function (html) {
+                    document.getElementById('editModalContent').innerHTML = html;
+                    new bootstrap.Modal(document.getElementById('editModal')).show();
+
+                    var form = document.getElementById('editEnhancementForm');
+                    if (form) {
+                        form.addEventListener('submit', function (e) {
+                            e.preventDefault();
+                            fetch('@Url.Action("Save", "Enhancements")', { method: 'POST', body: new FormData(form) })
+                                .then(function (r) { return r.json(); })
+                                .then(function (data) {
+                                    if (data.success) {
+                                        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                                        location.reload();
+                                    } else {
+                                        alert(data.message || 'Save failed');
+                                    }
+                                });
                         });
-                    });
-                }
-            });
-    }
-    
-    function loadBreakdownModal(id) {
-        fetch('@Url.Action("GetBreakdown", "Enhancements")' + '?id=' + id)
-            .then(function(r) { return r.text(); })
-            .then(function(html) {
-                document.getElementById('breakdownModalContent').innerHTML = html;
-                new bootstrap.Modal(document.getElementById('breakdownModal')).show();
-                
-                var form = document.getElementById('breakdownForm');
-                if (form) {
-                    form.addEventListener('submit', function(e) {
-                        e.preventDefault();
-                        fetch('@Url.Action("SaveBreakdown", "Enhancements")', { method: 'POST', body: new FormData(form) })
-                        .then(function(r) { return r.json(); })
-                        .then(function(data) {
-                            if (data.success) {
-                                bootstrap.Modal.getInstance(document.getElementById('breakdownModal')).hide();
-                                location.reload();
-                            }
-                        });
-                    });
-                }
-            });
-    }
-    
-    // Saved Filters
-    document.getElementById('savedFilterSelect').addEventListener('change', function() {
-        if (this.value) {
-            window.location.href = '@Url.Action("Index", "Enhancements")?serviceAreaId=' + serviceAreaId + '&filterId=' + this.value;
+                    }
+                });
         }
-    });
-    
-    document.getElementById('saveFilterBtn').addEventListener('click', function() {
-        new bootstrap.Modal(document.getElementById('saveFilterModal')).show();
-    });
-    
-    document.getElementById('confirmSaveFilterBtn').addEventListener('click', function() {
-        var name = document.getElementById('filterName').value.trim();
-        if (!name) { alert('Enter a filter name'); return; }
-        
-        var form = document.getElementById('filterForm');
-        var formData = new FormData(form);
-        var filterData = {
-            id: currentFilterId || null,
-            name: name,
-            serviceAreaId: serviceAreaId,
-            isDefault: document.getElementById('filterIsDefault').checked,
-            filter: {
-                search: formData.get('filter.Search') || null,
-                statuses: formData.getAll('filter.Statuses'),
-                infStatuses: formData.getAll('filter.InfStatuses'),
-                serviceLines: formData.getAll('filter.ServiceLines'),
-                estimatedHoursMin: formData.get('filter.EstimatedHoursMin') || null,
-                estimatedHoursMax: formData.get('filter.EstimatedHoursMax') || null,
-                estimatedStartDateFrom: formData.get('filter.EstimatedStartDateFrom') || null,
-                estimatedStartDateTo: formData.get('filter.EstimatedStartDateTo') || null,
-                estimatedEndDateFrom: formData.get('filter.EstimatedEndDateFrom') || null,
-                estimatedEndDateTo: formData.get('filter.EstimatedEndDateTo') || null,
-                startDateFrom: formData.get('filter.StartDateFrom') || null,
-                startDateTo: formData.get('filter.StartDateTo') || null,
-                endDateFrom: formData.get('filter.EndDateFrom') || null,
-                endDateTo: formData.get('filter.EndDateTo') || null
-            }
-        };
-        
-        fetch('@Url.Action("SaveFilter", "Enhancements")', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgeryToken },
-            body: JSON.stringify(filterData)
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('saveFilterModal')).hide();
-                window.location.href = '@Url.Action("Index", "Enhancements")?serviceAreaId=' + serviceAreaId + '&filterId=' + data.filterId;
+
+        function loadBreakdownModal(id) {
+            fetch('@Url.Action("GetBreakdown", "Enhancements")' + '?enhancementId=' + id)
+                .then(function (r) { return r.text(); })
+                .then(function (html) {
+                    document.getElementById('breakdownModalContent').innerHTML = html;
+                    new bootstrap.Modal(document.getElementById('breakdownModal')).show();
+
+                    var form = document.getElementById('breakdownForm');
+                    if (form) {
+                        form.addEventListener('submit', function (e) {
+                            e.preventDefault();
+                            fetch('@Url.Action("SaveBreakdown", "Enhancements")', { method: 'POST', body: new FormData(form) })
+                                .then(function (r) { return r.json(); })
+                                .then(function (data) {
+                                    if (data.success) {
+                                        bootstrap.Modal.getInstance(document.getElementById('breakdownModal')).hide();
+                                        location.reload();
+                                    }
+                                });
+                        });
+                    }
+                });
+        }
+
+        // Saved Filters
+        document.getElementById('savedFilterSelect').addEventListener('change', function () {
+            if (this.value) {
+                window.location.href = '@Url.Action("Index", "Enhancements")?serviceAreaId=' + serviceAreaId + '&filterId=' + this.value;
             }
         });
-    });
-    
-    // Delete filter
-    var deleteFilterBtn = document.getElementById('deleteFilterBtn');
-    if (deleteFilterBtn) {
-        deleteFilterBtn.addEventListener('click', function() {
-            if (!confirm('Delete this saved filter?')) return;
-            fetch('@Url.Action("DeleteFilter", "Enhancements")', {
+
+        document.getElementById('saveFilterBtn').addEventListener('click', function () {
+            new bootstrap.Modal(document.getElementById('saveFilterModal')).show();
+        });
+
+        document.getElementById('confirmSaveFilterBtn').addEventListener('click', function () {
+            var name = document.getElementById('filterName').value.trim();
+            if (!name) { alert('Enter a filter name'); return; }
+
+            var form = document.getElementById('filterForm');
+            var formData = new FormData(form);
+            var filterData = {
+                id: currentFilterId || null,
+                name: name,
+                serviceAreaId: serviceAreaId,
+                isDefault: document.getElementById('filterIsDefault').checked,
+                filter: {
+                    search: formData.get('filter.Search') || null,
+                    statuses: formData.getAll('filter.Statuses'),
+                    infStatuses: formData.getAll('filter.InfStatuses'),
+                    serviceLines: formData.getAll('filter.ServiceLines'),
+                    estimatedHoursMin: formData.get('filter.EstimatedHoursMin') || null,
+                    estimatedHoursMax: formData.get('filter.EstimatedHoursMax') || null,
+                    estimatedStartDateFrom: formData.get('filter.EstimatedStartDateFrom') || null,
+                    estimatedStartDateTo: formData.get('filter.EstimatedStartDateTo') || null,
+                    estimatedEndDateFrom: formData.get('filter.EstimatedEndDateFrom') || null,
+                    estimatedEndDateTo: formData.get('filter.EstimatedEndDateTo') || null,
+                    startDateFrom: formData.get('filter.StartDateFrom') || null,
+                    startDateTo: formData.get('filter.StartDateTo') || null,
+                    endDateFrom: formData.get('filter.EndDateFrom') || null,
+                    endDateTo: formData.get('filter.EndDateTo') || null
+                }
+            };
+
+            fetch('@Url.Action("SaveFilter", "Enhancements")', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgeryToken },
-                body: JSON.stringify({ id: currentFilterId })
+                body: JSON.stringify(filterData)
             })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.success) {
-                    window.location.href = '@Url.Action("Index", "Enhancements")?serviceAreaId=' + serviceAreaId;
-                }
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        bootstrap.Modal.getInstance(document.getElementById('saveFilterModal')).hide();
+                        window.location.href = '@Url.Action("Index", "Enhancements")?serviceAreaId=' + serviceAreaId + '&filterId=' + data.filterId;
+                    }
+                });
+        });
+
+        // Delete filter
+        var deleteFilterBtn = document.getElementById('deleteFilterBtn');
+        if (deleteFilterBtn) {
+            deleteFilterBtn.addEventListener('click', function () {
+                if (!confirm('Delete this saved filter?')) return;
+                fetch('@Url.Action("DeleteFilter", "Enhancements")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgeryToken },
+                    body: JSON.stringify({ id: currentFilterId })
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.success) {
+                            window.location.href = '@Url.Action("Index", "Enhancements")?serviceAreaId=' + serviceAreaId;
+                        }
+                    });
+            });
+        }
+
+        // Tab persistence - remember which tab was active
+        var tabKey = 'enhancementsTab_' + serviceAreaId;
+        var savedTab = localStorage.getItem(tabKey);
+
+        // If there's a saved tab and no active filter, restore it
+        var hasActiveFilter = @(hasActiveFilter ? "true" : "false");
+        if (savedTab && !hasActiveFilter) {
+            var tabEl = document.querySelector('[data-bs-target="' + savedTab + '"]');
+            if (tabEl) {
+                var tab = new bootstrap.Tab(tabEl);
+                tab.show();
+            }
+        }
+
+        // Save tab selection
+        document.querySelectorAll('#enhancementsTabs button[data-bs-toggle="tab"]').forEach(function (tabEl) {
+            tabEl.addEventListener('shown.bs.tab', function (e) {
+                localStorage.setItem(tabKey, e.target.getAttribute('data-bs-target'));
             });
         });
-    }
-    
-    // Tab persistence - remember which tab was active
-    var tabKey = 'enhancementsTab_' + serviceAreaId;
-    var savedTab = localStorage.getItem(tabKey);
-    
-    // If there's a saved tab and no active filter, restore it
-    var hasActiveFilter = @(hasActiveFilter ? "true" : "false");
-    if (savedTab && !hasActiveFilter) {
-        var tabEl = document.querySelector('[data-bs-target="' + savedTab + '"]');
-        if (tabEl) {
-            var tab = new bootstrap.Tab(tabEl);
-            tab.show();
-        }
-    }
-    
-    // Save tab selection
-    document.querySelectorAll('#enhancementsTabs button[data-bs-toggle="tab"]').forEach(function(tabEl) {
-        tabEl.addEventListener('shown.bs.tab', function(e) {
-            localStorage.setItem(tabKey, e.target.getAttribute('data-bs-target'));
-        });
-    });
-</script>
+    </script>
 }

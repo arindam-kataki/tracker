@@ -18,6 +18,7 @@ public class Resource
     
     // Legacy navigation (keep for now)
     public virtual ICollection<EnhancementContact> EnhancementContacts { get; set; } = new List<EnhancementContact>();
+    public virtual ICollection<TimeEntry> TimeEntries { get; set; } = new List<TimeEntry>();
 
     // Helper property for display
     public string ResourceTypeName => ResourceType?.Name ?? "Unknown";

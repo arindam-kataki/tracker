@@ -1,9 +1,11 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Tracker.Web.Data;
 using Tracker.Web.Entities;
 using Tracker.Web.Services.Interfaces;
 using Tracker.Web.ViewModels;
+using Microsoft.EntityFrameworkCore;
 
 namespace Tracker.Web.Controllers;
 
@@ -24,6 +26,7 @@ public class EnhancementDetailsController : BaseController
     private readonly ITimeRecordingService _timeRecordingService;
     private readonly IEnhancementSharingService _sharingService;
     private readonly IUserService _userService;
+    private readonly TrackerDbContext _context;
 
     public EnhancementDetailsController(
         IAuthService authService,
@@ -35,7 +38,8 @@ public class EnhancementDetailsController : BaseController
         IAttachmentService attachmentService,
         ITimeRecordingService timeRecordingService,
         IEnhancementSharingService sharingService,
-        IUserService userService) : base(authService)
+        IUserService userService,
+        TrackerDbContext context) : base(authService)
     {
         _enhancementService = enhancementService;
         _serviceAreaService = serviceAreaService;
@@ -46,6 +50,7 @@ public class EnhancementDetailsController : BaseController
         _timeRecordingService = timeRecordingService;
         _sharingService = sharingService;
         _userService = userService;
+        _context = context;
     }
 
     #region Main Details Page
@@ -89,8 +94,8 @@ public class EnhancementDetailsController : BaseController
     }
 
     private async Task<EnhancementDetailsViewModel> BuildDetailsViewModelAsync(
-        Enhancement? enhancement, 
-        ServiceArea serviceArea, 
+        Enhancement? enhancement,
+        ServiceArea serviceArea,
         string activeTab)
     {
         var isNew = enhancement == null;
@@ -106,11 +111,17 @@ public class EnhancementDetailsController : BaseController
 
         // Get distinct values for dropdowns
         //var allEnhancements = await _enhancementService.GetByServiceAreaAsync(serviceArea.Id, new EnhancementFilterViewModel { PageSize = 10000 });
-        
+
+        //var allEnhancements = await _enhancementService.GetByServiceAreaAsync(serviceArea.Id);
+
+        //var serviceLines = allEnhancements.Items.Select(e => e.ServiceLine).Where(s => !string.IsNullOrEmpty(s)).Distinct().OrderBy(s => s).ToList();
+        //var infStatuses = allEnhancements.Items.Select(e => e.InfStatus).Where(s => !string.IsNullOrEmpty(s)).Distinct().OrderBy(s => s).ToList();
+
+        // Fixed - GetByServiceAreaAsync returns List<Enhancement>, not PagedResult
         var allEnhancements = await _enhancementService.GetByServiceAreaAsync(serviceArea.Id);
-        
-        var serviceLines = allEnhancements.Items.Select(e => e.ServiceLine).Where(s => !string.IsNullOrEmpty(s)).Distinct().OrderBy(s => s).ToList();
-        var infStatuses = allEnhancements.Items.Select(e => e.InfStatus).Where(s => !string.IsNullOrEmpty(s)).Distinct().OrderBy(s => s).ToList();
+
+        var serviceLines = allEnhancements.Select(e => e.ServiceLine).Where(s => !string.IsNullOrEmpty(s)).Distinct().OrderBy(s => s).ToList();
+        var infStatuses = allEnhancements.Select(e => e.InfStatus).Where(s => !string.IsNullOrEmpty(s)).Distinct().OrderBy(s => s).ToList();
 
         // Build ticket details
         var ticketDetails = new TicketDetailsViewModel
@@ -249,6 +260,52 @@ public class EnhancementDetailsController : BaseController
             model.Sharing = new SharingViewModel();
             model.TimeRecording = new TimeRecordingViewModel { EnhancementId = enhancementId };
         }
+
+        // Notifications
+        if (!isNew)
+        {
+            var notificationRecipients = await _context.EnhancementNotificationRecipients
+                .Include(r => r.Resource)
+                .ThenInclude(r => r.ResourceType)
+                .Where(r => r.EnhancementId == enhancementId)
+                .ToListAsync();
+
+            // Get all active resources (all types) for notification selection
+            var allActiveResources = await _resourceService.GetActiveAsync();
+
+            model.Notifications = new NotificationsViewModel
+            {
+                EnhancementId = enhancementId,
+                SelectedRecipientIds = notificationRecipients.Select(r => r.ResourceId).ToList(),
+                AvailableResources = allActiveResources.Select(r => new NotificationRecipientOption
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    Email = r.Email,
+                    ResourceType = r.ResourceType?.Name
+                }).ToList(),
+                CurrentRecipients = notificationRecipients.Select(r => new NotificationRecipientViewModel
+                {
+                    Id = r.Id,
+                    ResourceId = r.ResourceId,
+                    ResourceName = r.Resource?.Name ?? "Unknown",
+                    Email = r.Resource?.Email,
+                    ResourceType = r.Resource?.ResourceType?.Name,
+                    AddedAt = r.CreatedAt,
+                    AddedBy = r.CreatedBy
+                }).ToList()
+            };
+        }
+        else
+        {
+            model.Notifications = new NotificationsViewModel();
+        }
+
+
+
+
+
+
 
         return model;
     }
@@ -501,9 +558,76 @@ public class EnhancementDetailsController : BaseController
     }
 
     #endregion
+
+    // Add these methods to EnhancementDetailsController.cs
+
+    #region Notification Recipients
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddNotificationRecipient([FromBody] AddNotificationRecipientRequest request)
+    {
+        if (string.IsNullOrEmpty(request.EnhancementId) || string.IsNullOrEmpty(request.ResourceId))
+            return Json(new { success = false, message = "Invalid request" });
+
+        var enhancement = await _enhancementService.GetByIdAsync(request.EnhancementId);
+        if (enhancement == null)
+            return Json(new { success = false, message = "Enhancement not found" });
+
+        // Check if already exists
+        var existing = await _context.EnhancementNotificationRecipients
+            .FirstOrDefaultAsync(r => r.EnhancementId == request.EnhancementId && r.ResourceId == request.ResourceId);
+
+        if (existing != null)
+            return Json(new { success = false, message = "Recipient already added" });
+
+        var recipient = new EnhancementNotificationRecipient
+        {
+            EnhancementId = request.EnhancementId,
+            ResourceId = request.ResourceId,
+            CreatedBy = CurrentUserId
+        };
+
+        _context.EnhancementNotificationRecipients.Add(recipient);
+        await _context.SaveChangesAsync();
+
+        return Json(new { success = true, recipientId = recipient.Id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveNotificationRecipient([FromBody] RemoveNotificationRecipientRequest request)
+    {
+        if (string.IsNullOrEmpty(request.RecipientId))
+            return Json(new { success = false, message = "Invalid request" });
+
+        var recipient = await _context.EnhancementNotificationRecipients.FindAsync(request.RecipientId);
+        if (recipient == null)
+            return Json(new { success = false, message = "Recipient not found" });
+
+        _context.EnhancementNotificationRecipients.Remove(recipient);
+        await _context.SaveChangesAsync();
+
+        return Json(new { success = true });
+    }
+
+    #endregion
 }
 
 public class DeleteRequest
 {
     public string Id { get; set; } = string.Empty;
+}
+
+
+// Request models - add to ViewModels folder or at the end of the controller file
+public class AddNotificationRecipientRequest
+{
+    public string EnhancementId { get; set; } = string.Empty;
+    public string ResourceId { get; set; } = string.Empty;
+}
+
+public class RemoveNotificationRecipientRequest
+{
+    public string RecipientId { get; set; } = string.Empty;
 }

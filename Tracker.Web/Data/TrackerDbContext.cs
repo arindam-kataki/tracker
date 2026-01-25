@@ -28,13 +28,19 @@ public class TrackerDbContext : DbContext
     public DbSet<ResourceSkill> ResourceSkills => Set<ResourceSkill>();
     public DbSet<ResourceTypeLookup> ResourceTypeLookups => Set<ResourceTypeLookup>();
     public DbSet<EnhancementSkill> EnhancementSkills => Set<EnhancementSkill>();
-    
+
     // New DbSets for Enhancement Details
-    public DbSet<EnhancementNote> EnhancementNotes => Set<EnhancementNote>();
+    public DbSet<Note> EnhancementNotes => Set<Note>();
     public DbSet<EnhancementAttachment> EnhancementAttachments => Set<EnhancementAttachment>();
     public DbSet<TimeRecordingCategory> TimeRecordingCategories => Set<TimeRecordingCategory>();
     public DbSet<EnhancementTimeCategory> EnhancementTimeCategories => Set<EnhancementTimeCategory>();
     public DbSet<EnhancementTimeEntry> EnhancementTimeEntries => Set<EnhancementTimeEntry>();
+    public DbSet<EnhancementNotificationRecipient> EnhancementNotificationRecipients => Set<EnhancementNotificationRecipient>();
+    public DbSet<WorkPhase> WorkPhases => Set<WorkPhase>();
+    public DbSet<EstimationBreakdownItem> EstimationBreakdownItems => Set<EstimationBreakdownItem>();
+    public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
+    public DbSet<Consolidation> Consolidations => Set<Consolidation>();
+    public DbSet<ConsolidationSource> ConsolidationSources => Set<ConsolidationSource>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -312,11 +318,11 @@ public class TrackerDbContext : DbContext
         // ============================================
         // NEW: Enhancement Notes
         // ============================================
-        modelBuilder.Entity<EnhancementNote>(entity =>
+        modelBuilder.Entity<Note>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.NoteText).IsRequired();
-            
+
             entity.HasIndex(e => e.EnhancementId);
             entity.HasIndex(e => e.CreatedAt);
 
@@ -341,7 +347,7 @@ public class TrackerDbContext : DbContext
             entity.Property(e => e.StoredFileName).IsRequired().HasMaxLength(255);
             entity.Property(e => e.ContentType).IsRequired().HasMaxLength(100);
             entity.Property(e => e.StoragePath).IsRequired().HasMaxLength(500);
-            
+
             entity.HasIndex(e => e.EnhancementId);
             entity.HasIndex(e => e.UploadedAt);
 
@@ -364,7 +370,7 @@ public class TrackerDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Description).HasMaxLength(500);
-            
+
             entity.HasIndex(e => e.DisplayOrder);
             entity.HasIndex(e => e.IsActive);
         });
@@ -394,7 +400,7 @@ public class TrackerDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.HoursJson).IsRequired().HasDefaultValue("{}");
-            
+
             entity.HasIndex(e => e.EnhancementId);
             entity.HasIndex(e => new { e.EnhancementId, e.PeriodStart, e.PeriodEnd });
 
@@ -403,5 +409,167 @@ public class TrackerDbContext : DbContext
                 .HasForeignKey(e => e.EnhancementId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        // EnhancementNotificationRecipient
+        modelBuilder.Entity<EnhancementNotificationRecipient>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => e.EnhancementId);
+            entity.HasIndex(e => new { e.EnhancementId, e.ResourceId }).IsUnique();
+
+            entity.HasOne(e => e.Enhancement)
+                .WithMany(e => e.NotificationRecipients)
+                .HasForeignKey(e => e.EnhancementId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Resource)
+                .WithMany()
+                .HasForeignKey(e => e.ResourceId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<WorkPhase>(entity =>
+{
+    entity.HasKey(e => e.Id);
+    entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+    entity.Property(e => e.Code).IsRequired().HasMaxLength(20);
+    entity.Property(e => e.Description).HasMaxLength(500);
+    entity.Property(e => e.DefaultContributionPercent).HasDefaultValue(100);
+    entity.Property(e => e.IsActive).HasDefaultValue(true);
+    entity.Property(e => e.ForEstimation).HasDefaultValue(true);
+    entity.Property(e => e.ForTimeRecording).HasDefaultValue(true);
+    entity.Property(e => e.ForConsolidation).HasDefaultValue(true);
+
+    entity.HasIndex(e => e.Code).IsUnique();
+    entity.HasIndex(e => e.DisplayOrder);
+});
+
+        // EstimationBreakdownItem
+        modelBuilder.Entity<EstimationBreakdownItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Hours).HasPrecision(10, 2);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+
+            entity.HasIndex(e => e.EnhancementId);
+            entity.HasIndex(e => e.WorkPhaseId);
+            entity.HasIndex(e => new { e.EnhancementId, e.WorkPhaseId }).IsUnique();
+
+            entity.HasOne(e => e.Enhancement)
+                .WithMany(e => e.EstimationBreakdownItems)
+                .HasForeignKey(e => e.EnhancementId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.WorkPhase)
+                .WithMany(wp => wp.EstimationItems)
+                .HasForeignKey(e => e.WorkPhaseId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // TimeEntry
+        modelBuilder.Entity<TimeEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Hours).HasPrecision(10, 2);
+            entity.Property(e => e.ContributedHours).HasPrecision(10, 2);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+
+            entity.HasIndex(e => e.EnhancementId);
+            entity.HasIndex(e => e.ResourceId);
+            entity.HasIndex(e => e.WorkPhaseId);
+            entity.HasIndex(e => new { e.StartDate, e.EndDate });
+
+            entity.HasOne(e => e.Enhancement)
+                .WithMany(e => e.TimeEntriesNew)
+                .HasForeignKey(e => e.EnhancementId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Resource)
+                .WithMany(r => r.TimeEntries)
+                .HasForeignKey(e => e.ResourceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.WorkPhase)
+                .WithMany(wp => wp.TimeEntries)
+                .HasForeignKey(e => e.WorkPhaseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedById)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ModifiedBy)
+                .WithMany()
+                .HasForeignKey(e => e.ModifiedById)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Ignore computed properties
+            entity.Ignore(e => e.TotalPulledHours);
+            entity.Ignore(e => e.RemainingHours);
+        });
+
+        // Consolidation
+        modelBuilder.Entity<Consolidation>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BillableHours).HasPrecision(10, 2);
+            entity.Property(e => e.SourceHours).HasPrecision(10, 2);
+            entity.Property(e => e.Status).HasDefaultValue(ConsolidationStatus.Draft);
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+
+            entity.HasIndex(e => e.EnhancementId);
+            entity.HasIndex(e => e.ServiceAreaId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => new { e.StartDate, e.EndDate });
+
+            entity.HasOne(e => e.Enhancement)
+                .WithMany(e => e.Consolidations)
+                .HasForeignKey(e => e.EnhancementId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ServiceArea)
+                .WithMany()
+                .HasForeignKey(e => e.ServiceAreaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedById)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ModifiedBy)
+                .WithMany()
+                .HasForeignKey(e => e.ModifiedById)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Ignore computed properties
+            entity.Ignore(e => e.IsManual);
+            entity.Ignore(e => e.PeriodDisplay);
+            entity.Ignore(e => e.DateRangeDisplay);
+        });
+
+        // ConsolidationSource
+        modelBuilder.Entity<ConsolidationSource>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PulledHours).HasPrecision(10, 2);
+
+            entity.HasIndex(e => e.ConsolidationId);
+            entity.HasIndex(e => e.TimeEntryId);
+
+            entity.HasOne(e => e.Consolidation)
+                .WithMany(c => c.Sources)
+                .HasForeignKey(e => e.ConsolidationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.TimeEntry)
+                .WithMany(te => te.ConsolidationSources)
+                .HasForeignKey(e => e.TimeEntryId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+
     }
 }

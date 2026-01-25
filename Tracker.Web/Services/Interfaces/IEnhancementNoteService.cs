@@ -4,9 +4,9 @@ namespace Tracker.Web.Services.Interfaces;
 
 public interface IEnhancementNoteService
 {
-    Task<List<EnhancementNote>> GetByEnhancementIdAsync(string enhancementId);
-    Task<EnhancementNote?> GetByIdAsync(string id);
-    Task<EnhancementNote> CreateAsync(string enhancementId, string noteText, string userId);
-    Task<EnhancementNote?> UpdateAsync(string id, string noteText, string userId);
+    Task<List<Note>> GetByEnhancementIdAsync(string enhancementId);
+    Task<Note?> GetByIdAsync(string id);
+    Task<Note> CreateAsync(string enhancementId, string noteText, string userId);
+    Task<Note?> UpdateAsync(string id, string noteText, string userId);
     Task<bool> DeleteAsync(string id, string userId);
 }
