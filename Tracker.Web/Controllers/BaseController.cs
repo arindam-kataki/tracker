@@ -1,63 +1,86 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Tracker.Web.Entities;
+using Tracker.Web.Services.Interfaces;
+using Tracker.Web.ViewModels;
 
 namespace Tracker.Web.Controllers;
 
 /// <summary>
-/// Base controller with common functionality
+/// Base controller with common functionality for authenticated controllers.
+/// Uses ASP.NET Core Identity claims for user identification.
 /// </summary>
 public abstract class BaseController : Controller
 {
-    /// <summary>
-    /// Current logged-in resource (user)
-    /// </summary>
-    protected Resource CurrentResource { get; private set; } = null!;
-    
-    /// <summary>
-    /// Current resource ID from session
-    /// </summary>
-    protected string CurrentResourceId => HttpContext.Session.GetString("ResourceId") ?? "";
-    
-    /// <summary>
-    /// Current resource name from session
-    /// </summary>
-    protected string CurrentResourceName => HttpContext.Session.GetString("ResourceName") ?? "";
-    
-    /// <summary>
-    /// Whether current user is admin
-    /// </summary>
-    protected bool IsAdmin => HttpContext.Session.GetString("IsAdmin") == "true";
-    
-    public override void OnActionExecuting(ActionExecutingContext context)
+    protected readonly IAuthService AuthService;
+
+    protected BaseController(IAuthService authService)
     {
-        base.OnActionExecuting(context);
+        AuthService = authService;
+    }
+
+    /// <summary>
+    /// Current user's ID from claims
+    /// </summary>
+    protected string? CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    /// <summary>
+    /// Current user's email from claims
+    /// </summary>
+    protected string? CurrentUserEmail => User.FindFirstValue(ClaimTypes.Email);
+
+    /// <summary>
+    /// Current user's display name from claims
+    /// </summary>
+    protected string? CurrentUserName => User.FindFirstValue(ClaimTypes.Name);
+
+    /// <summary>
+    /// Whether current user is a SuperAdmin
+    /// </summary>
+    protected bool IsSuperAdmin => User.IsInRole("SuperAdmin");
+
+    /// <summary>
+    /// Get sidebar view model for layout
+    /// </summary>
+    protected async Task<SidebarViewModel> GetSidebarViewModelAsync(string? currentServiceAreaId = null, string? currentPage = null)
+    {
+        var serviceAreas = new List<ServiceArea>();
         
-        // Skip auth check for Account controller
-        if (context.Controller is AccountController)
-            return;
-        
-        // Check if logged in
-        var resourceId = HttpContext.Session.GetString("ResourceId");
-        if (string.IsNullOrEmpty(resourceId))
+        if (CurrentUserId != null)
         {
-            context.Result = RedirectToAction("Login", "Account");
-            return;
+            serviceAreas = await AuthService.GetUserServiceAreasAsync(CurrentUserId);
         }
-        
-        // Build current resource from session
-        CurrentResource = new Resource
+
+        return new SidebarViewModel
         {
-            Id = resourceId,
-            Name = HttpContext.Session.GetString("ResourceName") ?? "",
-            Email = HttpContext.Session.GetString("ResourceEmail"),
-            IsAdmin = HttpContext.Session.GetString("IsAdmin") == "true",
-            OrganizationType = Enum.Parse<OrganizationType>(
-                HttpContext.Session.GetString("OrganizationType") ?? "Implementor")
+            ServiceAreas = serviceAreas,
+            CurrentServiceAreaId = currentServiceAreaId,
+            CurrentPage = currentPage,
+            IsSuperAdmin = IsSuperAdmin
         };
-        
-        // Pass to views
-        ViewBag.CurrentResource = CurrentResource;
-        ViewBag.IsAdmin = CurrentResource.IsAdmin;
+    }
+
+    /// <summary>
+    /// Get list of service area IDs accessible by current user
+    /// </summary>
+    protected async Task<List<string>> GetAccessibleServiceAreaIdsAsync()
+    {
+        if (CurrentUserId == null)
+            return new List<string>();
+
+        var serviceAreas = await AuthService.GetUserServiceAreasAsync(CurrentUserId);
+        return serviceAreas.Select(sa => sa.Id).ToList();
+    }
+
+    /// <summary>
+    /// Get list of service areas accessible by current user
+    /// </summary>
+    protected async Task<List<ServiceArea>> GetAccessibleServiceAreasAsync()
+    {
+        if (CurrentUserId == null)
+            return new List<ServiceArea>();
+
+        return await AuthService.GetUserServiceAreasAsync(CurrentUserId);
     }
 }

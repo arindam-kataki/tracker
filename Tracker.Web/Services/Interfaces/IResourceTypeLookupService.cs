@@ -1,7 +1,7 @@
 using Tracker.Web.Entities;
 using Tracker.Web.ViewModels;
 
-namespace Tracker.Web.Services;
+namespace Tracker.Web.Services.Interfaces;
 
 public interface IResourceTypeLookupService
 {

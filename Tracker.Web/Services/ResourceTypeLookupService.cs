@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Tracker.Web.Data;
 using Tracker.Web.Entities;
+using Tracker.Web.Services.Interfaces;
 using Tracker.Web.ViewModels;
 
 namespace Tracker.Web.Services;

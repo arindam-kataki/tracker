@@ -1,8 +1,9 @@
 namespace Tracker.Web.Entities;
 
 /// <summary>
-/// Represents a person in the system - can be a user (with login) or just a contact.
-/// Combines the old User and Resource tables into one unified entity.
+/// Represents a resource/person that can be assigned to enhancements.
+/// This is separate from User (which handles authentication).
+/// Resources are categorized by ResourceType and OrganizationType, and can have Skills.
 /// </summary>
 public class Resource
 {
@@ -11,45 +12,28 @@ public class Resource
     // === BASIC INFO ===
     public string Name { get; set; } = string.Empty;
     public string? Email { get; set; }
-    public string? Phone { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
     
     // === CLASSIFICATION ===
+    
     /// <summary>
     /// Client, Implementor, or Vendor
     /// </summary>
     public OrganizationType OrganizationType { get; set; } = OrganizationType.Implementor;
     
-    // === LOGIN (optional) ===
     /// <summary>
-    /// Whether this resource can log into the system
+    /// Foreign key to ResourceTypeLookup (e.g., Developer, Tester, Analyst, Sponsor, SPOC)
     /// </summary>
-    public bool CanLogin { get; set; } = false;
+    public string? ResourceTypeId { get; set; }
     
     /// <summary>
-    /// Password hash for authentication (null if CanLogin is false)
+    /// Navigation property to ResourceTypeLookup
     /// </summary>
-    public string? PasswordHash { get; set; }
-    
-    /// <summary>
-    /// Last login timestamp
-    /// </summary>
-    public DateTime? LastLoginAt { get; set; }
-    
-    // === ADMIN ===
-    /// <summary>
-    /// Full system access - bypasses all SA-based permissions.
-    /// Only Implementor resources can be admin.
-    /// </summary>
-    public bool IsAdmin { get; set; } = false;
+    public virtual ResourceTypeLookup? ResourceType { get; set; }
     
     // === NAVIGATION ===
-    
-    /// <summary>
-    /// Service area memberships with permissions
-    /// </summary>
-    public virtual ICollection<ResourceServiceArea> ServiceAreas { get; set; } = new List<ResourceServiceArea>();
     
     /// <summary>
     /// Skills associated with this resource
@@ -82,16 +66,6 @@ public class Resource
     // === COMPUTED PROPERTIES ===
     
     /// <summary>
-    /// Whether this resource can be an admin (only Implementor)
-    /// </summary>
-    public bool CanBeAdmin => OrganizationType == OrganizationType.Implementor;
-    
-    /// <summary>
-    /// Whether this resource can have login capability
-    /// </summary>
-    public bool CanHaveLogin => OrganizationType != OrganizationType.Client;
-    
-    /// <summary>
     /// Display string for organization type
     /// </summary>
     public string OrganizationTypeDisplay => OrganizationType switch
@@ -101,6 +75,11 @@ public class Resource
         OrganizationType.Vendor => "Vendor",
         _ => "Unknown"
     };
+    
+    /// <summary>
+    /// Resource type name for display
+    /// </summary>
+    public string ResourceTypeDisplay => ResourceType?.Name ?? "Unassigned";
     
     /// <summary>
     /// Skills as comma-separated display string
@@ -116,17 +95,17 @@ public class Resource
 public enum OrganizationType
 {
     /// <summary>
-    /// External client/customer - cannot login, cannot be admin
+    /// External client/customer
     /// </summary>
     Client = 0,
     
     /// <summary>
-    /// Internal team member - can login, can be admin
+    /// Internal team member
     /// </summary>
     Implementor = 1,
     
     /// <summary>
-    /// Third-party vendor - can login, cannot be admin
+    /// Third-party vendor
     /// </summary>
     Vendor = 2
 }

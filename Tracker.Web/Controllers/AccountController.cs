@@ -1,21 +1,25 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
-using Tracker.Web.Services;
+using Tracker.Web.Services.Interfaces;
+using Tracker.Web.ViewModels;
 
 namespace Tracker.Web.Controllers;
 
 /// <summary>
-/// Controller for authentication
+/// Controller for authentication (login/logout)
+/// Does NOT inherit from BaseController since it handles unauthenticated users
 /// </summary>
-public class AccountController : BaseController
+public class AccountController : Controller
 {
-    private readonly IResourceService _resourceService;
-    
-    public AccountController(IResourceService resourceService)
+    private readonly IAuthService _authService;
+
+    public AccountController(IAuthService authService)
     {
-        _resourceService = resourceService;
+        _authService = authService;
     }
-    
+
     /// <summary>
     /// Login page
     /// </summary>
@@ -23,62 +27,74 @@ public class AccountController : BaseController
     public IActionResult Login(string? returnUrl = null)
     {
         // Already logged in?
-        if (!string.IsNullOrEmpty(HttpContext.Session.GetString("ResourceId")))
+        if (User.Identity?.IsAuthenticated == true)
         {
             return RedirectToAction("Index", "Home");
         }
-        
-        ViewBag.ReturnUrl = returnUrl;
-        return View(new LoginViewModel());
+
+        return View(new LoginViewModel { ReturnUrl = returnUrl });
     }
-    
+
     /// <summary>
     /// Process login
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
+    public async Task<IActionResult> Login(LoginViewModel model)
     {
         if (!ModelState.IsValid)
         {
             return View(model);
         }
-        
-        var resource = await _resourceService.AuthenticateAsync(model.Email, model.Password);
-        
-        if (resource == null)
+
+        var user = await _authService.ValidateCredentialsAsync(model.Email, model.Password);
+
+        if (user == null)
         {
             ModelState.AddModelError("", "Invalid email or password");
             return View(model);
         }
-        
-        // Set session
-        HttpContext.Session.SetString("ResourceId", resource.Id);
-        HttpContext.Session.SetString("ResourceName", resource.Name);
-        HttpContext.Session.SetString("ResourceEmail", resource.Email ?? "");
-        HttpContext.Session.SetString("IsAdmin", resource.IsAdmin ? "true" : "false");
-        HttpContext.Session.SetString("OrganizationType", resource.OrganizationType.ToString());
-        
-        // Redirect
-        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+
+        // Create claims
+        var claims = new List<Claim>
         {
-            return Redirect(returnUrl);
+            new(ClaimTypes.NameIdentifier, user.Id),
+            new(ClaimTypes.Email, user.Email),
+            new(ClaimTypes.Name, user.DisplayName),
+            new(ClaimTypes.Role, user.Role.ToString())
+        };
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        var authProperties = new AuthenticationProperties
+        {
+            IsPersistent = model.RememberMe,
+            ExpiresUtc = model.RememberMe ? DateTimeOffset.UtcNow.AddDays(30) : DateTimeOffset.UtcNow.AddHours(8)
+        };
+
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
+
+        // Redirect
+        if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
+        {
+            return Redirect(model.ReturnUrl);
         }
-        
+
         return RedirectToAction("Index", "Home");
     }
-    
+
     /// <summary>
     /// Logout
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout()
     {
-        HttpContext.Session.Clear();
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return RedirectToAction(nameof(Login));
     }
-    
+
     /// <summary>
     /// Access denied page
     /// </summary>
@@ -87,20 +103,4 @@ public class AccountController : BaseController
     {
         return View();
     }
-}
-
-/// <summary>
-/// Login view model
-/// </summary>
-public class LoginViewModel
-{
-    [Required(ErrorMessage = "Email is required")]
-    [EmailAddress(ErrorMessage = "Invalid email address")]
-    public string Email { get; set; } = string.Empty;
-    
-    [Required(ErrorMessage = "Password is required")]
-    [DataType(DataType.Password)]
-    public string Password { get; set; } = string.Empty;
-    
-    public bool RememberMe { get; set; }
 }
