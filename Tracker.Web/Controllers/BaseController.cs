@@ -1,44 +1,63 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Tracker.Web.Entities;
-using Tracker.Web.Services.Interfaces;
-using Tracker.Web.ViewModels;
 
 namespace Tracker.Web.Controllers;
 
+/// <summary>
+/// Base controller with common functionality
+/// </summary>
 public abstract class BaseController : Controller
 {
-    protected readonly IAuthService AuthService;
-
-    protected BaseController(IAuthService authService)
+    /// <summary>
+    /// Current logged-in resource (user)
+    /// </summary>
+    protected Resource CurrentResource { get; private set; } = null!;
+    
+    /// <summary>
+    /// Current resource ID from session
+    /// </summary>
+    protected string CurrentResourceId => HttpContext.Session.GetString("ResourceId") ?? "";
+    
+    /// <summary>
+    /// Current resource name from session
+    /// </summary>
+    protected string CurrentResourceName => HttpContext.Session.GetString("ResourceName") ?? "";
+    
+    /// <summary>
+    /// Whether current user is admin
+    /// </summary>
+    protected bool IsAdmin => HttpContext.Session.GetString("IsAdmin") == "true";
+    
+    public override void OnActionExecuting(ActionExecutingContext context)
     {
-        AuthService = authService;
-    }
-
-    protected string? CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
-    protected string? CurrentUserEmail => User.FindFirstValue(ClaimTypes.Email);
-    protected string? CurrentUserName => User.FindFirstValue(ClaimTypes.Name);
-    protected bool IsSuperAdmin => User.IsInRole(UserRole.SuperAdmin.ToString());
-    protected bool IsReporting => User.IsInRole(UserRole.Reporting.ToString()) || IsSuperAdmin;
-    public bool CanConsolidate { get; set; }
-
-    protected async Task<SidebarViewModel> GetSidebarViewModelAsync(string? currentServiceAreaId = null, string currentPage = "")
-    {
-        var userId = CurrentUserId;
-        var user = userId != null ? await AuthService.GetUserByIdAsync(userId) : null;
-        var serviceAreas = userId != null
-            ? await AuthService.GetUserServiceAreasAsync(userId)
-            : new List<ServiceArea>();
-
-        return new SidebarViewModel
+        base.OnActionExecuting(context);
+        
+        // Skip auth check for Account controller
+        if (context.Controller is AccountController)
+            return;
+        
+        // Check if logged in
+        var resourceId = HttpContext.Session.GetString("ResourceId");
+        if (string.IsNullOrEmpty(resourceId))
         {
-            ServiceAreas = serviceAreas,
-            CurrentServiceAreaId = currentServiceAreaId,
-            IsSuperAdmin = IsSuperAdmin,
-            CurrentPage = currentPage,
-            UserEmail = CurrentUserEmail,
-            UserRole = IsSuperAdmin ? "SuperAdmin" : (IsReporting ? "Reporting" : "User"),
-            CanConsolidate = IsSuperAdmin || (user?.CanConsolidate ?? false)  // <-- ADD THIS
+            context.Result = RedirectToAction("Login", "Account");
+            return;
+        }
+        
+        // Build current resource from session
+        CurrentResource = new Resource
+        {
+            Id = resourceId,
+            Name = HttpContext.Session.GetString("ResourceName") ?? "",
+            Email = HttpContext.Session.GetString("ResourceEmail"),
+            IsAdmin = HttpContext.Session.GetString("IsAdmin") == "true",
+            OrganizationType = Enum.Parse<OrganizationType>(
+                HttpContext.Session.GetString("OrganizationType") ?? "Implementor")
         };
+        
+        // Pass to views
+        ViewBag.CurrentResource = CurrentResource;
+        ViewBag.IsAdmin = CurrentResource.IsAdmin;
     }
 }
