@@ -41,6 +41,7 @@ public class TrackerDbContext : DbContext
     public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
     public DbSet<Consolidation> Consolidations => Set<Consolidation>();
     public DbSet<ConsolidationSource> ConsolidationSources => Set<ConsolidationSource>();
+    public DbSet<ResourceServiceArea> ResourceServiceAreas { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -570,6 +571,51 @@ public class TrackerDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+
+        // ResourceServiceArea configuration
+        modelBuilder.Entity<ResourceServiceArea>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => e.ResourceId);
+            entity.HasIndex(e => e.ServiceAreaId);
+
+            // Unique constraint: one membership per resource+servicearea
+            entity.HasIndex(e => new { e.ResourceId, e.ServiceAreaId }).IsUnique();
+
+            entity.Property(e => e.IsPrimary).HasDefaultValue(false);
+            entity.Property(e => e.JoinedAt).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.Permissions).HasDefaultValue(Permissions.None);
+
+            entity.HasOne(e => e.Resource)
+                .WithMany(r => r.ServiceAreas)
+                .HasForeignKey(e => e.ResourceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ServiceArea)
+                .WithMany()
+                .HasForeignKey(e => e.ServiceAreaId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Update Resource configuration
+        modelBuilder.Entity<Resource>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.Phone).HasMaxLength(50);
+            entity.Property(e => e.OrganizationType).HasDefaultValue(OrganizationType.Implementor);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+
+            // Optional link to User
+            entity.HasOne(e => e.User)
+                .WithOne()
+                .HasForeignKey<Resource>(e => e.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
 
     }
 }

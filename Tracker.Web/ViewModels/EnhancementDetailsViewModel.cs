@@ -203,9 +203,14 @@ public class SharingViewModel
 public class ServiceAreaOption
 {
     public string Id { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;  // ADD THIS
     public string Name { get; set; } = string.Empty;
     public bool IsSelected { get; set; }
+    
+    // ADD THIS computed property
+    public string DisplayName => string.IsNullOrEmpty(Code) ? Name : $"{Code} - {Name}";
 }
+
 
 /// <summary>
 /// Tab 6: Time Recording

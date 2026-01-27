@@ -58,6 +58,7 @@ builder.Services.AddScoped<IWorkPhaseService, WorkPhaseService>();
 builder.Services.AddScoped<ITimesheetService, TimesheetService>();
 builder.Services.AddScoped<IConsolidationService, ConsolidationService>();
 builder.Services.AddScoped<IEstimationService, EstimationService>();
+builder.Services.AddScoped<IResourceService, ResourceService>();
 
 // Add MVC
 builder.Services.AddControllersWithViews();

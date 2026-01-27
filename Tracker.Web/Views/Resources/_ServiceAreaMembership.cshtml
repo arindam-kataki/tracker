@@ -1,0 +1,136 @@
+@model Tracker.Web.ViewModels.EditResourceServiceAreaViewModel
+@{
+    var index = (int)ViewData["index"];
+}
+
+<div class="card mb-3 sa-membership-card" data-sa-id="@Model.ServiceAreaId" id="membership_@index">
+    <div class="card-header d-flex justify-content-between align-items-center py-2">
+        <div>
+            <strong>@Model.ServiceAreaCode - @Model.ServiceAreaName</strong>
+            <span class="badge bg-primary ms-2 primary-badge" style="display: @(Model.IsPrimary ? "inline" : "none")">Primary</span>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger remove-sa-btn" data-index="@index">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div class="card-body py-3">
+        <input type="hidden" name="ServiceAreaMemberships[@index].Id" value="@Model.Id" />
+        <input type="hidden" name="ServiceAreaMemberships[@index].ServiceAreaId" value="@Model.ServiceAreaId" />
+        <input type="hidden" name="ServiceAreaMemberships[@index].ServiceAreaCode" value="@Model.ServiceAreaCode" />
+        <input type="hidden" name="ServiceAreaMemberships[@index].ServiceAreaName" value="@Model.ServiceAreaName" />
+        
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input sa-primary-checkbox" 
+                           name="ServiceAreaMemberships[@index].IsPrimary" 
+                           id="primary_@index" value="true" checked="@Model.IsPrimary" />
+                    <label class="form-check-label" for="primary_@index">
+                        <strong>Primary Service Area</strong>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Enhancements -->
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Enhancements</label>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" 
+                           name="ServiceAreaMemberships[@index].ViewEnhancements" 
+                           id="viewEnh_@index" value="true" checked="@Model.ViewEnhancements" />
+                    <label class="form-check-label" for="viewEnh_@index">View</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" 
+                           name="ServiceAreaMemberships[@index].EditEnhancements" 
+                           id="editEnh_@index" value="true" checked="@Model.EditEnhancements" />
+                    <label class="form-check-label" for="editEnh_@index">Edit</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" 
+                           name="ServiceAreaMemberships[@index].UploadEnhancements" 
+                           id="uploadEnh_@index" value="true" checked="@Model.UploadEnhancements" />
+                    <label class="form-check-label" for="uploadEnh_@index">Upload</label>
+                </div>
+            </div>
+            
+            <!-- Timesheets -->
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Timesheets</label>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" 
+                           name="ServiceAreaMemberships[@index].LogTimesheet" 
+                           id="logTime_@index" value="true" checked="@Model.LogTimesheet" />
+                    <label class="form-check-label" for="logTime_@index">Log Own</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" 
+                           name="ServiceAreaMemberships[@index].ViewAllTimesheets" 
+                           id="viewTime_@index" value="true" checked="@Model.ViewAllTimesheets" />
+                    <label class="form-check-label" for="viewTime_@index">View All</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" 
+                           name="ServiceAreaMemberships[@index].ApproveTimesheets" 
+                           id="approveTime_@index" value="true" checked="@Model.ApproveTimesheets" />
+                    <label class="form-check-label" for="approveTime_@index">Approve</label>
+                </div>
+            </div>
+            
+            <!-- Invoicing -->
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Invoicing</label>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" 
+                           name="ServiceAreaMemberships[@index].ViewInvoices" 
+                           id="viewInv_@index" value="true" checked="@Model.ViewInvoices" />
+                    <label class="form-check-label" for="viewInv_@index">View</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" 
+                           name="ServiceAreaMemberships[@index].CreateInvoices" 
+                           id="createInv_@index" value="true" checked="@Model.CreateInvoices" />
+                    <label class="form-check-label" for="createInv_@index">Create</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" 
+                           name="ServiceAreaMemberships[@index].UpdateInvoices" 
+                           id="updateInv_@index" value="true" checked="@Model.UpdateInvoices" />
+                    <label class="form-check-label" for="updateInv_@index">Update</label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-2">
+            <!-- Resources -->
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Resources</label>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" 
+                           name="ServiceAreaMemberships[@index].ViewResources" 
+                           id="viewRes_@index" value="true" checked="@Model.ViewResources" />
+                    <label class="form-check-label" for="viewRes_@index">View</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" 
+                           name="ServiceAreaMemberships[@index].ManageResources" 
+                           id="manageRes_@index" value="true" checked="@Model.ManageResources" />
+                    <label class="form-check-label" for="manageRes_@index">Manage</label>
+                </div>
+            </div>
+            
+            <!-- Reports -->
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Reports</label>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" 
+                           name="ServiceAreaMemberships[@index].ViewReports" 
+                           id="viewRep_@index" value="true" checked="@Model.ViewReports" />
+                    <label class="form-check-label" for="viewRep_@index">View</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

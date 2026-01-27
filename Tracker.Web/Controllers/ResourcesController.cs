@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Tracker.Web.Services;
-using Tracker.Web.ViewModels;
 using Tracker.Web.Services.Interfaces;
+using Tracker.Web.ViewModels;
 
 namespace Tracker.Web.Controllers;
 
@@ -17,7 +15,7 @@ public class ResourcesController : BaseController
     public ResourcesController(
         IAuthService authService,
         IResourceService resourceService,
-        ILogger<ResourcesController> logger) : base(authService) 
+        ILogger<ResourcesController> logger) : base(authService)
     {
         _resourceService = resourceService;
         _logger = logger;
@@ -46,7 +44,7 @@ public class ResourcesController : BaseController
     {
         var resourceTypes = await _resourceService.GetResourceTypesSelectListAsync();
         var allSkills = await _resourceService.GetSkillsSelectListAsync();
-        
+
         var model = new EditResourceViewModel
         {
             ResourceTypes = resourceTypes,
@@ -67,7 +65,7 @@ public class ResourcesController : BaseController
             model.ResourceTypeId = resource.ResourceTypeId;
             model.IsActive = resource.IsActive;
             model.SkillIds = selectedSkillIds;
-            
+
             // Update selection state
             model.AvailableSkills = await _resourceService.GetSkillsSelectListAsync(selectedSkillIds);
         }

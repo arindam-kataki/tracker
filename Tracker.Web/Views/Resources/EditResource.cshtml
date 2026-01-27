@@ -3,7 +3,7 @@
 <div class="modal-header">
     <h5 class="modal-title">
         <i class="bi bi-person me-2"></i>
-        @(string.IsNullOrEmpty(Model.Id) ? "Add Resource" : "Edit Resource")
+        @(Model.IsNew ? "Add Resource" : "Edit Resource")
     </h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 </div>
@@ -13,46 +13,69 @@
     <input type="hidden" asp-for="Id" />
     
     <div class="modal-body">
-        <div class="mb-3">
-            <label asp-for="Name" class="form-label">Name <span class="text-danger">*</span></label>
-            <input asp-for="Name" class="form-control" />
-            <span asp-validation-for="Name" class="text-danger small"></span>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="Name" class="form-label">Name <span class="text-danger">*</span></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <label asp-for="Email" class="form-label">Email</label>
+                <input asp-for="Email" type="email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
         </div>
         
-        <div class="mb-3">
-            <label asp-for="Email" class="form-label">Email</label>
-            <input asp-for="Email" type="email" class="form-control" />
-            <span asp-validation-for="Email" class="text-danger small"></span>
-        </div>
-        
-        <div class="mb-3">
-            <label asp-for="ResourceTypeId" class="form-label">Resource Type <span class="text-danger">*</span></label>
-            <select asp-for="ResourceTypeId" asp-items="Model.ResourceTypes" class="form-select">
-                <option value="">-- Select Type --</option>
-            </select>
-            <span asp-validation-for="ResourceTypeId" class="text-danger small"></span>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="ResourceTypeId" class="form-label">Type</label>
+                <select asp-for="ResourceTypeId" asp-items="Model.ResourceTypes" class="form-select">
+                    <option value="">-- Select Type --</option>
+                </select>
+                <span asp-validation-for="ResourceTypeId" class="text-danger small"></span>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="form-check mt-2">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label">Active</label>
+                </div>
+            </div>
         </div>
         
         <div class="mb-3">
             <label class="form-label">Skills</label>
-            <select asp-for="SkillIds" class="form-select" multiple size="5">
-                @foreach (var group in Model.AvailableSkills.GroupBy(s => s.Group))
+            <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                @if (!Model.AvailableSkills.Any())
                 {
-                    <optgroup label="@group.Key">
-                        @foreach (var skill in group)
-                        {
-                            <option value="@skill.Value" selected="@skill.Selected">@skill.Text</option>
-                        }
-                    </optgroup>
+                    <span class="text-muted">No skills available</span>
                 }
-            </select>
-            <small class="text-muted">Hold Ctrl/Cmd to select multiple skills</small>
-        </div>
-        
-        <div class="mb-3">
-            <div class="form-check">
-                <input asp-for="IsActive" class="form-check-input" />
-                <label asp-for="IsActive" class="form-check-label">Active</label>
+                else
+                {
+                    var groups = Model.AvailableSkills.GroupBy(s => s.Group?.Name ?? "General");
+                    @foreach (var group in groups)
+                    {
+                        <div class="mb-2">
+                            <strong class="text-muted small">@group.Key</strong>
+                            <div class="ms-2">
+                                @foreach (var skill in group)
+                                {
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" 
+                                               name="SkillIds" value="@skill.Value" 
+                                               id="skill_@skill.Value"
+                                               checked="@skill.Selected" />
+                                        <label class="form-check-label" for="skill_@skill.Value">
+                                            @skill.Text
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
             </div>
         </div>
     </div>
