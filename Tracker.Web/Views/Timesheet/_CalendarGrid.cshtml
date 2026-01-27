@@ -1,0 +1,50 @@
+@model MyTimesheetViewModel
+@{
+    var firstDayOfMonth = new DateTime(Model.StartDate.Year, Model.StartDate.Month, 1);
+    var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
+    var startDayOfWeek = (int)firstDayOfMonth.DayOfWeek;
+    var calendarStart = firstDayOfMonth.AddDays(-startDayOfWeek);
+    var today = DateTime.Today;
+}
+
+<!-- Calendar Header -->
+<div class="row g-0">
+    <div class="col calendar-header">Sun</div>
+    <div class="col calendar-header">Mon</div>
+    <div class="col calendar-header">Tue</div>
+    <div class="col calendar-header">Wed</div>
+    <div class="col calendar-header">Thu</div>
+    <div class="col calendar-header">Fri</div>
+    <div class="col calendar-header">Sat</div>
+</div>
+
+@{
+    var currentDate = calendarStart;
+    var weeksToShow = 6; // Always show 6 weeks for consistency
+}
+
+@for (int week = 0; week < weeksToShow; week++)
+{
+    <div class="row g-0">
+        @for (int day = 0; day < 7; day++)
+        {
+            var isOtherMonth = currentDate.Month != firstDayOfMonth.Month;
+            var isToday = currentDate.Date == today;
+            var isWeekend = day == 0 || day == 6;
+            var dateStr = currentDate.ToString("yyyy-MM-dd");
+            
+            var classes = new List<string> { "calendar-day", "p-1" };
+            if (isOtherMonth) classes.Add("other-month");
+            if (isToday) classes.Add("today");
+            if (isWeekend && !isOtherMonth) classes.Add("weekend");
+            
+            <div class="col @string.Join(" ", classes)" 
+                 data-date="@dateStr" 
+                 onclick="onDayClick('@dateStr', event)">
+                <span class="day-number">@currentDate.Day</span>
+            </div>
+            
+            currentDate = currentDate.AddDays(1);
+        }
+    </div>
+}

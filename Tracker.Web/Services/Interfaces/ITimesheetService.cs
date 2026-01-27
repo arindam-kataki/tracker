@@ -43,7 +43,7 @@ public interface ITimesheetService
         decimal hours,
         decimal? contributedHours,
         string? notes,
-        string userId);
+        string createdByResourceId);
     
     /// <summary>
     /// Update an existing time entry
@@ -56,7 +56,7 @@ public interface ITimesheetService
         decimal hours,
         decimal contributedHours,
         string? notes,
-        string userId);
+        string modifiedByResourceId);
     
     /// <summary>
     /// Delete a time entry
@@ -75,22 +75,45 @@ public interface ITimesheetService
     
     #endregion
     
-    #region My Timesheet (for logged-in resource)
+    #region My Timesheet - Permission Based
     
     /// <summary>
-    /// Get the resource associated with the current user
+    /// Get service areas where the resource has LogTimesheet permission
     /// </summary>
-    Task<Resource?> GetResourceForUserAsync(string userId);
+    Task<List<ServiceArea>> GetServiceAreasWithTimesheetPermissionAsync(string resourceId);
     
     /// <summary>
-    /// Get enhancements the resource is assigned to
+    /// Get enhancements accessible for timesheet entry based on resource's service area permissions
     /// </summary>
-    Task<List<Enhancement>> GetAssignedEnhancementsAsync(string resourceId);
+    Task<List<Enhancement>> GetEnhancementsForTimesheetAsync(
+        string resourceId,
+        string? serviceAreaId = null,
+        string? status = null,
+        string? workIdSearch = null,
+        string? descriptionSearch = null,
+        string? tagSearch = null,
+        DateTime? startDateFrom = null,
+        DateTime? startDateTo = null);
+    
+    /// <summary>
+    /// Check if resource has permission to log time against an enhancement
+    /// </summary>
+    Task<bool> CanLogTimeForEnhancementAsync(string resourceId, string enhancementId);
     
     /// <summary>
     /// Get timesheet summary for a resource by date range
     /// </summary>
     Task<TimesheetSummary> GetTimesheetSummaryAsync(string resourceId, DateTime startDate, DateTime endDate);
+    
+    /// <summary>
+    /// Get distinct statuses from enhancements for dropdown
+    /// </summary>
+    Task<List<string>> GetDistinctEnhancementStatusesAsync(string resourceId);
+    
+    /// <summary>
+    /// Get distinct tags from enhancements for dropdown/autocomplete
+    /// </summary>
+    Task<List<string>> GetDistinctEnhancementTagsAsync(string resourceId);
     
     #endregion
     

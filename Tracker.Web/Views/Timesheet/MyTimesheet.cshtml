@@ -3,194 +3,265 @@
     ViewData["Title"] = "My Timesheet";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0">
-        <i class="bi bi-clock-history me-2"></i>My Timesheet
-        <small class="text-muted">- @Model.ResourceName</small>
-    </h4>
-    <button type="button" class="btn btn-primary" onclick="openAddEntry()">
-        <i class="bi bi-plus-lg me-1"></i> Log Time
-    </button>
-</div>
-
-<!-- Date Range Filter -->
-<div class="card mb-4">
-    <div class="card-body py-2">
-        <form method="get" class="row g-2 align-items-center">
-            <div class="col-auto">
-                <label class="col-form-label">Period:</label>
-            </div>
-            <div class="col-auto">
-                <input type="date" name="startDate" value="@Model.StartDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
-            </div>
-            <div class="col-auto">
-                <span>to</span>
-            </div>
-            <div class="col-auto">
-                <input type="date" name="endDate" value="@Model.EndDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-search"></i> Apply
-                </button>
-            </div>
-            <div class="col-auto">
-                <a href="@Url.Action("MyTimesheet")" class="btn btn-sm btn-outline-secondary">This Week</a>
-            </div>
-            <div class="col-auto ms-auto">
-                <span class="badge bg-primary fs-6">
-                    Total: @Model.TotalHours.ToString("N1") hrs
-                </span>
-                <span class="badge bg-success fs-6 ms-1">
-                    Contributed: @Model.TotalContributedHours.ToString("N1") hrs
-                </span>
-            </div>
-        </form>
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-clock-history me-2"></i>My Timesheet
+            </h2>
+            <p class="text-muted mb-0">@Model.ResourceName</p>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="openAddEntry()">
+            <i class="bi bi-plus-lg me-1"></i> Log Time
+        </button>
     </div>
-</div>
 
-<!-- Summary Cards -->
-<div class="row mb-4">
-    <div class="col-md-8">
-        <!-- Time Entries -->
-        <div class="card">
-            <div class="card-header">
-                <i class="bi bi-list-ul me-1"></i> Time Entries
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <!-- Filter Panel -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <i class="bi bi-funnel me-1"></i> Filter Entries
+                </div>
+                <div class="card-body">
+                    <form method="get" id="filterForm">
+                        <div class="row g-3">
+                            <!-- Date Range -->
+                            <div class="col-md-3">
+                                <label class="form-label small">Start Date</label>
+                                <input type="date" name="startDate" class="form-control form-control-sm" 
+                                       value="@Model.StartDate.ToString("yyyy-MM-dd")" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">End Date</label>
+                                <input type="date" name="endDate" class="form-control form-control-sm" 
+                                       value="@Model.EndDate.ToString("yyyy-MM-dd")" />
+                            </div>
+                            
+                            <!-- Quick Date Buttons -->
+                            <div class="col-md-6 d-flex align-items-end gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange('today')">Today</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange('week')">This Week</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange('month')">This Month</button>
+                                <button type="submit" class="btn btn-primary btn-sm ms-auto">
+                                    <i class="bi bi-search me-1"></i> Apply
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div class="card-body p-0">
-                @if (!Model.Entries.Any())
-                {
-                    <div class="text-center text-muted py-5">
-                        <i class="bi bi-clock display-4"></i>
-                        <p class="mt-2">No time entries for this period.</p>
-                        <button type="button" class="btn btn-primary" onclick="openAddEntry()">
-                            <i class="bi bi-plus-lg me-1"></i> Log Time
-                        </button>
+
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h3 class="mb-0">@Model.TotalHours.ToString("N1")</h3>
+                            <small>Total Hours</small>
+                        </div>
                     </div>
-                }
-                else
-                {
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Enhancement</th>
-                                    <th>Type</th>
-                                    <th class="text-end">Hours</th>
-                                    <th class="text-end">Contributed</th>
-                                    <th>Notes</th>
-                                    <th style="width: 80px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var entry in Model.Entries)
-                                {
-                                    var isConsolidated = entry.ConsolidationSources?.Any() == true;
-                                    <tr class="@(isConsolidated ? "table-secondary" : "")">
-                                        <td>
-                                            @if (entry.StartDate == entry.EndDate)
-                                            {
-                                                @entry.StartDate.ToString("MMM d")
-                                            }
-                                            else
-                                            {
-                                                @($"{entry.StartDate:MMM d} - {entry.EndDate:MMM d}")
-                                            }
-                                        </td>
-                                        <td>
-                                            <span class="fw-semibold">@entry.Enhancement?.WorkId</span>
-                                            <br />
-                                            <small class="text-muted">@(entry.Enhancement?.Description?.Length > 40 ? entry.Enhancement.Description.Substring(0, 40) + "..." : entry.Enhancement?.Description)</small>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-secondary">@entry.WorkPhase?.Name</span>
-                                        </td>
-                                        <td class="text-end">@entry.Hours.ToString("N1")</td>
-                                        <td class="text-end">@entry.ContributedHours.ToString("N1")</td>
-                                        <td>
-                                            <small class="text-muted">@(entry.Notes?.Length > 30 ? entry.Notes.Substring(0, 30) + "..." : entry.Notes)</small>
-                                        </td>
-                                        <td>
-                                            @if (isConsolidated)
-                                            {
-                                                <span class="badge bg-info" title="This entry has been consolidated">
-                                                    <i class="bi bi-lock"></i>
-                                                </span>
-                                            }
-                                            else
-                                            {
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h3 class="mb-0">@Model.TotalContributedHours.ToString("N1")</h3>
+                            <small>Contributed Hours</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h3 class="mb-0">@Model.Entries.Count</h3>
+                            <small>Entries</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Entries Table -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <i class="bi bi-table me-1"></i> Time Entries
+                    <span class="badge bg-secondary ms-2">@Model.StartDate.ToString("MMM d") - @Model.EndDate.ToString("MMM d, yyyy")</span>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.Entries.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 100px;">Date</th>
+                                        <th>Enhancement</th>
+                                        <th>Work Phase</th>
+                                        <th class="text-end" style="width: 80px;">Hours</th>
+                                        <th class="text-end" style="width: 80px;">Contrib.</th>
+                                        <th style="width: 200px;">Notes</th>
+                                        <th style="width: 100px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var entry in Model.Entries)
+                                    {
+                                        var dateDisplay = entry.StartDate == entry.EndDate 
+                                            ? entry.StartDate.ToString("MMM d") 
+                                            : $"{entry.StartDate:MMM d} - {entry.EndDate:MMM d}";
+                                        var isConsolidated = entry.ConsolidationSources?.Any() == true;
+                                        
+                                        <tr class="@(isConsolidated ? "table-secondary" : "")">
+                                            <td>
+                                                <small>@dateDisplay</small>
+                                            </td>
+                                            <td>
+                                                <strong>@entry.Enhancement?.WorkId</strong>
+                                                <br />
+                                                <small class="text-muted">
+                                                    @if (entry.Enhancement?.Description?.Length > 40)
+                                                    {
+                                                        @entry.Enhancement.Description.Substring(0, 40)<text>...</text>
+                                                    }
+                                                    else
+                                                    {
+                                                        @entry.Enhancement?.Description
+                                                    }
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">@entry.WorkPhase?.Name</span>
+                                            </td>
+                                            <td class="text-end">@entry.Hours.ToString("N2")</td>
+                                            <td class="text-end">@entry.ContributedHours.ToString("N2")</td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    @if (entry.Notes?.Length > 30)
+                                                    {
+                                                        @entry.Notes.Substring(0, 30)<text>...</text>
+                                                    }
+                                                    else
+                                                    {
+                                                        @entry.Notes
+                                                    }
+                                                </small>
+                                            </td>
+                                            <td class="text-end">
+                                                @if (isConsolidated)
+                                                {
+                                                    <span class="badge bg-warning text-dark" title="This entry has been consolidated">
+                                                        <i class="bi bi-lock"></i>
+                                                    </span>
+                                                }
                                                 <button type="button" class="btn btn-sm btn-outline-primary" 
                                                         onclick="openEditEntry('@entry.Id')" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                        onclick="deleteEntry('@entry.Id')" title="Delete">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            }
-                                        </td>
+                                                @if (!isConsolidated)
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                            onclick="deleteEntry('@entry.Id')" title="Delete">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <th colspan="3" class="text-end">Totals:</th>
+                                        <th class="text-end">@Model.TotalHours.ToString("N2")</th>
+                                        <th class="text-end">@Model.TotalContributedHours.ToString("N2")</th>
+                                        <th colspan="2"></th>
                                     </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox display-4"></i>
+                            <p class="mt-2">No time entries for this period.</p>
+                            <button type="button" class="btn btn-primary" onclick="openAddEntry()">
+                                <i class="bi bi-plus-lg me-1"></i> Log Your First Entry
+                            </button>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
-    </div>
-    
-    <div class="col-md-4">
-        <!-- Hours by Type -->
-        <div class="card mb-3">
-            <div class="card-header">
-                <i class="bi bi-pie-chart me-1"></i> Hours by Type
+
+        <!-- Sidebar Summary -->
+        <div class="col-lg-3">
+            <!-- Hours by Phase -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <i class="bi bi-pie-chart me-1"></i> Hours by Phase
+                </div>
+                <div class="card-body">
+                    @if (Model.HoursByPhase.Any())
+                    {
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var phase in Model.HoursByPhase.OrderByDescending(p => p.Value))
+                            {
+                                var percentage = Model.TotalHours > 0 ? (phase.Value / Model.TotalHours * 100) : 0;
+                                <li class="mb-2">
+                                    <div class="d-flex justify-content-between small">
+                                        <span>@phase.Key</span>
+                                        <span class="badge bg-primary rounded-pill">@phase.Value.ToString("N1") hrs</span>
+                                    </div>
+                                    <div class="progress" style="height: 4px;">
+                                        <div class="progress-bar" style="width: @percentage.ToString("N0")%"></div>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0 small">No data</p>
+                    }
+                </div>
             </div>
-            <div class="card-body">
-                @if (Model.HoursByPhase.Any())
-                {
-                    <ul class="list-group list-group-flush">
-                        @foreach (var phase in Model.HoursByPhase.OrderByDescending(p => p.Value))
-                        {
-                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                @phase.Key
-                                <span class="badge bg-primary rounded-pill">@phase.Value.ToString("N1") hrs</span>
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <p class="text-muted mb-0">No data</p>
-                }
-            </div>
-        </div>
-        
-        <!-- Quick Add -->
-        <div class="card">
-            <div class="card-header">
-                <i class="bi bi-lightning me-1"></i> Quick Add
-            </div>
-            <div class="card-body">
-                <p class="small text-muted mb-2">Select an enhancement to log time:</p>
-                @if (Model.AssignedEnhancements.Any())
-                {
-                    <div class="list-group">
-                        @foreach (var enh in Model.AssignedEnhancements.Take(5))
-                        {
-                            <a href="#" class="list-group-item list-group-item-action" 
-                               onclick="openAddEntryForEnhancement('@enh.Id'); return false;">
-                                <strong>@enh.WorkId</strong>
-                                <br />
-                                <small class="text-muted">@(enh.Description?.Length > 40 ? enh.Description.Substring(0, 40) + "..." : enh.Description)</small>
-                            </a>
-                        }
+
+            <!-- Quick Add Panel -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <i class="bi bi-lightning me-1"></i> Quick Add
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-3">Find an enhancement to log time:</p>
+                    
+                    <!-- Service Area Filter -->
+                    <div class="mb-2">
+                        <select id="quickServiceArea" class="form-select form-select-sm" onchange="loadQuickEnhancements()">
+                            <option value="">All Service Areas</option>
+                            @foreach (var sa in Model.AvailableServiceAreas)
+                            {
+                                <option value="@sa.Id">@sa.Code - @sa.Name</option>
+                            }
+                        </select>
                     </div>
-                }
-                else
-                {
-                    <p class="text-muted small">No assigned enhancements.</p>
-                }
+                    
+                    <!-- Search -->
+                    <div class="mb-3">
+                        <div class="input-group input-group-sm">
+                            <input type="text" id="quickSearch" class="form-control" placeholder="Search WorkId or description..." 
+                                   onkeyup="debounceSearch()" />
+                            <button class="btn btn-outline-secondary" type="button" onclick="loadQuickEnhancements()">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Results -->
+                    <div id="quickEnhancementsList" class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                        <p class="text-muted small text-center">Enter a search term to find enhancements</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -198,7 +269,7 @@
 
 <!-- Modal for Add/Edit Entry -->
 <div class="modal fade" id="entryModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content" id="entryModalContent">
             <!-- Loaded via AJAX -->
         </div>
@@ -207,6 +278,38 @@
 
 @section Scripts {
 <script>
+    let searchTimeout = null;
+    
+    function setDateRange(range) {
+        const today = new Date();
+        let start, end;
+        
+        switch(range) {
+            case 'today':
+                start = end = today;
+                break;
+            case 'week':
+                const dayOfWeek = today.getDay();
+                start = new Date(today);
+                start.setDate(today.getDate() - dayOfWeek);
+                end = new Date(start);
+                end.setDate(start.getDate() + 6);
+                break;
+            case 'month':
+                start = new Date(today.getFullYear(), today.getMonth(), 1);
+                end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                break;
+        }
+        
+        document.querySelector('input[name="startDate"]').value = formatDate(start);
+        document.querySelector('input[name="endDate"]').value = formatDate(end);
+        document.getElementById('filterForm').submit();
+    }
+    
+    function formatDate(date) {
+        return date.toISOString().split('T')[0];
+    }
+    
     function openAddEntry() {
         loadModal('/timesheet/entry/edit');
     }
@@ -221,16 +324,23 @@
     
     function loadModal(url) {
         fetch(url)
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to load');
+                return response.text();
+            })
             .then(html => {
                 document.getElementById('entryModalContent').innerHTML = html;
                 var modal = new bootstrap.Modal(document.getElementById('entryModal'));
                 modal.show();
+            })
+            .catch(err => {
+                alert('Error loading form: ' + err.message);
             });
     }
     
     function deleteEntry(id) {
-        if (!confirm('Are you sure you want to delete this time entry?')) return;
+        if (!confirm('Are you sure you want to delete this time entry?'))
+            return;
         
         fetch('/timesheet/entry/delete', {
             method: 'POST',
@@ -268,6 +378,51 @@
         });
         
         return false;
+    }
+    
+    function debounceSearch() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(loadQuickEnhancements, 300);
+    }
+    
+    function loadQuickEnhancements() {
+        const serviceAreaId = document.getElementById('quickServiceArea').value;
+        const search = document.getElementById('quickSearch').value;
+        
+        if (!search && !serviceAreaId) {
+            document.getElementById('quickEnhancementsList').innerHTML = 
+                '<p class="text-muted small text-center">Enter a search term to find enhancements</p>';
+            return;
+        }
+        
+        let url = '/timesheet/enhancements?';
+        if (serviceAreaId) url += 'serviceAreaId=' + encodeURIComponent(serviceAreaId) + '&';
+        if (search) url += 'workIdSearch=' + encodeURIComponent(search) + '&descriptionSearch=' + encodeURIComponent(search);
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const list = document.getElementById('quickEnhancementsList');
+                if (data.length === 0) {
+                    list.innerHTML = '<p class="text-muted small text-center">No enhancements found</p>';
+                    return;
+                }
+                
+                list.innerHTML = data.slice(0, 10).map(e => `
+                    <a href="#" class="list-group-item list-group-item-action py-2" 
+                       onclick="openAddEntryForEnhancement('${e.id}'); return false;">
+                        <div class="d-flex justify-content-between">
+                            <strong class="small">${e.workId}</strong>
+                            <span class="badge bg-secondary">${e.serviceAreaCode || ''}</span>
+                        </div>
+                        <small class="text-muted">${e.description || ''}</small>
+                    </a>
+                `).join('');
+                
+                if (data.length > 10) {
+                    list.innerHTML += `<p class="text-muted small text-center mt-2">Showing 10 of ${data.length} results</p>`;
+                }
+            });
     }
     
     // Update contributed hours when work phase changes

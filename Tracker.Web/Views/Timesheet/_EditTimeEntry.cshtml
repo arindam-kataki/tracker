@@ -8,40 +8,187 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 </div>
 
-<form onsubmit="return saveEntry(this);">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="Id" value="@Model.Id" />
-    <input type="hidden" name="ResourceId" value="@Model.ResourceId" />
-    
+@if (string.IsNullOrEmpty(Model.Id))
+{
+    <!-- NEW ENTRY MODE: Multiple work type entries -->
     <div class="modal-body">
-        @if (Model.IsConsolidated)
-        {
-            <div class="alert alert-warning">
-                <i class="bi bi-lock me-1"></i>
-                This entry has been consolidated and can only have its notes edited.
+        <!-- Step 1: Enhancement Selection (collapsible after selection) -->
+        <div id="enhancementSelectionPanel">
+            <h6 class="text-muted mb-3"><i class="bi bi-1-circle me-1"></i> Select Enhancement</h6>
+            
+            <div class="row g-2 mb-3">
+                <!-- Service Area Filter -->
+                <div class="col-md-4">
+                    <select id="filterServiceArea" class="form-select form-select-sm" onchange="loadEnhancements()">
+                        <option value="">All Service Areas</option>
+                        @foreach (var sa in Model.AvailableServiceAreas)
+                        {
+                            <option value="@sa.Id" selected="@(sa.Id == Model.ServiceAreaId)">
+                                @sa.Code - @sa.Name
+                            </option>
+                        }
+                    </select>
+                </div>
+                
+                <!-- Status Filter -->
+                <div class="col-md-4">
+                    <select id="filterStatus" class="form-select form-select-sm" onchange="loadEnhancements()">
+                        <option value="">All Statuses</option>
+                        <option value="New">New</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="On Hold">On Hold</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+                
+                <!-- Search -->
+                <div class="col-md-4">
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="filterSearch" class="form-control" 
+                               placeholder="Search..." onkeyup="debounceEnhancementSearch()" />
+                        <button class="btn btn-outline-secondary" type="button" onclick="loadEnhancements()">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
-        }
-        
-        <div class="row g-3">
-            <!-- Enhancement -->
-            <div class="col-12">
-                <label class="form-label">Enhancement <span class="text-danger">*</span></label>
-                <select name="EnhancementId" class="form-select" required @(Model.IsConsolidated ? "disabled" : "")>
-                    <option value="">-- Select Enhancement --</option>
-                    @foreach (var enh in Model.AvailableEnhancements)
+            
+            <!-- Enhancement Dropdown -->
+            <div class="mb-3">
+                <select id="enhancementSelect" class="form-select" onchange="onEnhancementSelected()">
+                    <option value="">-- Search or select an enhancement --</option>
+                    @if (!string.IsNullOrEmpty(Model.EnhancementId))
                     {
-                        var desc = enh.Description?.Length > 50 ? enh.Description.Substring(0, 50) + "..." : enh.Description;
-                        <option value="@enh.Id" selected="@(enh.Id == Model.EnhancementId)">
-                            @enh.WorkId - @desc
+                        <option value="@Model.EnhancementId" selected>
+                            @Model.EnhancementWorkId - @Model.EnhancementDescription
                         </option>
                     }
                 </select>
+                <div id="enhancementLoading" class="form-text text-muted" style="display: none;">
+                    <i class="bi bi-hourglass-split"></i> Loading...
+                </div>
+            </div>
+        </div>
+        
+        <!-- Selected Enhancement Display (shown after selection) -->
+        <div id="selectedEnhancementDisplay" class="alert alert-info py-2 mb-3" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong id="selectedWorkId"></strong>
+                    <span class="text-muted ms-2" id="selectedDescription"></span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeEnhancement()">
+                    <i class="bi bi-pencil"></i> Change
+                </button>
+            </div>
+        </div>
+        
+        <!-- Step 2: Date Range (shared for all entries) -->
+        <div id="dateRangePanel" style="display: none;">
+            <h6 class="text-muted mb-3"><i class="bi bi-2-circle me-1"></i> Date Range</h6>
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label small">Start Date</label>
+                    <input type="date" id="sharedStartDate" class="form-control form-control-sm" 
+                           value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small">End Date</label>
+                    <input type="date" id="sharedEndDate" class="form-control form-control-sm" 
+                           value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                </div>
+            </div>
+        </div>
+        
+        <!-- Step 3: Work Type Entries -->
+        <div id="workEntriesPanel" style="display: none;">
+            <h6 class="text-muted mb-2">
+                <i class="bi bi-3-circle me-1"></i> Time Entries
+                <button type="button" class="btn btn-sm btn-outline-primary float-end" onclick="addWorkEntry()">
+                    <i class="bi bi-plus"></i> Add Row
+                </button>
+            </h6>
+            
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered mb-2" id="workEntriesTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 40%;">Work Type</th>
+                            <th style="width: 20%;">Hours</th>
+                            <th style="width: 20%;">Contributed</th>
+                            <th style="width: 15%;">Notes</th>
+                            <th style="width: 5%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="workEntriesBody">
+                        <!-- Rows added dynamically -->
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <th class="text-end">Totals:</th>
+                            <th id="totalHours">0.00</th>
+                            <th id="totalContributed">0.00</th>
+                            <th colspan="2"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <div class="text-muted small">
+                <i class="bi bi-info-circle"></i> 
+                Add multiple work types for the same date range. Contributed hours default based on work type.
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveEntriesBtn" onclick="saveAllEntries()" disabled>
+            <i class="bi bi-check-lg me-1"></i> Save All Entries
+        </button>
+    </div>
+    
+    <!-- Work Phases Data for JavaScript -->
+    <script id="workPhasesData" type="application/json">
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableWorkPhases.Select(wp => new {
+            id = wp.Id,
+            name = wp.Name,
+            code = wp.Code,
+            contribution = wp.DefaultContributionPercent
+        })))
+    </script>
+}
+else
+{
+    <!-- EDIT MODE: Single entry -->
+    <form onsubmit="return saveEntry(this);">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Id" value="@Model.Id" />
+        <input type="hidden" name="ResourceId" value="@Model.ResourceId" />
+        <input type="hidden" name="EnhancementId" value="@Model.EnhancementId" />
+        
+        <div class="modal-body">
+            @if (Model.IsConsolidated)
+            {
+                <div class="alert alert-warning">
+                    <i class="bi bi-lock me-1"></i>
+                    This entry has been consolidated and can only have its notes edited.
+                </div>
+            }
+            
+            <!-- Enhancement (read-only in edit mode) -->
+            <div class="mb-3">
+                <label class="form-label">Enhancement</label>
+                <div class="form-control bg-light">
+                    <strong>@Model.EnhancementWorkId</strong> - @Model.EnhancementDescription
+                </div>
             </div>
             
             <!-- Work Phase -->
-            <div class="col-12">
+            <div class="mb-3">
                 <label class="form-label">Type of Work <span class="text-danger">*</span></label>
-                <select name="WorkPhaseId" class="form-select" required onchange="onWorkPhaseChange(this)" @(Model.IsConsolidated ? "disabled" : "")>
+                <select name="WorkPhaseId" class="form-select" required onchange="onWorkPhaseChange(this)" 
+                        @(Model.IsConsolidated ? "disabled" : "")>
                     <option value="">-- Select Type --</option>
                     @foreach (var phase in Model.AvailableWorkPhases)
                     {
@@ -55,59 +202,403 @@
             </div>
             
             <!-- Dates -->
-            <div class="col-md-6">
-                <label class="form-label">Start Date <span class="text-danger">*</span></label>
-                <input type="date" name="StartDate" value="@Model.StartDate.ToString("yyyy-MM-dd")" 
-                       class="form-control" required @(Model.IsConsolidated ? "disabled" : "") />
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">End Date <span class="text-danger">*</span></label>
-                <input type="date" name="EndDate" value="@Model.EndDate.ToString("yyyy-MM-dd")" 
-                       class="form-control" required @(Model.IsConsolidated ? "disabled" : "") />
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Start Date <span class="text-danger">*</span></label>
+                    <input type="date" name="StartDate" value="@Model.StartDate.ToString("yyyy-MM-dd")" 
+                           class="form-control" required @(Model.IsConsolidated ? "disabled" : "") />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">End Date <span class="text-danger">*</span></label>
+                    <input type="date" name="EndDate" value="@Model.EndDate.ToString("yyyy-MM-dd")" 
+                           class="form-control" required @(Model.IsConsolidated ? "disabled" : "") />
+                </div>
             </div>
             
             <!-- Hours -->
-            <div class="col-md-6">
-                <label class="form-label">Hours Worked <span class="text-danger">*</span></label>
-                <input type="number" name="Hours" value="@Model.Hours" step="0.25" min="0.25" 
-                       class="form-control" required onchange="onHoursChange(this)" @(Model.IsConsolidated ? "disabled" : "") />
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">
-                    Contributed Hours
-                    <i class="bi bi-info-circle text-muted" 
-                       title="Hours that count toward billable work. Defaults based on work type."></i>
-                </label>
-                <input type="number" name="ContributedHours" value="@Model.ContributedHours" step="0.25" min="0" 
-                       class="form-control" @(Model.IsConsolidated ? "disabled" : "") />
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Hours Worked <span class="text-danger">*</span></label>
+                    <input type="number" name="Hours" value="@Model.Hours" step="0.25" min="0.25" 
+                           class="form-control" required onchange="onHoursChange(this)" 
+                           @(Model.IsConsolidated ? "disabled" : "") />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Contributed Hours</label>
+                    <input type="number" name="ContributedHours" value="@Model.ContributedHours" step="0.25" min="0" 
+                           class="form-control" @(Model.IsConsolidated ? "disabled" : "") />
+                </div>
             </div>
             
             <!-- Notes -->
-            <div class="col-12">
+            <div class="mb-3">
                 <label class="form-label">Notes</label>
                 <textarea name="Notes" class="form-control" rows="2" 
                           placeholder="Optional description of work performed">@Model.Notes</textarea>
             </div>
         </div>
-    </div>
-    
-    <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="btn btn-primary">
-            <i class="bi bi-check-lg me-1"></i> Save
-        </button>
-    </div>
-</form>
+        
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1"></i> Save
+            </button>
+        </div>
+    </form>
+}
 
 <script>
-    // Initialize contributed hours if creating new entry
+    let enhancementSearchTimeout = null;
+    let workPhases = [];
+    let rowCounter = 0;
+    let selectedEnhancement = null;
+    
+    // Initialize
     document.addEventListener('DOMContentLoaded', function() {
-        var isNew = !document.querySelector('input[name="Id"]').value;
-        if (isNew) {
-            var phaseSelect = document.querySelector('select[name="WorkPhaseId"]');
-            if (phaseSelect && phaseSelect.value) {
-                onWorkPhaseChange(phaseSelect);
-            }
+        const wpData = document.getElementById('workPhasesData');
+        if (wpData) {
+            workPhases = JSON.parse(wpData.textContent);
+        }
+        
+        // If enhancement is pre-selected, show the entry panel
+        const preselectedId = '@Model.EnhancementId';
+        if (preselectedId) {
+            selectedEnhancement = {
+                id: preselectedId,
+                workId: '@Model.EnhancementWorkId',
+                description: '@Model.EnhancementDescription'
+            };
+            showEntryPanel();
         }
     });
+    
+    function debounceEnhancementSearch() {
+        clearTimeout(enhancementSearchTimeout);
+        enhancementSearchTimeout = setTimeout(loadEnhancements, 300);
+    }
+    
+    function loadEnhancements() {
+        const serviceAreaId = document.getElementById('filterServiceArea')?.value || '';
+        const status = document.getElementById('filterStatus')?.value || '';
+        const search = document.getElementById('filterSearch')?.value || '';
+        
+        const select = document.getElementById('enhancementSelect');
+        const loading = document.getElementById('enhancementLoading');
+        
+        if (!search && !serviceAreaId && !status) {
+            select.innerHTML = '<option value="">-- Search or select an enhancement --</option>';
+            return;
+        }
+        
+        loading.style.display = 'block';
+        
+        let url = '/timesheet/enhancements?';
+        if (serviceAreaId) url += 'serviceAreaId=' + encodeURIComponent(serviceAreaId) + '&';
+        if (status) url += 'status=' + encodeURIComponent(status) + '&';
+        if (search) {
+            url += 'workIdSearch=' + encodeURIComponent(search) + '&';
+            url += 'descriptionSearch=' + encodeURIComponent(search);
+        }
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                
+                let options = '<option value="">-- Select Enhancement (' + data.length + ' found) --</option>';
+                data.forEach(e => {
+                    const desc = e.description ? e.description.substring(0, 40) : '';
+                    options += `<option value="${e.id}" data-workid="${e.workId}" data-desc="${desc}">[${e.serviceAreaCode}] ${e.workId} - ${desc}</option>`;
+                });
+                
+                select.innerHTML = options;
+            })
+            .catch(err => {
+                loading.style.display = 'none';
+                console.error('Error loading enhancements:', err);
+            });
+    }
+    
+    function onEnhancementSelected() {
+        const select = document.getElementById('enhancementSelect');
+        const option = select.options[select.selectedIndex];
+        
+        if (!select.value) {
+            selectedEnhancement = null;
+            document.getElementById('saveEntriesBtn').disabled = true;
+            return;
+        }
+        
+        selectedEnhancement = {
+            id: select.value,
+            workId: option.dataset.workid,
+            description: option.dataset.desc
+        };
+        
+        showEntryPanel();
+    }
+    
+    function showEntryPanel() {
+        // Hide selection panel, show selected display
+        document.getElementById('enhancementSelectionPanel').style.display = 'none';
+        document.getElementById('selectedEnhancementDisplay').style.display = 'block';
+        document.getElementById('selectedWorkId').textContent = selectedEnhancement.workId;
+        document.getElementById('selectedDescription').textContent = selectedEnhancement.description;
+        
+        // Show date and entries panels
+        document.getElementById('dateRangePanel').style.display = 'block';
+        document.getElementById('workEntriesPanel').style.display = 'block';
+        
+        // Add initial row if empty
+        if (document.getElementById('workEntriesBody').children.length === 0) {
+            addWorkEntry();
+        }
+        
+        updateSaveButton();
+    }
+    
+    function changeEnhancement() {
+        // Show selection panel, hide entry panels
+        document.getElementById('enhancementSelectionPanel').style.display = 'block';
+        document.getElementById('selectedEnhancementDisplay').style.display = 'none';
+        document.getElementById('dateRangePanel').style.display = 'none';
+        document.getElementById('workEntriesPanel').style.display = 'none';
+        
+        selectedEnhancement = null;
+        document.getElementById('saveEntriesBtn').disabled = true;
+    }
+    
+    function addWorkEntry() {
+        const tbody = document.getElementById('workEntriesBody');
+        const rowId = 'row_' + (++rowCounter);
+        
+        let phaseOptions = '<option value="">-- Select --</option>';
+        workPhases.forEach(wp => {
+            phaseOptions += `<option value="${wp.id}" data-contribution="${wp.contribution}">${wp.name}</option>`;
+        });
+        
+        const row = document.createElement('tr');
+        row.id = rowId;
+        row.innerHTML = `
+            <td>
+                <select class="form-select form-select-sm work-phase-select" onchange="onRowPhaseChange(this, '${rowId}')" required>
+                    ${phaseOptions}
+                </select>
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm hours-input" 
+                       step="0.25" min="0.25" placeholder="0.00" 
+                       onchange="onRowHoursChange('${rowId}')" />
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm contributed-input" 
+                       step="0.25" min="0" placeholder="0.00" />
+            </td>
+            <td>
+                <input type="text" class="form-control form-control-sm notes-input" 
+                       placeholder="Notes..." maxlength="200" />
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeWorkEntry('${rowId}')" title="Remove">
+                    <i class="bi bi-x"></i>
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+        updateTotals();
+        updateSaveButton();
+    }
+    
+    function removeWorkEntry(rowId) {
+        const row = document.getElementById(rowId);
+        if (row) {
+            row.remove();
+            updateTotals();
+            updateSaveButton();
+        }
+    }
+    
+    function onRowPhaseChange(select, rowId) {
+        const row = document.getElementById(rowId);
+        const hoursInput = row.querySelector('.hours-input');
+        const contributedInput = row.querySelector('.contributed-input');
+        
+        if (select.value && hoursInput.value) {
+            const contribution = parseInt(select.options[select.selectedIndex].dataset.contribution) || 100;
+            const hours = parseFloat(hoursInput.value) || 0;
+            contributedInput.value = (hours * contribution / 100).toFixed(2);
+        }
+        
+        updateSaveButton();
+    }
+    
+    function onRowHoursChange(rowId) {
+        const row = document.getElementById(rowId);
+        const select = row.querySelector('.work-phase-select');
+        const hoursInput = row.querySelector('.hours-input');
+        const contributedInput = row.querySelector('.contributed-input');
+        
+        if (select.value && hoursInput.value) {
+            const contribution = parseInt(select.options[select.selectedIndex].dataset.contribution) || 100;
+            const hours = parseFloat(hoursInput.value) || 0;
+            contributedInput.value = (hours * contribution / 100).toFixed(2);
+        }
+        
+        updateTotals();
+        updateSaveButton();
+    }
+    
+    function updateTotals() {
+        let totalHours = 0;
+        let totalContributed = 0;
+        
+        document.querySelectorAll('#workEntriesBody tr').forEach(row => {
+            const hours = parseFloat(row.querySelector('.hours-input')?.value) || 0;
+            const contributed = parseFloat(row.querySelector('.contributed-input')?.value) || 0;
+            totalHours += hours;
+            totalContributed += contributed;
+        });
+        
+        document.getElementById('totalHours').textContent = totalHours.toFixed(2);
+        document.getElementById('totalContributed').textContent = totalContributed.toFixed(2);
+    }
+    
+    function updateSaveButton() {
+        const btn = document.getElementById('saveEntriesBtn');
+        if (!btn) return;
+        
+        // Need enhancement selected and at least one valid row
+        if (!selectedEnhancement) {
+            btn.disabled = true;
+            return;
+        }
+        
+        let hasValidRow = false;
+        document.querySelectorAll('#workEntriesBody tr').forEach(row => {
+            const phase = row.querySelector('.work-phase-select')?.value;
+            const hours = parseFloat(row.querySelector('.hours-input')?.value) || 0;
+            if (phase && hours > 0) {
+                hasValidRow = true;
+            }
+        });
+        
+        btn.disabled = !hasValidRow;
+    }
+    
+    async function saveAllEntries() {
+        if (!selectedEnhancement) {
+            alert('Please select an enhancement.');
+            return;
+        }
+        
+        const startDate = document.getElementById('sharedStartDate').value;
+        const endDate = document.getElementById('sharedEndDate').value;
+        
+        if (!startDate || !endDate) {
+            alert('Please enter start and end dates.');
+            return;
+        }
+        
+        // Collect all valid entries
+        const entries = [];
+        document.querySelectorAll('#workEntriesBody tr').forEach(row => {
+            const phase = row.querySelector('.work-phase-select')?.value;
+            const hours = parseFloat(row.querySelector('.hours-input')?.value) || 0;
+            const contributed = parseFloat(row.querySelector('.contributed-input')?.value) || 0;
+            const notes = row.querySelector('.notes-input')?.value || '';
+            
+            if (phase && hours > 0) {
+                entries.push({
+                    enhancementId: selectedEnhancement.id,
+                    workPhaseId: phase,
+                    startDate: startDate,
+                    endDate: endDate,
+                    hours: hours,
+                    contributedHours: contributed,
+                    notes: notes
+                });
+            }
+        });
+        
+        if (entries.length === 0) {
+            alert('Please add at least one valid time entry.');
+            return;
+        }
+        
+        // Get CSRF token
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ||
+                      document.querySelector('meta[name="csrf-token"]')?.content;
+        
+        // Save each entry
+        const btn = document.getElementById('saveEntriesBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Saving...';
+        
+        let successCount = 0;
+        let errors = [];
+        
+        for (const entry of entries) {
+            try {
+                const formData = new URLSearchParams();
+                formData.append('EnhancementId', entry.enhancementId);
+                formData.append('WorkPhaseId', entry.workPhaseId);
+                formData.append('StartDate', entry.startDate);
+                formData.append('EndDate', entry.endDate);
+                formData.append('Hours', entry.hours);
+                formData.append('ContributedHours', entry.contributedHours);
+                formData.append('Notes', entry.notes);
+                formData.append('__RequestVerificationToken', token);
+                
+                const response = await fetch('/timesheet/entry/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: formData.toString()
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    successCount++;
+                } else {
+                    errors.push(result.message || 'Unknown error');
+                }
+            } catch (err) {
+                errors.push(err.message);
+            }
+        }
+        
+        if (errors.length > 0) {
+            alert(`Saved ${successCount} of ${entries.length} entries.\nErrors: ${errors.join(', ')}`);
+        }
+        
+        if (successCount > 0) {
+            // Close modal and refresh
+            bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
+            location.reload();
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save All Entries';
+        }
+    }
+    
+    // For edit mode
+    function onWorkPhaseChange(select) {
+        const hoursInput = document.querySelector('input[name="Hours"]');
+        const contributedInput = document.querySelector('input[name="ContributedHours"]');
+        
+        if (select.value && hoursInput.value) {
+            const contribution = parseInt(select.options[select.selectedIndex].dataset.contribution) || 100;
+            const hours = parseFloat(hoursInput.value) || 0;
+            contributedInput.value = (hours * contribution / 100).toFixed(2);
+        }
+    }
+    
+    function onHoursChange(input) {
+        const select = document.querySelector('select[name="WorkPhaseId"]');
+        if (select && select.value) {
+            onWorkPhaseChange(select);
+        }
+    }
 </script>
