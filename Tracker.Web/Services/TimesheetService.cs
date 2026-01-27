@@ -128,7 +128,8 @@ public class TimesheetService : ITimesheetService
             Hours = hours,
             ContributedHours = actualContributedHours,
             Notes = notes,
-            CreatedById = createdByResourceId,
+            // NOTE: Don't set CreatedById - it has FK to Users table which is deprecated
+            // The ResourceId already identifies who created it
             CreatedAt = DateTime.UtcNow
         };
 
@@ -164,9 +165,9 @@ public class TimesheetService : ITimesheetService
         {
             // Only allow notes update if consolidated
             entry.Notes = notes;
-            entry.ModifiedById = modifiedByResourceId;
+            // NOTE: Don't set ModifiedById - it has FK to Users table which is deprecated
             entry.ModifiedAt = DateTime.UtcNow;
-            _logger.LogInformation("Time entry {Id} (consolidated) notes updated by {Resource}", id, modifiedByResourceId);
+            _logger.LogInformation("Time entry {Id} (consolidated) notes updated by resource {Resource}", id, modifiedByResourceId);
         }
         else
         {
@@ -176,9 +177,9 @@ public class TimesheetService : ITimesheetService
             entry.Hours = hours;
             entry.ContributedHours = contributedHours;
             entry.Notes = notes;
-            entry.ModifiedById = modifiedByResourceId;
+            // NOTE: Don't set ModifiedById - it has FK to Users table which is deprecated
             entry.ModifiedAt = DateTime.UtcNow;
-            _logger.LogInformation("Time entry {Id} updated by {Resource}", id, modifiedByResourceId);
+            _logger.LogInformation("Time entry {Id} updated by resource {Resource}", id, modifiedByResourceId);
         }
 
         await _db.SaveChangesAsync();
@@ -238,33 +239,17 @@ public class TimesheetService : ITimesheetService
 
     public async Task<List<ServiceArea>> GetServiceAreasWithTimesheetPermissionAsync(string resourceId)
     {
-        var resource = await _db.Resources
-            .Include(r => r.ServiceAreas)
-                .ThenInclude(rsa => rsa.ServiceArea)
-            .FirstOrDefaultAsync(r => r.Id == resourceId);
+        // Get service areas where the resource has LogTimesheet permission
+        var serviceAreaIds = await _db.ResourceServiceAreas
+            .Where(rsa => rsa.ResourceId == resourceId && rsa.Permissions.HasFlag(Permissions.LogTimesheet))
+            .Select(rsa => rsa.ServiceAreaId)
+            .ToListAsync();
 
-        if (resource == null)
-            return new List<ServiceArea>();
-
-        // SuperAdmin has access to all service areas
-        if (resource.IsAdmin)
-        {
-            return await _db.ServiceAreas
-                .Where(sa => sa.IsActive)
-                .OrderBy(sa => sa.DisplayOrder)
-                .ThenBy(sa => sa.Code)
-                .ToListAsync();
-        }
-
-        // Regular resources only have access to service areas where they have LogTimesheet permission
-        return resource.ServiceAreas
-            .Where(rsa => rsa.HasPermission(Permissions.LogTimesheet) && 
-                          rsa.ServiceArea != null && 
-                          rsa.ServiceArea.IsActive)
-            .Select(rsa => rsa.ServiceArea!)
+        return await _db.ServiceAreas
+            .Where(sa => serviceAreaIds.Contains(sa.Id) && sa.IsActive)
             .OrderBy(sa => sa.DisplayOrder)
             .ThenBy(sa => sa.Code)
-            .ToList();
+            .ToListAsync();
     }
 
     public async Task<List<Enhancement>> GetEnhancementsForTimesheetAsync(
@@ -277,9 +262,11 @@ public class TimesheetService : ITimesheetService
         DateTime? startDateFrom = null,
         DateTime? startDateTo = null)
     {
-        // Get service areas where resource has LogTimesheet permission
-        var permittedServiceAreas = await GetServiceAreasWithTimesheetPermissionAsync(resourceId);
-        var permittedServiceAreaIds = permittedServiceAreas.Select(sa => sa.Id).ToList();
+        // Get permitted service area IDs
+        var permittedServiceAreaIds = await _db.ResourceServiceAreas
+            .Where(rsa => rsa.ResourceId == resourceId && rsa.Permissions.HasFlag(Permissions.LogTimesheet))
+            .Select(rsa => rsa.ServiceAreaId)
+            .ToListAsync();
 
         if (!permittedServiceAreaIds.Any())
             return new List<Enhancement>();
@@ -300,22 +287,20 @@ public class TimesheetService : ITimesheetService
             query = query.Where(e => e.WorkId.Contains(workIdSearch));
 
         if (!string.IsNullOrEmpty(descriptionSearch))
-            query = query.Where(e => e.Description.Contains(descriptionSearch));
+            query = query.Where(e => e.Description != null && e.Description.Contains(descriptionSearch));
 
         if (!string.IsNullOrEmpty(tagSearch))
             query = query.Where(e => e.Tags != null && e.Tags.Contains(tagSearch));
 
-        // Date range filter - uses actual StartDate/EndDate fields
         if (startDateFrom.HasValue)
-            query = query.Where(e => e.StartDate >= startDateFrom.Value || e.EstimatedStartDate >= startDateFrom.Value);
+            query = query.Where(e => e.StartDate >= startDateFrom.Value);
 
         if (startDateTo.HasValue)
-            query = query.Where(e => e.StartDate <= startDateTo.Value || e.EstimatedStartDate <= startDateTo.Value);
+            query = query.Where(e => e.StartDate <= startDateTo.Value);
 
         return await query
-            .OrderBy(e => e.ServiceArea.Code)
-            .ThenBy(e => e.WorkId)
-            .Take(500) // Limit results for performance
+            .OrderBy(e => e.WorkId)
+            .Take(50) // Limit for performance
             .ToListAsync();
     }
 

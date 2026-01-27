@@ -28,11 +28,62 @@ public class TimesheetController : BaseController
     }
 
     /// <summary>
-    /// My Timesheet - Calendar view
+    /// My Timesheet - List view (original)
     /// </summary>
     [HttpGet("")]
     [HttpGet("my")]
-    public async Task<IActionResult> MyTimesheet(int? year = null, int? month = null)
+    public async Task<IActionResult> MyTimesheet(DateTime? startDate = null, DateTime? endDate = null)
+    {
+        var resourceId = CurrentUserId!;
+        
+        // Check if user has timesheet permission for any service area
+        var permittedServiceAreas = await _timesheetService.GetServiceAreasWithTimesheetPermissionAsync(resourceId);
+        
+        if (!permittedServiceAreas.Any() && !IsSuperAdmin)
+        {
+            ViewBag.Message = "You do not have permission to log timesheets. Please contact an administrator.";
+            ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "timesheet");
+            return View("NoPermission");
+        }
+
+        // Default to current week
+        var start = startDate ?? DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek);
+        var end = endDate ?? start.AddDays(6);
+        
+        // Get entries for this resource
+        var entries = await _timesheetService.GetEntriesForResourceAsync(resourceId, start, end);
+        
+        // Get available work phases
+        var workPhases = await _workPhaseService.GetForTimeRecordingAsync();
+
+        var model = new MyTimesheetViewModel
+        {
+            ResourceId = resourceId,
+            ResourceName = CurrentUserName ?? "Unknown",
+            StartDate = start,
+            EndDate = end,
+            Entries = entries,
+            WorkPhases = workPhases,
+            AvailableServiceAreas = permittedServiceAreas,
+            TotalHours = entries.Sum(e => e.Hours),
+            TotalContributedHours = entries.Sum(e => e.ContributedHours),
+            EntriesByDate = entries
+                .GroupBy(e => e.StartDate.ToString("yyyy-MM-dd"))
+                .ToDictionary(g => g.Key, g => g.ToList()),
+            HoursByPhase = entries
+                .GroupBy(e => e.WorkPhase?.Name ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.Sum(e => e.Hours))
+        };
+
+        ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "timesheet");
+        return View("MyTimesheet", model);
+    }
+
+    /// <summary>
+    /// My Timesheet - Calendar view (new)
+    /// </summary>
+    [HttpGet("calendar")]
+    public async Task<IActionResult> MyTimesheetCalendar(int? year = null, int? month = null)
     {
         var resourceId = CurrentUserId!;
         
@@ -61,7 +112,7 @@ public class TimesheetController : BaseController
             AvailableServiceAreas = permittedServiceAreas,
         };
 
-        ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "timesheet");
+        ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "timesheet-calendar");
         return View("MyTimesheetCalendar", model);
     }
 
@@ -220,7 +271,7 @@ public class TimesheetController : BaseController
     }
 
     /// <summary>
-    /// Get the add/edit time entry modal (legacy)
+    /// Get the add/edit time entry modal
     /// </summary>
     [HttpGet("entry/edit")]
     public async Task<IActionResult> EditEntry(string? id = null, string? enhancementId = null)
