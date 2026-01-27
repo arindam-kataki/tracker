@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Tracker.Web.Entities;
 using Tracker.Web.Services.Interfaces;
 using Tracker.Web.ViewModels;
 
@@ -21,58 +22,72 @@ public class ResourcesController : BaseController
         _logger = logger;
     }
 
+    /// <summary>
+    /// List all resources with filtering
+    /// </summary>
     [HttpGet]
-    public async Task<IActionResult> Index(string? search, string? type)
+    public async Task<IActionResult> Index(string? search, string? orgType, string? serviceArea)
     {
-        var resources = await _resourceService.GetAllAsync(search, type);
-        var resourceTypes = await _resourceService.GetResourceTypesSelectListAsync();
+        // Parse org type filter
+        OrganizationType? orgTypeFilter = null;
+        if (!string.IsNullOrEmpty(orgType) && Enum.TryParse<OrganizationType>(orgType, out var parsed))
+        {
+            orgTypeFilter = parsed;
+        }
+
+        var resources = await _resourceService.GetAllWithFiltersAsync(search, orgTypeFilter, serviceArea);
 
         var model = new ResourcesViewModel
         {
             Resources = resources,
             SearchTerm = search,
-            TypeFilter = type,
-            ResourceTypes = resourceTypes
+            OrgTypeFilter = orgTypeFilter,
+            ServiceAreaFilter = serviceArea,
+            OrganizationTypes = _resourceService.GetOrganizationTypesSelectList(),
+            ServiceAreas = await _resourceService.GetServiceAreasSelectListAsync()
         };
 
         ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "resources");
         return View("Resources", model);
     }
 
-    [HttpGet("edit")]
-    public async Task<IActionResult> Edit(string? id)
+    /// <summary>
+    /// Full-page Create resource form
+    /// </summary>
+    [HttpGet("create")]
+    [Authorize(Policy = "SuperAdmin")]
+    public async Task<IActionResult> Create()
     {
-        var resourceTypes = await _resourceService.GetResourceTypesSelectListAsync();
-        var allSkills = await _resourceService.GetSkillsSelectListAsync();
-
         var model = new EditResourceViewModel
         {
-            ResourceTypes = resourceTypes,
-            AvailableSkills = allSkills
+            IsActive = true,
+            OrganizationType = OrganizationType.Implementor,
+            OrganizationTypeOptions = _resourceService.GetOrganizationTypesSelectList(OrganizationType.Implementor),
+            AvailableServiceAreas = await _resourceService.GetAvailableServiceAreasAsync(),
+            AvailableSkillsGrouped = await _resourceService.GetSkillsGroupedByServiceAreaAsync()
         };
 
-        if (!string.IsNullOrEmpty(id))
-        {
-            var resource = await _resourceService.GetByIdAsync(id);
-            if (resource == null)
-                return NotFound();
-
-            var selectedSkillIds = await _resourceService.GetResourceSkillIdsAsync(id);
-
-            model.Id = resource.Id;
-            model.Name = resource.Name;
-            model.Email = resource.Email;
-            model.ResourceTypeId = resource.ResourceTypeId;
-            model.IsActive = resource.IsActive;
-            model.SkillIds = selectedSkillIds;
-
-            // Update selection state
-            model.AvailableSkills = await _resourceService.GetSkillsSelectListAsync(selectedSkillIds);
-        }
-
-        return PartialView("EditResource", model);
+        ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "resources");
+        return View("Edit", model);
     }
 
+    /// <summary>
+    /// Full-page Edit resource form
+    /// </summary>
+    [HttpGet("edit/{id}")]
+    public async Task<IActionResult> Edit(string id)
+    {
+        var model = await _resourceService.GetForEditAsync(id);
+        if (model == null)
+            return NotFound();
+
+        ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "resources");
+        return View("Edit", model);
+    }
+
+    /// <summary>
+    /// Save resource (create or update)
+    /// </summary>
     [HttpPost("save")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = "SuperAdmin")]
@@ -80,26 +95,62 @@ public class ResourcesController : BaseController
     {
         if (!ModelState.IsValid)
         {
-            model.ResourceTypes = await _resourceService.GetResourceTypesSelectListAsync();
-            model.AvailableSkills = await _resourceService.GetSkillsSelectListAsync(model.SkillIds);
-            return PartialView("EditResource", model);
+            // Reload dropdown options
+            model.OrganizationTypeOptions = _resourceService.GetOrganizationTypesSelectList(model.OrganizationType);
+            model.AvailableServiceAreas = await _resourceService.GetAvailableServiceAreasAsync();
+            model.AvailableSkillsGrouped = await _resourceService.GetSkillsGroupedByServiceAreaAsync(
+                model.Id,
+                model.ServiceAreaMemberships?.Select(sa => sa.ServiceAreaId).ToList());
+
+            ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "resources");
+            return View("Edit", model);
         }
 
-        if (string.IsNullOrEmpty(model.Id))
+        ResourceOperationResult result;
+
+        if (model.IsNew)
         {
-            await _resourceService.CreateAsync(model.Name, model.Email, model.ResourceTypeId, model.SkillIds);
-            _logger.LogInformation("Resource {Name} created by {User}", model.Name, CurrentUserEmail);
+            result = await _resourceService.CreateResourceAsync(model);
+            if (result.Success)
+            {
+                _logger.LogInformation("Resource {Name} created by {User}", model.Name, CurrentUserEmail);
+                TempData["SuccessMessage"] = $"Resource '{model.Name}' created successfully.";
+            }
         }
         else
         {
-            await _resourceService.UpdateAsync(model.Id, model.Name, model.Email, model.ResourceTypeId, model.IsActive, model.SkillIds);
-            _logger.LogInformation("Resource {Name} updated by {User}", model.Name, CurrentUserEmail);
+            result = await _resourceService.UpdateResourceAsync(model);
+            if (result.Success)
+            {
+                _logger.LogInformation("Resource {Name} updated by {User}", model.Name, CurrentUserEmail);
+                TempData["SuccessMessage"] = $"Resource '{model.Name}' updated successfully.";
+            }
         }
 
-        return Json(new { success = true });
+        if (!result.Success)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError("", error);
+            }
+
+            model.OrganizationTypeOptions = _resourceService.GetOrganizationTypesSelectList(model.OrganizationType);
+            model.AvailableServiceAreas = await _resourceService.GetAvailableServiceAreasAsync();
+            model.AvailableSkillsGrouped = await _resourceService.GetSkillsGroupedByServiceAreaAsync(
+                model.Id,
+                model.ServiceAreaMemberships?.Select(sa => sa.ServiceAreaId).ToList());
+
+            ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "resources");
+            return View("Edit", model);
+        }
+
+        return RedirectToAction("Index");
     }
 
-    [HttpPost("delete")]
+    /// <summary>
+    /// Delete resource
+    /// </summary>
+    [HttpPost("delete/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = "SuperAdmin")]
     public async Task<IActionResult> Delete(string id)
@@ -108,9 +159,55 @@ public class ResourcesController : BaseController
         if (resource == null)
             return NotFound();
 
-        await _resourceService.DeleteAsync(id);
-        _logger.LogInformation("Resource {Name} deleted by {User}", resource.Name, CurrentUserEmail);
+        var result = await _resourceService.DeleteResourceAsync(id);
+        
+        if (result.Success)
+        {
+            _logger.LogInformation("Resource {Name} deleted by {User}", resource.Name, CurrentUserEmail);
+            TempData["SuccessMessage"] = $"Resource '{resource.Name}' deleted successfully.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = string.Join(", ", result.Errors);
+        }
 
-        return Json(new { success = true });
+        return RedirectToAction("Index");
+    }
+
+    /// <summary>
+    /// AJAX: Get service area membership partial for dynamically adding
+    /// </summary>
+    [HttpGet("service-area-membership-template")]
+    public async Task<IActionResult> GetServiceAreaMembershipTemplate(string serviceAreaId, int index)
+    {
+        var serviceAreas = await _resourceService.GetAvailableServiceAreasAsync();
+        var sa = serviceAreas.FirstOrDefault(s => s.Id == serviceAreaId);
+        
+        if (sa == null)
+            return NotFound();
+
+        var model = new EditResourceServiceAreaViewModel
+        {
+            ServiceAreaId = serviceAreaId,
+            ServiceAreaCode = sa.Code,
+            ServiceAreaName = sa.Name,
+            IsPrimary = false,
+            // Default permissions for new membership
+            ViewEnhancements = true,
+            ViewResources = true
+        };
+
+        ViewData["Index"] = index;
+        return PartialView("_ServiceAreaMembership", model);
+    }
+
+    /// <summary>
+    /// AJAX: Get resources eligible for a specific enhancement column
+    /// </summary>
+    [HttpGet("for-column")]
+    public async Task<IActionResult> GetResourcesForColumn(string serviceAreaId, string column)
+    {
+        var resources = await _resourceService.GetResourcesForColumnAsync(serviceAreaId, column);
+        return Json(resources.Select(r => new { r.Id, r.Name, r.Email }));
     }
 }

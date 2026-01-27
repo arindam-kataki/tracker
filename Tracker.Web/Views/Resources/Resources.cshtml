@@ -8,33 +8,54 @@
         <i class="bi bi-people me-2"></i>Resources
         <small class="text-muted fs-6">(@Model.ActiveCount active of @Model.TotalCount)</small>
     </h4>
-</div>
-
-@Html.AntiForgeryToken()
-
-<div class="toolbar mb-3">
     @if (User.IsInRole("SuperAdmin"))
     {
-        <button class="btn btn-primary" id="addBtn">
+        <a href="/resources/create" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i> Add Resource
-        </button>
+        </a>
     }
 </div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-2"></i>@TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
 
 <!-- Filter -->
 <div class="card mb-3">
     <div class="card-body py-2">
         <form method="get" class="row g-2 align-items-center">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <input type="text" name="search" class="form-control form-control-sm" 
                        placeholder="Search name or email..." value="@Model.SearchTerm" />
             </div>
-            <div class="col-md-3">
-                <select name="type" class="form-select form-select-sm">
-                    <option value="">All Types</option>
-                    @foreach (var item in Model.ResourceTypes)
+            <div class="col-md-2">
+                <select name="orgType" class="form-select form-select-sm">
+                    <option value="">All Org Types</option>
+                    @foreach (var item in Model.OrganizationTypes)
                     {
-                        <option value="@item.Value" selected="@(item.Value == Model.TypeFilter)">@item.Text</option>
+                        var selected = Model.OrgTypeFilter.HasValue && ((int)Model.OrgTypeFilter.Value).ToString() == item.Value;
+                        <option value="@item.Value" selected="@selected">@item.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="serviceArea" class="form-select form-select-sm">
+                    <option value="">All Service Areas</option>
+                    @foreach (var item in Model.ServiceAreas)
+                    {
+                        <option value="@item.Value" selected="@(item.Value == Model.ServiceAreaFilter)">@item.Text</option>
                     }
                 </select>
             </div>
@@ -42,15 +63,23 @@
                 <button type="submit" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-search"></i> Filter
                 </button>
-                @if (!string.IsNullOrEmpty(Model.SearchTerm) || !string.IsNullOrEmpty(Model.TypeFilter))
+                @if (!string.IsNullOrEmpty(Model.SearchTerm) || Model.OrgTypeFilter.HasValue || !string.IsNullOrEmpty(Model.ServiceAreaFilter))
                 {
-                    <a href="@Url.Action("Index")" class="btn btn-sm btn-outline-secondary">
+                    <a href="/resources" class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-x-lg"></i> Clear
                     </a>
                 }
             </div>
         </form>
     </div>
+</div>
+
+<!-- Legend -->
+<div class="small text-muted mb-2">
+    <span class="badge bg-info">Client</span>
+    <span class="badge bg-primary">Implementor</span>
+    <span class="badge bg-warning text-dark">Vendor</span>
+    <span class="ms-3"><strong>*</strong> = Primary Service Area</span>
 </div>
 
 <!-- Table -->
@@ -60,9 +89,10 @@
             <thead class="table-light">
                 <tr>
                     <th>Name</th>
-                    <th>Type</th>
+                    <th style="width: 100px;">Organization</th>
                     <th>Email</th>
-                    <th>Skills</th>
+                    <th>Service Areas</th>
+                    <th style="width: 70px;">Login</th>
                     <th style="width: 80px;">Status</th>
                     @if (User.IsInRole("SuperAdmin"))
                     {
@@ -74,7 +104,7 @@
                 @if (!Model.Resources.Any())
                 {
                     <tr>
-                        <td colspan="@(User.IsInRole("SuperAdmin") ? 6 : 5)" class="text-center text-muted py-4">
+                        <td colspan="@(User.IsInRole("SuperAdmin") ? 7 : 6)" class="text-center text-muted py-4">
                             <i class="bi bi-inbox display-6 d-block mb-2"></i>
                             No resources found.
                         </td>
@@ -85,14 +115,7 @@
                     <tr class="@(!resource.IsActive ? "table-secondary" : "")">
                         <td><strong>@resource.Name</strong></td>
                         <td>
-                            @if (!string.IsNullOrEmpty(resource.ResourceTypeName))
-                            {
-                                <span class="badge bg-secondary">@resource.ResourceTypeName</span>
-                            }
-                            else
-                            {
-                                <span class="text-muted">-</span>
-                            }
+                            <span class="badge @resource.OrganizationTypeBadgeClass">@resource.OrganizationTypeDisplay</span>
                         </td>
                         <td class="text-muted">
                             @if (!string.IsNullOrEmpty(resource.Email))
@@ -105,13 +128,24 @@
                             }
                         </td>
                         <td>
-                            @if (resource.SkillNames.Any())
+                            @if (resource.ServiceAreas.Any())
                             {
-                                <span title="@resource.SkillsDisplay">
-                                    @(resource.SkillNames.Count > 2 
-                                        ? string.Join(", ", resource.SkillNames.Take(2)) + $" +{resource.SkillNames.Count - 2} more"
-                                        : resource.SkillsDisplay)
-                                </span>
+                                @foreach (var sa in resource.ServiceAreas.OrderByDescending(s => s.IsPrimary).ThenBy(s => s.Code))
+                                {
+                                    <span class="badge bg-secondary me-1" title="@sa.Name">
+                                        @sa.Code@(sa.IsPrimary ? "*" : "")
+                                    </span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>
+                            @if (resource.HasLogin)
+                            {
+                                <span class="badge bg-success" title="Has login access">Yes</span>
                             }
                             else
                             {
@@ -132,10 +166,9 @@
                         {
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <button type="button" class="btn btn-outline-primary edit-btn" 
-                                            data-id="@resource.Id" title="Edit">
+                                    <a href="/resources/edit/@resource.Id" class="btn btn-outline-primary" title="Edit">
                                         <i class="bi bi-pencil"></i>
-                                    </button>
+                                    </a>
                                     <button type="button" class="btn btn-outline-danger delete-btn" 
                                             data-id="@resource.Id" data-name="@resource.Name" title="Delete">
                                         <i class="bi bi-trash"></i>
@@ -150,28 +183,26 @@
     </div>
 </div>
 
-<!-- Modal -->
-<div class="modal fade" id="editModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content" id="editModalContent">
-        </div>
-    </div>
-</div>
-
-<!-- Delete Modal -->
+<!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Confirm Delete</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete <strong id="deleteResourceName"></strong>?</p>
+                <p class="text-muted small mb-0">This action cannot be undone. All service area memberships and skill assignments will also be removed.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Delete
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -180,97 +211,19 @@
 @section Scripts {
 <script>
 (function() {
-    var editModal = new bootstrap.Modal(document.getElementById('editModal'));
     var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    var deleteId = null;
-
-    // Add button
-    document.getElementById('addBtn')?.addEventListener('click', function() {
-        loadEditForm('');
-    });
-
-    // Edit buttons
-    document.querySelectorAll('.edit-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            loadEditForm(this.dataset.id);
-        });
-    });
-
-    // Delete buttons
+    
     document.querySelectorAll('.delete-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
-            deleteId = this.dataset.id;
-            document.getElementById('deleteResourceName').textContent = this.dataset.name;
+            var id = this.dataset.id;
+            var name = this.dataset.name;
+            
+            document.getElementById('deleteResourceName').textContent = name;
+            document.getElementById('deleteForm').action = '/resources/delete/' + encodeURIComponent(id);
+            
             deleteModal.show();
         });
     });
-
-    // Confirm delete
-    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-        if (!deleteId) return;
-        
-        var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-        
-        fetch('/resources/delete', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'RequestVerificationToken': token
-            },
-            body: 'id=' + encodeURIComponent(deleteId)
-        })
-        .then(function(response) { return response.json(); })
-        .then(function(data) {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Error deleting resource');
-            }
-        });
-    });
-
-    function loadEditForm(id) {
-        var url = '/resources/edit' + (id ? '?id=' + encodeURIComponent(id) : '');
-        
-        fetch(url)
-            .then(function(response) { return response.text(); })
-            .then(function(html) {
-                document.getElementById('editModalContent').innerHTML = html;
-                editModal.show();
-                bindFormSubmit();
-            });
-    }
-
-    function bindFormSubmit() {
-        var form = document.getElementById('editResourceForm');
-        if (!form) return;
-        
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            var formData = new FormData(form);
-            
-            fetch('/resources/save', {
-                method: 'POST',
-                body: formData
-            })
-            .then(function(response) { return response.json(); })
-            .then(function(data) {
-                if (data.success) {
-                    editModal.hide();
-                    location.reload();
-                } else {
-                    // Reload form with errors
-                    fetch(form.action, { method: 'POST', body: formData })
-                        .then(function(r) { return r.text(); })
-                        .then(function(html) {
-                            document.getElementById('editModalContent').innerHTML = html;
-                            bindFormSubmit();
-                        });
-                }
-            });
-        });
-    }
 })();
 </script>
 }

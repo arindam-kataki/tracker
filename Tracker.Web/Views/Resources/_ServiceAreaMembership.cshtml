@@ -1,41 +1,40 @@
 @model Tracker.Web.ViewModels.EditResourceServiceAreaViewModel
 @{
-    var index = (int)ViewData["index"];
+    var index = (int)ViewData["Index"];
 }
 
-<div class="card mb-3 sa-membership-card" data-sa-id="@Model.ServiceAreaId" id="membership_@index">
-    <div class="card-header d-flex justify-content-between align-items-center py-2">
+<div class="card mb-3 sa-membership-card" data-service-area-id="@Model.ServiceAreaId" data-index="@index">
+    <div class="card-header py-2 d-flex justify-content-between align-items-center bg-light">
         <div>
             <strong>@Model.ServiceAreaCode - @Model.ServiceAreaName</strong>
-            <span class="badge bg-primary ms-2 primary-badge" style="display: @(Model.IsPrimary ? "inline" : "none")">Primary</span>
+            <span class="badge bg-primary ms-2 primary-badge @(Model.IsPrimary ? "" : "d-none")">Primary</span>
         </div>
-        <button type="button" class="btn btn-sm btn-outline-danger remove-sa-btn" data-index="@index">
+        <button type="button" class="btn btn-sm btn-outline-danger remove-membership-btn" title="Remove membership">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <div class="card-body py-3">
+    <div class="card-body py-2">
+        <!-- Hidden fields -->
         <input type="hidden" name="ServiceAreaMemberships[@index].Id" value="@Model.Id" />
         <input type="hidden" name="ServiceAreaMemberships[@index].ServiceAreaId" value="@Model.ServiceAreaId" />
         <input type="hidden" name="ServiceAreaMemberships[@index].ServiceAreaCode" value="@Model.ServiceAreaCode" />
         <input type="hidden" name="ServiceAreaMemberships[@index].ServiceAreaName" value="@Model.ServiceAreaName" />
         
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input sa-primary-checkbox" 
-                           name="ServiceAreaMemberships[@index].IsPrimary" 
-                           id="primary_@index" value="true" checked="@Model.IsPrimary" />
-                    <label class="form-check-label" for="primary_@index">
-                        <strong>Primary Service Area</strong>
-                    </label>
-                </div>
-            </div>
+        <!-- Primary Checkbox -->
+        <div class="form-check mb-2">
+            <input type="checkbox" class="form-check-input primary-checkbox" 
+                   name="ServiceAreaMemberships[@index].IsPrimary" 
+                   id="primary_@index" value="true" checked="@Model.IsPrimary" />
+            <label class="form-check-label fw-semibold" for="primary_@index">Primary Service Area</label>
         </div>
         
-        <div class="row">
+        <hr class="my-2" />
+        
+        <!-- Permissions -->
+        <div class="row small">
             <!-- Enhancements -->
-            <div class="col-md-4">
-                <label class="form-label fw-semibold">Enhancements</label>
+            <div class="col-md-4 col-lg-2 mb-2">
+                <label class="form-label fw-semibold text-muted mb-1">Enhancements</label>
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" 
                            name="ServiceAreaMemberships[@index].ViewEnhancements" 
@@ -57,8 +56,8 @@
             </div>
             
             <!-- Timesheets -->
-            <div class="col-md-4">
-                <label class="form-label fw-semibold">Timesheets</label>
+            <div class="col-md-4 col-lg-2 mb-2">
+                <label class="form-label fw-semibold text-muted mb-1">Timesheets</label>
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" 
                            name="ServiceAreaMemberships[@index].LogTimesheet" 
@@ -80,8 +79,8 @@
             </div>
             
             <!-- Invoicing -->
-            <div class="col-md-4">
-                <label class="form-label fw-semibold">Invoicing</label>
+            <div class="col-md-4 col-lg-2 mb-2">
+                <label class="form-label fw-semibold text-muted mb-1">Invoicing</label>
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" 
                            name="ServiceAreaMemberships[@index].ViewInvoices" 
@@ -101,12 +100,10 @@
                     <label class="form-check-label" for="updateInv_@index">Update</label>
                 </div>
             </div>
-        </div>
-        
-        <div class="row mt-2">
+            
             <!-- Resources -->
-            <div class="col-md-4">
-                <label class="form-label fw-semibold">Resources</label>
+            <div class="col-md-4 col-lg-2 mb-2">
+                <label class="form-label fw-semibold text-muted mb-1">Resources</label>
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" 
                            name="ServiceAreaMemberships[@index].ViewResources" 
@@ -122,8 +119,8 @@
             </div>
             
             <!-- Reports -->
-            <div class="col-md-4">
-                <label class="form-label fw-semibold">Reports</label>
+            <div class="col-md-4 col-lg-2 mb-2">
+                <label class="form-label fw-semibold text-muted mb-1">Reports</label>
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" 
                            name="ServiceAreaMemberships[@index].ViewReports" 
