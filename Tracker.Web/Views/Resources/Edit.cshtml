@@ -40,31 +40,35 @@
 <form method="post" action="/resources/save" id="resourceForm">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="Id" />
-    
+
     <!-- Tabs -->
     <ul class="nav nav-tabs mb-3" id="resourceTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic-panel" type="button" role="tab">
+            <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic-panel"
+                type="button" role="tab">
                 <i class="bi bi-person-badge me-1"></i> Basic Info
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="access-tab" data-bs-toggle="tab" data-bs-target="#access-panel" type="button" role="tab">
+            <button class="nav-link" id="access-tab" data-bs-toggle="tab" data-bs-target="#access-panel" type="button"
+                role="tab">
                 <i class="bi bi-shield-lock me-1"></i> Login & Access
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="skills-tab" data-bs-toggle="tab" data-bs-target="#skills-panel" type="button" role="tab">
+            <button class="nav-link" id="skills-tab" data-bs-toggle="tab" data-bs-target="#skills-panel" type="button"
+                role="tab">
                 <i class="bi bi-tools me-1"></i> Skills
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="availability-tab" data-bs-toggle="tab" data-bs-target="#availability-panel" type="button" role="tab">
+            <button class="nav-link" id="availability-tab" data-bs-toggle="tab" data-bs-target="#availability-panel"
+                type="button" role="tab">
                 <i class="bi bi-calendar3 me-1"></i> Availability
             </button>
         </li>
     </ul>
-    
+
     <div class="tab-content">
         <!-- TAB 1: Basic Info -->
         <div class="tab-pane fade show active" id="basic-panel" role="tabpanel">
@@ -80,11 +84,12 @@
                                 <input asp-for="Name" class="form-control" placeholder="Full name" />
                                 <span asp-validation-for="Name" class="text-danger small"></span>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label asp-for="Email" class="form-label">Email</label>
-                                    <input asp-for="Email" type="email" class="form-control" placeholder="email@example.com" />
+                                    <input asp-for="Email" type="email" class="form-control"
+                                        placeholder="email@example.com" />
                                     <span asp-validation-for="Email" class="text-danger small"></span>
                                 </div>
                                 <div class="col-md-6 mb-3">
@@ -93,12 +98,15 @@
                                     <span asp-validation-for="Phone" class="text-danger small"></span>
                                 </div>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-8 mb-3">
-                                    <label asp-for="OrganizationType" class="form-label">Organization Type <span class="text-danger">*</span></label>
-                                    <select asp-for="OrganizationType" asp-items="Model.OrganizationTypeOptions" class="form-select"></select>
-                                    <small class="text-muted">Determines which enhancement columns this resource can appear in</small>
+                                    <label asp-for="OrganizationType" class="form-label">Organization Type <span
+                                            class="text-danger">*</span></label>
+                                    <select asp-for="OrganizationType" asp-items="Model.OrganizationTypeOptions"
+                                        class="form-select"></select>
+                                    <small class="text-muted">Determines which enhancement columns this resource can
+                                        appear in</small>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label">&nbsp;</label>
@@ -111,7 +119,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="col-lg-7">
                     <div class="card mb-3">
                         <div class="card-header d-flex justify-content-between align-items-center">
@@ -127,10 +135,11 @@
                                     for (int i = 0; i < Model.ServiceAreaMemberships.Count; i++)
                                     {
                                         ViewData["Index"] = i;
-                                        @await Html.PartialAsync("_ServiceAreaMembership", Model.ServiceAreaMemberships[i], ViewData)
-                                    }
-                                }
-                                else
+                                        @await Html.PartialAsync("_ServiceAreaMembership", Model.ServiceAreaMemberships[i],
+                                        ViewData)
+                                                                }
+                                                                }
+                                                                else
                                 {
                                     <div id="noMembershipsMessage" class="text-center text-muted py-4">
                                         <i class="bi bi-diagram-3 display-6 d-block mb-2"></i>
@@ -143,7 +152,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- TAB 2: Login & Access -->
         <div class="tab-pane fade" id="access-panel" role="tabpanel">
             <div class="row">
@@ -168,10 +177,10 @@
                                 </label>
                                 <div class="form-text">Allow this person to log in to the system</div>
                             </div>
-                            
+
                             <div id="loginOptionsSection" style="display: @(Model.HasLoginAccess ? "block" : "none");">
                                 <hr />
-                                
+
                                 <div class="mb-3">
                                     <label asp-for="NewPassword" class="form-label">
                                         @(Model.IsNew ? "Password" : "New Password")
@@ -180,12 +189,12 @@
                                             <span class="text-danger">*</span>
                                         }
                                     </label>
-                                    <input asp-for="NewPassword" type="password" class="form-control" 
-                                           placeholder="@(Model.IsNew ? "Enter password" : "Leave blank to keep current")" />
+                                    <input asp-for="NewPassword" type="password" class="form-control"
+                                        placeholder="@(Model.IsNew ? "Enter password" : "Leave blank to keep current")" />
                                     <span asp-validation-for="NewPassword" class="text-danger small"></span>
                                     <small class="text-muted">Minimum 8 characters</small>
                                 </div>
-                                
+
                                 <div class="form-check form-switch mb-3">
                                     @if (Model.IsLastAdmin)
                                     {
@@ -202,7 +211,7 @@
                                     </label>
                                     <div class="form-text">Full access to all features and all service areas</div>
                                 </div>
-                                
+
                                 <div class="form-check form-switch mb-3">
                                     <input asp-for="CanConsolidate" class="form-check-input" />
                                     <label asp-for="CanConsolidate" class="form-check-label">
@@ -214,7 +223,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="col-lg-6">
                     <div class="card mb-3">
                         <div class="card-header">
@@ -228,7 +237,7 @@
                             else if (Model.LastLoginAt.HasValue)
                             {
                                 <p class="mb-0">
-                                    <strong>Last Login:</strong> @Model.LastLoginAt.Value.ToString("MMMM dd, yyyy 'at' HH:mm")
+                                    <strong>Last Login:</strong> @Model.LastLoginAt.Value.ToString("MMMM dd, yyyy 'at'                     HH:mm")
                                 </p>
                             }
                             else
@@ -237,7 +246,7 @@
                             }
                         </div>
                     </div>
-                    
+
                     @if (!Model.IsNew && Model.HasLoginAccess)
                     {
                         <div class="card mb-3 border-warning">
@@ -246,22 +255,23 @@
                             </div>
                             <div class="card-body">
                                 <p class="small text-muted mb-2">Generate a new password for this user:</p>
-                                <form method="post" action="/resources/reset-password/@Model.Id" id="resetPasswordForm">
-                                    @Html.AntiForgeryToken()
+                                <div id="resetPasswordSection">
                                     <div class="input-group">
-                                        <input type="password" name="newPassword" class="form-control" placeholder="New password (min 8 chars)" />
-                                        <button type="submit" class="btn btn-warning" onclick="return confirm('Reset password for this user?')">
+                                        <input type="password" id="resetPasswordInput" class="form-control"
+                                            placeholder="New password (min 8 chars)" />
+                                        <button type="button" class="btn btn-warning" id="resetPasswordBtn">
                                             <i class="bi bi-key me-1"></i> Reset
                                         </button>
                                     </div>
-                                </form>
+                                    <div id="resetPasswordMessage" class="mt-2"></div>
+                                </div>
                             </div>
                         </div>
                     }
                 </div>
             </div>
         </div>
-        
+
         <!-- TAB 3: Skills -->
         <div class="tab-pane fade" id="skills-panel" role="tabpanel">
             <div class="card">
@@ -270,7 +280,7 @@
                 </div>
                 <div class="card-body">
                     <p class="text-muted mb-3">Select skills for this resource. Skills are grouped by Service Area.</p>
-                    
+
                     @if (Model.AvailableSkillsGrouped?.Any() != true)
                     {
                         <div class="text-center text-muted py-4">
@@ -280,8 +290,9 @@
                     }
                     else
                     {
-                        var memberServiceAreaIds = Model.ServiceAreaMemberships?.Select(sa => sa.ServiceAreaId).ToHashSet() ?? new HashSet<string>();
-                        
+                        var memberServiceAreaIds = Model.ServiceAreaMemberships?.Select(sa => sa.ServiceAreaId).ToHashSet()
+                        ?? new HashSet<string>();
+
                         @foreach (var group in Model.AvailableSkillsGrouped)
                         {
                             var isMember = memberServiceAreaIds.Contains(group.ServiceAreaId);
@@ -307,10 +318,10 @@
                                             {
                                                 <div class="col-md-4 col-lg-3">
                                                     <div class="form-check">
-                                                        <input type="checkbox" class="form-check-input" 
-                                                               name="SelectedSkillIds" value="@skill.Id" 
-                                                               id="skill_@skill.Id" checked="@skill.IsSelected" />
-                                                        <label class="form-check-label" for="skill_@skill.Id" title="@skill.Description">
+                                                        <input type="checkbox" class="form-check-input" name="SelectedSkillIds"
+                                                            value="@skill.Id" id="skill_@skill.Id" checked="@skill.IsSelected" />
+                                                        <label class="form-check-label" for="skill_@skill.Id"
+                                                            title="@skill.Description">
                                                             @skill.Name
                                                         </label>
                                                     </div>
@@ -325,7 +336,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- TAB 4: Availability -->
         <div class="tab-pane fade" id="availability-panel" role="tabpanel">
             <div class="card">
@@ -342,7 +353,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Save Button -->
     <div class="card mt-3">
         <div class="card-body d-flex justify-content-between">
@@ -391,119 +402,159 @@
 </div>
 
 @section Scripts {
-<script>
-(function() {
-    var membershipIndex = @(Model.ServiceAreaMemberships?.Count ?? 0);
-    var addedServiceAreas = [@Html.Raw(string.Join(",", (Model.ServiceAreaMemberships ?? new List<EditResourceServiceAreaViewModel>()).Select(sa => $"'{sa.ServiceAreaId}'")))];
-    var addModal = new bootstrap.Modal(document.getElementById('addServiceAreaModal'));
-    
-    // Toggle login options
-    var hasLoginCheckbox = document.getElementById('hasLoginAccess');
-    var loginOptionsSection = document.getElementById('loginOptionsSection');
-    
-    if (hasLoginCheckbox) {
-        hasLoginCheckbox.addEventListener('change', function() {
-            loginOptionsSection.style.display = this.checked ? 'block' : 'none';
-            if (!this.checked) {
-                var isAdminCheckbox = document.getElementById('isAdmin');
-                if (isAdminCheckbox) isAdminCheckbox.checked = false;
+    <script>
+        (function () {
+            var membershipIndex = @(Model.ServiceAreaMemberships?.Count ?? 0);
+            var addedServiceAreas = [@Html.Raw(string.Join(",", (Model.ServiceAreaMemberships ?? new List<EditResourceServiceAreaViewModel>()).Select(sa => $"'{sa.ServiceAreaId}'")))];
+            var addModal = new bootstrap.Modal(document.getElementById('addServiceAreaModal'));
+
+            // Toggle login options
+            var hasLoginCheckbox = document.getElementById('hasLoginAccess');
+            var loginOptionsSection = document.getElementById('loginOptionsSection');
+
+            if (hasLoginCheckbox) {
+                hasLoginCheckbox.addEventListener('change', function () {
+                    loginOptionsSection.style.display = this.checked ? 'block' : 'none';
+                    if (!this.checked) {
+                        var isAdminCheckbox = document.getElementById('isAdmin');
+                        if (isAdminCheckbox) isAdminCheckbox.checked = false;
+                    }
+                });
             }
-        });
-    }
-    
-    document.getElementById('addServiceAreaBtn').addEventListener('click', function() {
-        updateServiceAreaDropdown();
-        addModal.show();
-    });
-    
-    document.getElementById('confirmAddServiceArea').addEventListener('click', function() {
-        var select = document.getElementById('newServiceAreaId');
-        var serviceAreaId = select.value;
-        if (!serviceAreaId) { alert('Please select a service area'); return; }
-        
-        var isPrimary = document.getElementById('newIsPrimary').checked;
-        
-        fetch('/resources/service-area-membership-template?serviceAreaId=' + encodeURIComponent(serviceAreaId) + '&index=' + membershipIndex)
-            .then(function(r) { return r.text(); })
-            .then(function(html) {
-                var noMsg = document.getElementById('noMembershipsMessage');
-                if (noMsg) noMsg.remove();
-                
-                var container = document.getElementById('serviceAreaMemberships');
-                var div = document.createElement('div');
-                div.innerHTML = html;
-                container.appendChild(div.firstElementChild);
-                
-                if (isPrimary) setPrimaryServiceArea(membershipIndex);
-                
-                addedServiceAreas.push(serviceAreaId);
-                membershipIndex++;
-                select.value = '';
-                document.getElementById('newIsPrimary').checked = false;
-                addModal.hide();
+
+            document.getElementById('addServiceAreaBtn').addEventListener('click', function () {
+                updateServiceAreaDropdown();
+                addModal.show();
             });
-    });
-    
-    function updateServiceAreaDropdown() {
-        var select = document.getElementById('newServiceAreaId');
-        select.querySelectorAll('option').forEach(function(opt) {
-            if (opt.value && addedServiceAreas.includes(opt.value)) {
-                opt.disabled = true;
-                opt.textContent = opt.dataset.code + ' - ' + opt.dataset.name + ' (already added)';
-            } else if (opt.value) {
-                opt.disabled = false;
-                opt.textContent = opt.dataset.code + ' - ' + opt.dataset.name;
+
+            document.getElementById('confirmAddServiceArea').addEventListener('click', function () {
+                var select = document.getElementById('newServiceAreaId');
+                var serviceAreaId = select.value;
+                if (!serviceAreaId) { alert('Please select a service area'); return; }
+
+                var isPrimary = document.getElementById('newIsPrimary').checked;
+
+                fetch('/resources/service-area-membership-template?serviceAreaId=' + encodeURIComponent(serviceAreaId) + '&index=' + membershipIndex)
+                    .then(function (r) { return r.text(); })
+                    .then(function (html) {
+                        var noMsg = document.getElementById('noMembershipsMessage');
+                        if (noMsg) noMsg.remove();
+
+                        var container = document.getElementById('serviceAreaMemberships');
+                        var div = document.createElement('div');
+                        div.innerHTML = html;
+                        container.appendChild(div.firstElementChild);
+
+                        if (isPrimary) setPrimaryServiceArea(membershipIndex);
+
+                        addedServiceAreas.push(serviceAreaId);
+                        membershipIndex++;
+                        select.value = '';
+                        document.getElementById('newIsPrimary').checked = false;
+                        addModal.hide();
+                    });
+            });
+
+            function updateServiceAreaDropdown() {
+                var select = document.getElementById('newServiceAreaId');
+                select.querySelectorAll('option').forEach(function (opt) {
+                    if (opt.value && addedServiceAreas.includes(opt.value)) {
+                        opt.disabled = true;
+                        opt.textContent = opt.dataset.code + ' - ' + opt.dataset.name + ' (already added)';
+                    } else if (opt.value) {
+                        opt.disabled = false;
+                        opt.textContent = opt.dataset.code + ' - ' + opt.dataset.name;
+                    }
+                });
             }
-        });
-    }
-    
-    document.getElementById('serviceAreaMemberships').addEventListener('click', function(e) {
-        var removeBtn = e.target.closest('.remove-membership-btn');
-        if (removeBtn) {
-            var card = removeBtn.closest('.sa-membership-card');
-            var idx = addedServiceAreas.indexOf(card.dataset.serviceAreaId);
-            if (idx > -1) addedServiceAreas.splice(idx, 1);
-            card.remove();
-            
-            var container = document.getElementById('serviceAreaMemberships');
-            if (container.querySelectorAll('.sa-membership-card').length === 0) {
-                container.innerHTML = '<div id="noMembershipsMessage" class="text-center text-muted py-4"><i class="bi bi-diagram-3 display-6 d-block mb-2"></i>No service area memberships.</div>';
+
+            document.getElementById('serviceAreaMemberships').addEventListener('click', function (e) {
+                var removeBtn = e.target.closest('.remove-membership-btn');
+                if (removeBtn) {
+                    var card = removeBtn.closest('.sa-membership-card');
+                    var idx = addedServiceAreas.indexOf(card.dataset.serviceAreaId);
+                    if (idx > -1) addedServiceAreas.splice(idx, 1);
+                    card.remove();
+
+                    var container = document.getElementById('serviceAreaMemberships');
+                    if (container.querySelectorAll('.sa-membership-card').length === 0) {
+                        container.innerHTML = '<div id="noMembershipsMessage" class="text-center text-muted py-4"><i class="bi bi-diagram-3 display-6 d-block mb-2"></i>No service area memberships.</div>';
+                    }
+                    reindexMemberships();
+                }
+            });
+
+            document.getElementById('serviceAreaMemberships').addEventListener('change', function (e) {
+                if (e.target.classList.contains('primary-checkbox') && e.target.checked) {
+                    setPrimaryServiceArea(parseInt(e.target.closest('.sa-membership-card').dataset.index));
+                }
+            });
+
+            function setPrimaryServiceArea(primaryIndex) {
+                document.querySelectorAll('.primary-checkbox').forEach(function (cb) {
+                    var card = cb.closest('.sa-membership-card');
+                    var idx = parseInt(card.dataset.index);
+                    cb.checked = (idx === primaryIndex);
+                    var badge = card.querySelector('.primary-badge');
+                    badge.classList.toggle('d-none', idx !== primaryIndex);
+                });
             }
-            reindexMemberships();
-        }
-    });
-    
-    document.getElementById('serviceAreaMemberships').addEventListener('change', function(e) {
-        if (e.target.classList.contains('primary-checkbox') && e.target.checked) {
-            setPrimaryServiceArea(parseInt(e.target.closest('.sa-membership-card').dataset.index));
-        }
-    });
-    
-    function setPrimaryServiceArea(primaryIndex) {
-        document.querySelectorAll('.primary-checkbox').forEach(function(cb) {
-            var card = cb.closest('.sa-membership-card');
-            var idx = parseInt(card.dataset.index);
-            cb.checked = (idx === primaryIndex);
-            var badge = card.querySelector('.primary-badge');
-            badge.classList.toggle('d-none', idx !== primaryIndex);
-        });
-    }
-    
-    function reindexMemberships() {
-        var cards = document.querySelectorAll('.sa-membership-card');
-        cards.forEach(function(card, i) {
-            card.dataset.index = i;
-            card.querySelectorAll('input, select').forEach(function(inp) {
-                if (inp.name) inp.name = inp.name.replace(/\[\d+\]/, '[' + i + ']');
-                if (inp.id) inp.id = inp.id.replace(/_\d+$/, '_' + i);
+
+            function reindexMemberships() {
+                var cards = document.querySelectorAll('.sa-membership-card');
+                cards.forEach(function (card, i) {
+                    card.dataset.index = i;
+                    card.querySelectorAll('input, select').forEach(function (inp) {
+                        if (inp.name) inp.name = inp.name.replace(/\[\d+\]/, '[' + i + ']');
+                        if (inp.id) inp.id = inp.id.replace(/_\d+$/, '_' + i);
+                    });
+                    card.querySelectorAll('label').forEach(function (lbl) {
+                        var f = lbl.getAttribute('for');
+                        if (f) lbl.setAttribute('for', f.replace(/_\d+$/, '_' + i));
+                    });
+                });
+                membershipIndex = cards.length;
+            }
+
+            // Password Reset Handler
+            document.getElementById('resetPasswordBtn')?.addEventListener('click', function () {
+                var newPassword = document.getElementById('resetPasswordInput').value;
+                var messageDiv = document.getElementById('resetPasswordMessage');
+
+                if (!newPassword || newPassword.length < 8) {
+                    messageDiv.innerHTML = '<div class="alert alert-danger py-1 small">Password must be at least 8 characters.</div>';
+                    return;
+                }
+
+                if (!confirm('Reset password for this user?')) {
+                    return;
+                }
+
+                var resourceId = document.querySelector('input[name="Id"]').value;
+                var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                var formData = new FormData();
+                formData.append('newPassword', newPassword);
+                formData.append('__RequestVerificationToken', token);
+
+                fetch('/resources/reset-password/' + resourceId, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(function (response) {
+                        if (response.ok || response.redirected) {
+                            messageDiv.innerHTML = '<div class="alert alert-success py-1 small">Password reset successfully!</div>';
+                            document.getElementById('resetPasswordInput').value = '';
+                            setTimeout(function () { location.reload(); }, 1500);
+                        } else {
+                            messageDiv.innerHTML = '<div class="alert alert-danger py-1 small">Failed to reset password.</div>';
+                        }
+                    })
+                    .catch(function (error) {
+                        messageDiv.innerHTML = '<div class="alert alert-danger py-1 small">An error occurred.</div>';
+                    });
             });
-            card.querySelectorAll('label').forEach(function(lbl) {
-                var f = lbl.getAttribute('for');
-                if (f) lbl.setAttribute('for', f.replace(/_\d+$/, '_' + i));
-            });
-        });
-        membershipIndex = cards.length;
-    }
-})();
-</script>
+
+        })();
+    </script>
 }

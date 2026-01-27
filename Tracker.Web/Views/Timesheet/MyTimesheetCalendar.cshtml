@@ -8,80 +8,215 @@
     var calendarStart = firstDayOfMonth.AddDays(-startDayOfWeek);
 }
 
-<div class="container-fluid">
-    <!-- Page Header -->
+@* ============================================
+   CUSTOM STYLES - Bigger fonts, unselectable calendar
+   ============================================ *@
+<style>
+    /* Bigger fonts throughout */
+    .timesheet-calendar {
+        font-size: 1.05rem;
+    }
+    .timesheet-calendar .card-header {
+        font-size: 1.1rem;
+    }
+    .timesheet-calendar .form-select,
+    .timesheet-calendar .form-control {
+        font-size: 1rem;
+    }
+    .timesheet-calendar .btn {
+        font-size: 1rem;
+    }
+    
+    /* Calendar specific - unselectable */
+    .calendar-grid {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+    }
+    .calendar-day {
+        cursor: pointer;
+        min-height: 70px;
+        font-size: 1.1rem;
+        transition: background-color 0.15s;
+    }
+    .calendar-day:hover {
+        background-color: #e9ecef;
+    }
+    .calendar-day.today {
+        background-color: #fff3cd;
+        font-weight: bold;
+    }
+    .calendar-day.selected {
+        background-color: #0d6efd;
+        color: white;
+    }
+    .calendar-day.range-selected {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    .calendar-day.has-hours {
+        background-color: #d1e7dd;
+    }
+    .calendar-day.has-hours.selected {
+        background-color: #0d6efd;
+        color: white;
+    }
+    .calendar-day.other-month {
+        opacity: 0.4;
+    }
+    .calendar-day .day-number {
+        font-weight: 600;
+        font-size: 1.15rem;
+    }
+    .calendar-day .hours-badge {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    /* Day names header */
+    .calendar-header th {
+        font-size: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Filter section */
+    .filter-section {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+    }
+    .filter-section label {
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    /* Totals display */
+    .totals-display {
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    
+    /* Notes field - make it prominent */
+    .notes-field {
+        min-height: 60px;
+        font-size: 1rem;
+    }
+    .notes-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    .notes-label i {
+        color: #ffc107;
+    }
+    
+    /* Entry form */
+    .entry-row {
+        background-color: #f8f9fa;
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Info messages */
+    .info-message {
+        font-size: 1rem;
+        padding: 1rem;
+    }
+</style>
+
+<div class="container-fluid timesheet-calendar">
+    @Html.AntiForgeryToken()
+    
+    @* ============================================
+       PAGE HEADER
+       ============================================ *@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="mb-0">
-            <i class="bi bi-clock-history me-2"></i>My Timesheet
+            <i class="bi bi-calendar3 me-2"></i>My Timesheet
         </h4>
         <div>
-            <span class="text-muted me-3">@Model.ResourceName</span>
-            <span class="badge bg-secondary" id="monthTotalBadge">@Model.StartDate.ToString("MMMM yyyy"): @Model.TotalHours.ToString("N1") hrs</span>
+            <span class="text-muted me-3" style="font-size: 1.1rem;">@Model.ResourceName</span>
         </div>
     </div>
 
-    <!-- Enhancement Selection Bar -->
-    <div class="card mb-3">
+    @* ============================================
+       FILTER SECTION - Service Area, Work Item, Clear
+       ============================================ *@
+    <div class="filter-section mb-3">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="serviceAreaFilter" class="form-label">
+                    <i class="bi bi-diagram-3 me-1"></i>Service Area
+                </label>
+                <select id="serviceAreaFilter" class="form-select" onchange="onServiceAreaChange()">
+                    <option value="">-- All Service Areas --</option>
+                    @foreach (var sa in Model.AvailableServiceAreas)
+                    {
+                        <option value="@sa.Id" data-code="@sa.Code">@sa.Code - @sa.Name</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="col-md-5">
+                <label for="workItemFilter" class="form-label">
+                    <i class="bi bi-file-earmark-text me-1"></i>Work Item
+                </label>
+                <select id="workItemFilter" class="form-select" onchange="onWorkItemChange()" disabled>
+                    <option value="">-- Select Service Area First --</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <button type="button" class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                    <i class="bi bi-x-circle me-1"></i>Clear Filters
+                </button>
+            </div>
+        </div>
+        
+        @* Status message showing current filter state *@
+        <div class="mt-2">
+            <span id="filterStatus" class="text-muted" style="font-size: 0.95rem;">
+                <i class="bi bi-info-circle me-1"></i>Showing totals for all work items. Select a work item to add hours.
+            </span>
+        </div>
+    </div>
+
+    @* ============================================
+       TOTALS DISPLAY - Shows based on filter selection
+       ============================================ *@
+    <div class="card mb-3" id="totalsCard">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-bar-chart me-2"></i><span id="totalsTitle">Monthly Totals</span></span>
+            <span class="badge bg-primary totals-display" id="monthTotalBadge">0.0 hrs</span>
+        </div>
         <div class="card-body py-2">
-            <div class="row align-items-center g-2">
-                <div class="col-auto">
-                    <span class="badge bg-primary rounded-pill">1</span>
-                </div>
-                <div class="col-md-2">
-                    <select id="serviceAreaFilter" class="form-select form-select-sm" onchange="onServiceAreaChange()">
-                        <option value="">All Service Areas</option>
-                        @foreach (var sa in Model.AvailableServiceAreas)
-                        {
-                            <option value="@sa.Id">@sa.Code - @sa.Name</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-auto">
-                    <span class="badge bg-primary rounded-pill">2</span>
-                </div>
-                <div class="col-md-4">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" id="enhancementSearch" class="form-control" 
-                               placeholder="Search enhancement by WorkId or description..." 
-                               onkeyup="debounceEnhancementSearch()">
-                    </div>
-                </div>
+            <div class="row text-center" id="totalsBreakdown">
                 <div class="col">
-                    <div id="selectedEnhancementDisplay" class="d-none">
-                        <div class="d-flex align-items-center">
-                            <div class="bg-success text-white px-2 py-1 rounded-start small">
-                                <i class="bi bi-check-circle"></i>
-                            </div>
-                            <div class="bg-light border px-2 py-1 rounded-end flex-grow-1 small">
-                                <strong id="selectedWorkId"></strong> - <span id="selectedDescription"></span>
-                                <button type="button" class="btn btn-sm btn-link p-0 ms-2" onclick="clearEnhancement()">
-                                    <i class="bi bi-x-circle"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="enhancementDropdown" class="dropdown d-none">
-                        <div class="list-group shadow" style="position: absolute; z-index: 1000; max-height: 250px; overflow-y: auto; min-width: 400px;">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
+                    <div class="text-muted small">Loading...</div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <!-- Left: Calendar -->
+        @* ============================================
+           LEFT: CALENDAR
+           ============================================ *@
         <div class="col-lg-7">
             <div class="card">
-                <!-- Calendar Header -->
+                @* Calendar Header with Navigation *@
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
                     <button class="btn btn-sm btn-outline-secondary" onclick="changeMonth(-1)">
                         <i class="bi bi-chevron-left"></i>
                     </button>
                     <div>
-                        <h5 class="mb-0 d-inline" id="calendarMonthTitle">@Model.StartDate.ToString("MMMM yyyy")</h5>
+                        <h5 class="mb-0 d-inline" id="calendarMonthTitle" style="font-size: 1.25rem;">
+                            @Model.StartDate.ToString("MMMM yyyy")
+                        </h5>
                         <button class="btn btn-sm btn-link" onclick="goToToday()">Today</button>
                     </div>
                     <button class="btn btn-sm btn-outline-secondary" onclick="changeMonth(1)">
@@ -90,213 +225,180 @@
                 </div>
                 
                 <div class="card-body p-2">
-                    <!-- Instruction -->
-                    <div class="alert alert-info py-2 mb-2 small">
+                    @* Instructions *@
+                    <div class="alert alert-info py-2 mb-2 info-message" id="calendarInstructions">
                         <i class="bi bi-info-circle me-1"></i>
-                        Select an enhancement above, then <strong>click</strong> a day to view/edit entries. 
+                        <strong>Click</strong> a day to view/edit entries. 
                         <strong>Shift+Click</strong> to select a range for bulk entry.
+                        <span id="addHoursWarning" class="text-danger d-none">
+                            <br><i class="bi bi-exclamation-triangle me-1"></i>Select a specific work item above to add hours.
+                        </span>
                     </div>
-
-                    <!-- Calendar Grid -->
-                    <div id="calendarGrid">
-                        @await Html.PartialAsync("_CalendarGrid", Model)
-                    </div>
-                </div>
-                
-                <!-- Calendar Footer -->
-                <div class="card-footer py-2">
-                    <div class="row align-items-center small">
-                        <div class="col">
-                            <span class="text-success me-3"><i class="bi bi-circle-fill"></i> Has entries</span>
-                            <span class="text-primary me-3"><i class="bi bi-square-fill"></i> Selected</span>
-                            <span class="text-warning"><i class="bi bi-square"></i> Today</span>
-                        </div>
-                        <div class="col-auto">
-                            <strong id="enhancementMonthTotal">Select an enhancement</strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Monthly Summary -->
-            <div class="card mt-3" id="monthlySummaryCard" style="display: none;">
-                <div class="card-header py-2">
-                    <i class="bi bi-bar-chart me-1"></i> <span id="summaryTitle">Monthly Summary</span>
-                </div>
-                <div class="card-body py-2">
-                    <div class="row text-center">
-                        <div class="col">
-                            <div class="h4 mb-0 text-primary" id="summaryTotalHours">0</div>
-                            <small class="text-muted">Total Hours</small>
-                        </div>
-                        <div class="col">
-                            <div class="h4 mb-0 text-success" id="summaryContributedHours">0</div>
-                            <small class="text-muted">Contributed</small>
-                        </div>
-                        <div class="col">
-                            <div class="h4 mb-0" id="summaryDaysWorked">0</div>
-                            <small class="text-muted">Days Worked</small>
-                        </div>
-                        <div class="col border-start">
-                            <div class="h6 mb-1">By Work Type</div>
-                            <small id="summaryByWorkType">-</small>
-                        </div>
+                    
+                    @* Calendar Grid *@
+                    <div id="calendarContainer" class="calendar-grid">
+                        <table class="table table-bordered mb-0">
+                            <thead class="calendar-header">
+                                <tr>
+                                    <th class="text-center py-2">Sun</th>
+                                    <th class="text-center py-2">Mon</th>
+                                    <th class="text-center py-2">Tue</th>
+                                    <th class="text-center py-2">Wed</th>
+                                    <th class="text-center py-2">Thu</th>
+                                    <th class="text-center py-2">Fri</th>
+                                    <th class="text-center py-2">Sat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="calendarBody">
+                                @* Calendar days rendered by JavaScript *@
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Right: Entry Panel -->
+        @* ============================================
+           RIGHT: DAY PANEL (Single Day or Bulk Entry)
+           ============================================ *@
         <div class="col-lg-5">
-            <!-- Placeholder when no enhancement selected -->
-            <div id="noEnhancementPanel" class="card">
-                <div class="card-body text-center py-5 text-muted">
-                    <i class="bi bi-arrow-left-circle display-4"></i>
-                    <p class="mt-3">Select a service area and enhancement to start logging time.</p>
+            @* No Work Item Selected Panel *@
+            <div id="noWorkItemPanel" class="card">
+                <div class="card-header">
+                    <i class="bi bi-hand-index me-1"></i>
+                    <strong>Select a Work Item</strong>
+                </div>
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-calendar-plus display-4 text-muted d-block mb-3"></i>
+                    <p class="text-muted mb-0">
+                        Select a <strong>Service Area</strong> and <strong>Work Item</strong> above to add time entries.
+                    </p>
+                    <p class="text-muted small mt-2">
+                        You can view totals without selecting a work item, but adding hours requires a specific work item.
+                    </p>
                 </div>
             </div>
 
-            <!-- Single Day Panel -->
+            @* Single Day Panel *@
             <div id="singleDayPanel" class="card" style="display: none;">
-                <div class="card-header bg-primary text-white py-2">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span>
-                            <i class="bi bi-calendar-day me-1"></i>
-                            <strong id="singleDayTitle">Select a date</strong>
-                        </span>
-                        <button class="btn btn-sm btn-light" onclick="showAddEntryForm()">
-                            <i class="bi bi-plus-lg"></i> Add Entry
-                        </button>
-                    </div>
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-calendar-day me-1"></i>
+                    <strong id="singleDayTitle">Select a day</strong>
                 </div>
-                <div class="card-body p-0">
-                    <div id="dayEntriesLoading" class="text-center py-3" style="display: none;">
-                        <div class="spinner-border spinner-border-sm"></div> Loading...
+                <div class="card-body">
+                    @* Existing entries for this day *@
+                    <div id="dayEntriesList" class="mb-3">
+                        <p class="text-muted">Loading...</p>
                     </div>
-                    <div id="dayEntriesEmpty" class="text-center py-4 text-muted" style="display: none;">
-                        <i class="bi bi-inbox"></i> No entries for this day.
-                    </div>
-                    <table class="table table-sm table-hover mb-0" id="dayEntriesTable" style="display: none;">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Work Type</th>
-                                <th class="text-center" style="width: 60px;">Hours</th>
-                                <th class="text-center" style="width: 60px;">Contrib.</th>
-                                <th style="width: 70px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="dayEntriesBody">
-                        </tbody>
-                        <tfoot class="table-light">
-                            <tr>
-                                <th class="text-end">Day Total:</th>
-                                <th class="text-center" id="dayTotalHours">0</th>
-                                <th class="text-center" id="dayTotalContributed">0</th>
-                                <th></th>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-                
-                <!-- Inline Add Form -->
-                <div id="addEntryForm" class="card-footer bg-light" style="display: none;">
-                    <h6 class="mb-2"><i class="bi bi-plus-circle me-1"></i> Add New Entry</h6>
-                    <div class="row g-2">
-                        <div class="col-md-5">
-                            <select id="newEntryWorkPhase" class="form-select form-select-sm">
-                                <option value="">Select Work Type</option>
-                                @foreach (var wp in Model.WorkPhases)
-                                {
-                                    <option value="@wp.Id" data-contribution="@wp.DefaultContributionPercent">@wp.Name</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <input type="number" id="newEntryHours" class="form-control form-control-sm" 
-                                   placeholder="Hrs" step="0.25" min="0.25" onchange="updateNewEntryContributed()">
-                        </div>
-                        <div class="col-md-3">
-                            <input type="text" id="newEntryNotes" class="form-control form-control-sm" placeholder="Notes...">
-                        </div>
-                        <div class="col-md-2">
-                            <button class="btn btn-sm btn-success w-100" onclick="saveNewEntry()">
-                                <i class="bi bi-check"></i>
-                            </button>
+                    
+                    @* Add Entry Form *@
+                    <div id="addEntryForm">
+                        <hr />
+                        <h6 class="mb-3"><i class="bi bi-plus-circle me-1 text-success"></i>Add New Entry</h6>
+                        
+                        <div class="entry-row">
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small">Work Type <span class="text-danger">*</span></label>
+                                    <select id="newEntryWorkPhase" class="form-select" onchange="updateNewEntryContributed()">
+                                        <option value="">-- Select --</option>
+                                        @foreach (var wp in Model.WorkPhases)
+                                        {
+                                            <option value="@wp.Id" data-contribution="@wp.DefaultContributionPercent">@wp.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Hours <span class="text-danger">*</span></label>
+                                    <input type="number" id="newEntryHours" class="form-control" 
+                                           step="0.25" min="0.25" placeholder="0.00" onchange="updateNewEntryContributed()">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Contributed</label>
+                                    <input type="number" id="newEntryContributed" class="form-control" 
+                                           step="0.25" min="0" placeholder="0.00" readonly>
+                                </div>
+                            </div>
+                            
+                            @* Notes on its own row - prominent! *@
+                            <div class="mb-2">
+                                <label class="form-label small notes-label">
+                                    <i class="bi bi-chat-left-text me-1"></i>Notes / Comments <span class="text-muted">(Important!)</span>
+                                </label>
+                                <textarea id="newEntryNotes" class="form-control notes-field" 
+                                          rows="2" placeholder="Describe the work done... (comments are important for tracking!)"></textarea>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="button" class="btn btn-success" onclick="saveNewEntry()">
+                                    <i class="bi bi-plus-lg me-1"></i>Add Entry
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Range Selection Panel -->
+            @* Bulk Entry Panel (Range Selection) *@
             <div id="rangeDayPanel" class="card" style="display: none;">
-                <div class="card-header bg-warning">
+                <div class="card-header bg-warning text-dark">
                     <i class="bi bi-calendar-range me-1"></i>
                     <strong id="rangeDayTitle">Bulk Entry</strong>
                     <span class="badge bg-dark float-end" id="rangeDayCount">0 days</span>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-warning py-2 mb-3 small">
+                    <div class="alert alert-warning py-2 mb-3 info-message">
                         <i class="bi bi-exclamation-triangle me-1"></i>
                         Entries will be created for <strong>each day</strong> in the selected range.
                     </div>
-
-                    <table class="table table-sm table-bordered mb-3" id="bulkEntriesTable">
-                        <thead class="table-light">
+                    
+                    @* Bulk entries table *@
+                    <table class="table table-sm mb-3">
+                        <thead>
                             <tr>
                                 <th>Work Type</th>
-                                <th style="width: 90px;">Hours/Day</th>
+                                <th style="width: 80px;">Hours</th>
                                 <th style="width: 40px;"></th>
                             </tr>
                         </thead>
                         <tbody id="bulkEntriesBody">
+                            @* Rows added dynamically *@
                         </tbody>
                     </table>
                     
-                    <button class="btn btn-sm btn-outline-primary mb-3" onclick="addBulkEntryRow()">
-                        <i class="bi bi-plus"></i> Add Work Type
+                    <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addBulkEntryRow()">
+                        <i class="bi bi-plus me-1"></i>Add Row
                     </button>
-
-                    <div class="alert alert-info py-2 mb-3" id="bulkPreview">
-                        <strong>Preview:</strong> <span id="bulkPreviewText">0 days × 0 hrs/day = 0 hours total</span>
+                    
+                    @* Notes for bulk entry - on its own row, prominent! *@
+                    <div class="mb-3">
+                        <label class="form-label notes-label">
+                            <i class="bi bi-chat-left-text me-1"></i>Notes / Comments <span class="text-muted">(Applied to all entries)</span>
+                        </label>
+                        <textarea id="bulkEntryNotes" class="form-control notes-field" 
+                                  rows="2" placeholder="Describe the work done... (comments are important for tracking!)"></textarea>
                     </div>
-
+                    
+                    @* Preview and Save *@
+                    <div class="alert alert-secondary py-2 mb-3">
+                        <span id="bulkPreviewText">0 days × 0 hrs/day = 0 hours total</span>
+                    </div>
+                    
                     <div class="d-flex gap-2">
-                        <button class="btn btn-secondary flex-grow-1" onclick="cancelBulkEntry()">
-                            <i class="bi bi-x-lg me-1"></i> Cancel
+                        <button type="button" class="btn btn-secondary flex-fill" onclick="cancelBulkEntry()">
+                            <i class="bi bi-x me-1"></i>Cancel
                         </button>
-                        <button class="btn btn-success flex-grow-1" onclick="saveBulkEntries()" id="saveBulkBtn">
-                            <i class="bi bi-check-lg me-1"></i> Create Entries
+                        <button type="button" class="btn btn-success flex-fill" id="saveBulkBtn" onclick="saveBulkEntries()">
+                            <i class="bi bi-check-lg me-1"></i>Create Entries
                         </button>
                     </div>
-                </div>
-            </div>
-
-            <!-- My Overview -->
-            <div class="card mt-3">
-                <div class="card-header py-2">
-                    <i class="bi bi-graph-up me-1"></i> My <span id="overviewMonthName">@Model.StartDate.ToString("MMMM")</span> Overview
-                </div>
-                <div class="card-body py-2">
-                    <div id="overviewLoading" class="text-center py-2">
-                        <div class="spinner-border spinner-border-sm"></div>
-                    </div>
-                    <table class="table table-sm mb-0" id="overviewTable" style="display: none;">
-                        <tbody id="overviewBody">
-                        </tbody>
-                        <tfoot class="table-light">
-                            <tr>
-                                <td><strong>Total</strong></td>
-                                <td class="text-end"><strong id="overviewTotal">0h</strong></td>
-                            </tr>
-                        </tfoot>
-                    </table>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Edit Entry Modal -->
+@* Edit Entry Modal *@
 <div class="modal fade" id="editEntryModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -305,34 +407,42 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <input type="hidden" id="editEntryId">
-                <div class="mb-3">
-                    <label class="form-label">Work Type</label>
-                    <select id="editWorkPhase" class="form-select">
-                        @foreach (var wp in Model.WorkPhases)
-                        {
-                            <option value="@wp.Id" data-contribution="@wp.DefaultContributionPercent">@wp.Name</option>
-                        }
-                    </select>
-                </div>
-                <div class="row mb-3">
-                    <div class="col">
-                        <label class="form-label">Hours</label>
-                        <input type="number" id="editHours" class="form-control" step="0.25" min="0.25">
+                <input type="hidden" id="editEntryId" />
+                
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Work Type</label>
+                        <select id="editWorkPhase" class="form-select" onchange="updateEditContributed()">
+                            @foreach (var wp in Model.WorkPhases)
+                            {
+                                <option value="@wp.Id" data-contribution="@wp.DefaultContributionPercent">@wp.Name</option>
+                            }
+                        </select>
                     </div>
-                    <div class="col">
+                    <div class="col-md-3">
+                        <label class="form-label">Hours</label>
+                        <input type="number" id="editHours" class="form-control" step="0.25" min="0.25" onchange="updateEditContributed()">
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label">Contributed</label>
                         <input type="number" id="editContributed" class="form-control" step="0.25" min="0">
                     </div>
                 </div>
+                
+                @* Notes on its own row *@
                 <div class="mb-3">
-                    <label class="form-label">Notes</label>
-                    <textarea id="editNotes" class="form-control" rows="2"></textarea>
+                    <label class="form-label notes-label">
+                        <i class="bi bi-chat-left-text me-1"></i>Notes / Comments
+                    </label>
+                    <textarea id="editNotes" class="form-control notes-field" rows="3" 
+                              placeholder="Describe the work done..."></textarea>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="updateEntry()">Save Changes</button>
+                <button type="button" class="btn btn-primary" onclick="updateEntry()">
+                    <i class="bi bi-check-lg me-1"></i>Save Changes
+                </button>
             </div>
         </div>
     </div>
@@ -340,233 +450,311 @@
 
 @section Scripts {
 <script>
-    // State
-    let selectedEnhancement = null;
+(function() {
+    // ============================================
+    // STATE VARIABLES
+    // ============================================
+    let selectedServiceAreaId = null;
+    let selectedWorkItem = null;  // { id, workId, description }
     let selectedDate = null;
     let selectedDateRange = [];
+    let lastClickedDate = null;
     let currentMonth = new Date(@Model.StartDate.Year, @(Model.StartDate.Month - 1), 1);
-    let calendarData = {}; // { 'YYYY-MM-DD': { hours: X, contributed: Y, entries: [] } }
-    let searchTimeout = null;
-    let workPhases = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.WorkPhases.Select(wp => new { wp.Id, wp.Name, wp.DefaultContributionPercent })));
+    let calendarData = {};  // { 'YYYY-MM-DD': { hours, contributed, entries[] } }
+    let bulkRowCounter = 0;
     
-    // Initialize
+    // Work phases data (with camelCase for JS)
+    let workPhases = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.WorkPhases.Select(wp => new { 
+            id = wp.Id, 
+            name = wp.Name, 
+            defaultContributionPercent = wp.DefaultContributionPercent 
+        })));
+    
+    // ============================================
+    // INITIALIZATION
+    // ============================================
     document.addEventListener('DOMContentLoaded', function() {
-        loadOverview();
+        loadCalendarGrid();
+        loadTotals();
+        updateFilterStatus();
     });
-
-    // Enhancement Search
-    function debounceEnhancementSearch() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(searchEnhancements, 300);
-    }
-
-    function searchEnhancements() {
-        const serviceAreaId = document.getElementById('serviceAreaFilter').value;
-        const search = document.getElementById('enhancementSearch').value;
+    
+    // ============================================
+    // FILTER HANDLERS
+    // ============================================
+    window.onServiceAreaChange = function() {
+        const select = document.getElementById('serviceAreaFilter');
+        selectedServiceAreaId = select.value || null;
         
-        if (!search && !serviceAreaId) {
-            hideEnhancementDropdown();
-            return;
+        // Reset work item
+        selectedWorkItem = null;
+        const workItemSelect = document.getElementById('workItemFilter');
+        
+        if (selectedServiceAreaId) {
+            // Load work items for this service area
+            workItemSelect.disabled = true;
+            workItemSelect.innerHTML = '<option value="">Loading...</option>';
+            
+            fetch('/timesheet/enhancements?serviceAreaId=' + encodeURIComponent(selectedServiceAreaId))
+                .then(r => r.json())
+                .then(data => {
+                    let options = '<option value="">-- Select Work Item --</option>';
+                    data.forEach(item => {
+                        // Format: WorkId - Description
+                        const desc = item.description ? item.description.substring(0, 50) : '';
+                        options += `<option value="${item.id}" data-workid="${item.workId}" data-desc="${item.description || ''}">${item.workId} - ${desc}${item.description && item.description.length > 50 ? '...' : ''}</option>`;
+                    });
+                    workItemSelect.innerHTML = options;
+                    workItemSelect.disabled = false;
+                })
+                .catch(err => {
+                    console.error('Error loading work items:', err);
+                    workItemSelect.innerHTML = '<option value="">Error loading items</option>';
+                });
+        } else {
+            workItemSelect.innerHTML = '<option value="">-- Select Service Area First --</option>';
+            workItemSelect.disabled = true;
         }
-
-        let url = '/timesheet/enhancements?';
-        if (serviceAreaId) url += 'serviceAreaId=' + encodeURIComponent(serviceAreaId) + '&';
-        if (search) url += 'workIdSearch=' + encodeURIComponent(search) + '&descriptionSearch=' + encodeURIComponent(search);
-
+        
+        // Reset UI
+        resetDayPanels();
+        updateFilterStatus();
+        loadCalendarGrid();
+        loadTotals();
+    };
+    
+    window.onWorkItemChange = function() {
+        const select = document.getElementById('workItemFilter');
+        const selectedOption = select.options[select.selectedIndex];
+        
+        if (select.value) {
+            selectedWorkItem = {
+                id: select.value,
+                workId: selectedOption.dataset.workid,
+                description: selectedOption.dataset.desc
+            };
+        } else {
+            selectedWorkItem = null;
+        }
+        
+        // Reset UI
+        resetDayPanels();
+        updateFilterStatus();
+        loadCalendarGrid();
+        loadTotals();
+    };
+    
+    window.clearFilters = function() {
+        selectedServiceAreaId = null;
+        selectedWorkItem = null;
+        
+        document.getElementById('serviceAreaFilter').value = '';
+        const workItemSelect = document.getElementById('workItemFilter');
+        workItemSelect.innerHTML = '<option value="">-- Select Service Area First --</option>';
+        workItemSelect.disabled = true;
+        
+        resetDayPanels();
+        updateFilterStatus();
+        loadCalendarGrid();
+        loadTotals();
+    };
+    
+    function resetDayPanels() {
+        selectedDate = null;
+        selectedDateRange = [];
+        lastClickedDate = null;
+        
+        document.getElementById('noWorkItemPanel').style.display = selectedWorkItem ? 'none' : 'block';
+        document.getElementById('singleDayPanel').style.display = 'none';
+        document.getElementById('rangeDayPanel').style.display = 'none';
+        
+        // Update instructions
+        const warning = document.getElementById('addHoursWarning');
+        if (selectedWorkItem) {
+            warning.classList.add('d-none');
+        } else {
+            warning.classList.remove('d-none');
+        }
+    }
+    
+    function updateFilterStatus() {
+        const statusEl = document.getElementById('filterStatus');
+        const titleEl = document.getElementById('totalsTitle');
+        
+        if (selectedWorkItem) {
+            statusEl.innerHTML = `<i class="bi bi-check-circle text-success me-1"></i>Showing hours for: <strong>${selectedWorkItem.workId}</strong>. You can add hours.`;
+            titleEl.textContent = `Hours for ${selectedWorkItem.workId}`;
+        } else if (selectedServiceAreaId) {
+            const saSelect = document.getElementById('serviceAreaFilter');
+            const saName = saSelect.options[saSelect.selectedIndex].text;
+            statusEl.innerHTML = `<i class="bi bi-funnel me-1"></i>Showing totals for: <strong>${saName}</strong>. Select a work item to add hours.`;
+            titleEl.textContent = `Totals for ${saName}`;
+        } else {
+            statusEl.innerHTML = `<i class="bi bi-info-circle me-1"></i>Showing totals for <strong>all work items</strong>. Select a work item to add hours.`;
+            titleEl.textContent = 'Monthly Totals (All Items)';
+        }
+    }
+    
+    // ============================================
+    // CALENDAR GRID
+    // ============================================
+    function loadCalendarGrid() {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startDayOfWeek = firstDay.getDay();
+        const calendarStart = new Date(firstDay);
+        calendarStart.setDate(calendarStart.getDate() - startDayOfWeek);
+        
+        // Update header
+        document.getElementById('calendarMonthTitle').textContent = 
+            firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        
+        let html = '';
+        let current = new Date(calendarStart);
+        
+        for (let week = 0; week < 6; week++) {
+            html += '<tr>';
+            for (let day = 0; day < 7; day++) {
+                const dateStr = current.toISOString().split('T')[0];
+                const isCurrentMonth = current.getMonth() === month;
+                const isToday = dateStr === new Date().toISOString().split('T')[0];
+                
+                let classes = 'calendar-day text-center p-2';
+                if (!isCurrentMonth) classes += ' other-month';
+                if (isToday) classes += ' today';
+                
+                html += `<td class="${classes}" data-date="${dateStr}" onclick="onDayClick(event, '${dateStr}')">
+                    <div class="day-number">${current.getDate()}</div>
+                </td>`;
+                
+                current.setDate(current.getDate() + 1);
+            }
+            html += '</tr>';
+            
+            // Stop if we've passed the last day of the month and completed the week
+            if (current > lastDay && current.getDay() === 0) break;
+        }
+        
+        document.getElementById('calendarBody').innerHTML = html;
+        
+        // Load calendar data (hours per day)
+        loadCalendarData();
+    }
+    
+    function loadCalendarData() {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth() + 1;
+        
+        let url = `/timesheet/calendar-data?year=${year}&month=${month}`;
+        
+        if (selectedWorkItem) {
+            url += `&enhancementId=${encodeURIComponent(selectedWorkItem.id)}`;
+        } else if (selectedServiceAreaId) {
+            url += `&serviceAreaId=${encodeURIComponent(selectedServiceAreaId)}`;
+        }
+        
         fetch(url)
             .then(r => r.json())
             .then(data => {
-                showEnhancementDropdown(data);
-            });
+                calendarData = {};
+                data.forEach(d => {
+                    calendarData[d.date] = { hours: d.hours, contributed: d.contributed };
+                });
+                updateCalendarDisplay();
+            })
+            .catch(err => console.error('Error loading calendar data:', err));
     }
-
-    function showEnhancementDropdown(enhancements) {
-        const dropdown = document.getElementById('enhancementDropdown');
-        const list = dropdown.querySelector('.list-group');
-        
-        if (enhancements.length === 0) {
-            list.innerHTML = '<div class="list-group-item text-muted">No enhancements found</div>';
-        } else {
-            list.innerHTML = enhancements.slice(0, 10).map(e => `
-                <a href="#" class="list-group-item list-group-item-action py-2" onclick="selectEnhancement('${e.id}', '${e.workId}', '${(e.description || '').replace(/'/g, "\\'")}'); return false;">
-                    <strong>${e.workId}</strong> - ${e.description || ''}<br>
-                    <small class="text-muted">${e.serviceAreaCode || ''} | ${e.status || ''}</small>
-                </a>
-            `).join('');
-        }
-        
-        dropdown.classList.remove('d-none');
-    }
-
-    function hideEnhancementDropdown() {
-        document.getElementById('enhancementDropdown').classList.add('d-none');
-    }
-
-    function selectEnhancement(id, workId, description) {
-        selectedEnhancement = { id, workId, description };
-        
-        document.getElementById('selectedWorkId').textContent = workId;
-        document.getElementById('selectedDescription').textContent = description;
-        document.getElementById('selectedEnhancementDisplay').classList.remove('d-none');
-        document.getElementById('enhancementSearch').value = '';
-        hideEnhancementDropdown();
-        
-        // Show panels
-        document.getElementById('noEnhancementPanel').style.display = 'none';
-        document.getElementById('monthlySummaryCard').style.display = 'block';
-        
-        // Load calendar data for this enhancement
-        loadCalendarData();
-    }
-
-    function clearEnhancement() {
-        selectedEnhancement = null;
-        selectedDate = null;
-        selectedDateRange = [];
-        
-        document.getElementById('selectedEnhancementDisplay').classList.add('d-none');
-        document.getElementById('noEnhancementPanel').style.display = 'block';
-        document.getElementById('singleDayPanel').style.display = 'none';
-        document.getElementById('rangeDayPanel').style.display = 'none';
-        document.getElementById('monthlySummaryCard').style.display = 'none';
-        document.getElementById('enhancementMonthTotal').textContent = 'Select an enhancement';
-        
-        // Clear calendar highlights
-        document.querySelectorAll('.calendar-day').forEach(d => {
-            d.classList.remove('has-hours', 'selected', 'range-selected');
-            const badge = d.querySelector('.hours-badge');
-            if (badge) badge.remove();
+    
+    function updateCalendarDisplay() {
+        document.querySelectorAll('.calendar-day').forEach(dayEl => {
+            const dateStr = dayEl.dataset.date;
+            const dayData = calendarData[dateStr];
+            
+            // Remove existing badge
+            const existingBadge = dayEl.querySelector('.hours-badge');
+            if (existingBadge) existingBadge.remove();
+            
+            dayEl.classList.remove('has-hours');
+            
+            if (dayData && dayData.hours > 0) {
+                dayEl.classList.add('has-hours');
+                const badge = document.createElement('div');
+                badge.className = 'hours-badge badge bg-success mt-1';
+                badge.textContent = dayData.hours.toFixed(1) + 'h';
+                dayEl.appendChild(badge);
+            }
         });
     }
-
-    function onServiceAreaChange() {
-        clearEnhancement();
-        searchEnhancements();
-    }
-
-    // Calendar Navigation
-    function changeMonth(delta) {
-        currentMonth.setMonth(currentMonth.getMonth() + delta);
-        loadCalendarGrid();
-        if (selectedEnhancement) {
-            loadCalendarData();
-        }
-        loadOverview();
-    }
-
-    function goToToday() {
-        currentMonth = new Date();
-        currentMonth.setDate(1);
-        loadCalendarGrid();
-        if (selectedEnhancement) {
-            loadCalendarData();
-        }
-        loadOverview();
-    }
-
-    function loadCalendarGrid() {
+    
+    // ============================================
+    // TOTALS LOADING
+    // ============================================
+    function loadTotals() {
         const year = currentMonth.getFullYear();
         const month = currentMonth.getMonth() + 1;
         
-        fetch(`/timesheet/calendar-grid?year=${year}&month=${month}`)
-            .then(r => r.text())
-            .then(html => {
-                document.getElementById('calendarGrid').innerHTML = html;
-                document.getElementById('calendarMonthTitle').textContent = 
-                    currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                document.getElementById('overviewMonthName').textContent = 
-                    currentMonth.toLocaleDateString('en-US', { month: 'long' });
-                
-                if (selectedEnhancement) {
-                    applyCalendarData();
-                }
-            });
-    }
-
-    function loadCalendarData() {
-        if (!selectedEnhancement) return;
+        let url = `/timesheet/monthly-totals?year=${year}&month=${month}`;
         
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth() + 1;
+        if (selectedWorkItem) {
+            url += `&enhancementId=${encodeURIComponent(selectedWorkItem.id)}`;
+        } else if (selectedServiceAreaId) {
+            url += `&serviceAreaId=${encodeURIComponent(selectedServiceAreaId)}`;
+        }
         
-        fetch(`/timesheet/calendar-data?enhancementId=${selectedEnhancement.id}&year=${year}&month=${month}`)
+        fetch(url)
             .then(r => r.json())
             .then(data => {
-                calendarData = data.dayData || {};
-                applyCalendarData();
-                updateMonthlySummary(data.summary);
+                // Update total badge
+                document.getElementById('monthTotalBadge').textContent = 
+                    (data.totalHours || 0).toFixed(1) + ' hrs';
+                
+                // Update breakdown
+                let breakdownHtml = '';
+                if (data.byWorkPhase && Object.keys(data.byWorkPhase).length > 0) {
+                    breakdownHtml = '<div class="row">';
+                    for (const [phase, hours] of Object.entries(data.byWorkPhase)) {
+                        breakdownHtml += `<div class="col-auto"><span class="badge bg-secondary me-1">${phase}</span>${hours.toFixed(1)}h</div>`;
+                    }
+                    breakdownHtml += '</div>';
+                } else {
+                    breakdownHtml = '<span class="text-muted">No hours recorded this month</span>';
+                }
+                document.getElementById('totalsBreakdown').innerHTML = breakdownHtml;
+            })
+            .catch(err => {
+                console.error('Error loading totals:', err);
+                document.getElementById('totalsBreakdown').innerHTML = '<span class="text-danger">Error loading totals</span>';
             });
     }
-
-    function applyCalendarData() {
-        // Clear existing
-        document.querySelectorAll('.calendar-day').forEach(d => {
-            d.classList.remove('has-hours');
-            const badge = d.querySelector('.hours-badge');
-            if (badge) badge.remove();
-        });
-        
-        // Apply data
-        let totalHours = 0;
-        for (const [dateStr, dayInfo] of Object.entries(calendarData)) {
-            const dayEl = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
-            if (dayEl && dayInfo.hours > 0) {
-                dayEl.classList.add('has-hours');
-                const badge = document.createElement('span');
-                badge.className = 'hours-badge';
-                badge.textContent = dayInfo.hours + 'h';
-                dayEl.appendChild(badge);
-                totalHours += dayInfo.hours;
-            }
-        }
-        
-        document.getElementById('enhancementMonthTotal').innerHTML = 
-            `<strong>${selectedEnhancement.workId}</strong> Total: ${totalHours}h`;
-    }
-
-    function updateMonthlySummary(summary) {
-        if (!summary) return;
-        
-        document.getElementById('summaryTitle').textContent = 
-            `${currentMonth.toLocaleDateString('en-US', { month: 'long' })} Summary for ${selectedEnhancement.workId}`;
-        document.getElementById('summaryTotalHours').textContent = summary.totalHours || 0;
-        document.getElementById('summaryContributedHours').textContent = summary.contributedHours || 0;
-        document.getElementById('summaryDaysWorked').textContent = summary.daysWorked || 0;
-        
-        if (summary.byWorkType && Object.keys(summary.byWorkType).length > 0) {
-            document.getElementById('summaryByWorkType').textContent = 
-                Object.entries(summary.byWorkType).map(([k, v]) => `${k}: ${v}h`).join(' | ');
-        } else {
-            document.getElementById('summaryByWorkType').textContent = '-';
-        }
-    }
-
-    // Day Selection
-    let lastClickedDate = null;
     
-    function onDayClick(dateStr, event) {
-        if (!selectedEnhancement) {
-            alert('Please select an enhancement first.');
+    // ============================================
+    // DAY CLICK HANDLING
+    // ============================================
+    window.onDayClick = function(event, dateStr) {
+        // If no work item selected, can't add hours
+        if (!selectedWorkItem) {
+            alert('Please select a Service Area and Work Item above before adding time entries.');
             return;
         }
         
-        const clickedDate = new Date(dateStr);
-        
         if (event.shiftKey && lastClickedDate) {
-            // Range selection
+            // Range selection for bulk entry
             selectDateRange(lastClickedDate, dateStr);
         } else {
-            // Single selection
+            // Single day selection
             lastClickedDate = dateStr;
             selectSingleDate(dateStr);
         }
-    }
-
+    };
+    
     function selectSingleDate(dateStr) {
         selectedDate = dateStr;
         selectedDateRange = [];
         
-        // Update UI
+        // Update calendar UI
         document.querySelectorAll('.calendar-day').forEach(d => {
             d.classList.remove('selected', 'range-selected');
         });
@@ -574,21 +762,31 @@
         if (dayEl) dayEl.classList.add('selected');
         
         // Show single day panel
+        document.getElementById('noWorkItemPanel').style.display = 'none';
         document.getElementById('singleDayPanel').style.display = 'block';
         document.getElementById('rangeDayPanel').style.display = 'none';
         
+        // Update title
         const date = new Date(dateStr);
         document.getElementById('singleDayTitle').textContent = 
             date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
         
+        // Load entries for this day
         loadDayEntries(dateStr);
+        
+        // Clear add form
+        document.getElementById('newEntryWorkPhase').value = '';
+        document.getElementById('newEntryHours').value = '';
+        document.getElementById('newEntryContributed').value = '';
+        document.getElementById('newEntryNotes').value = '';
     }
-
+    
     function selectDateRange(startStr, endStr) {
-        const start = new Date(startStr);
-        const end = new Date(endStr);
+        let start = new Date(startStr);
+        let end = new Date(endStr);
         
         if (start > end) {
+            [start, end] = [end, start];
             [startStr, endStr] = [endStr, startStr];
         }
         
@@ -596,14 +794,13 @@
         selectedDateRange = [];
         
         // Build range
-        let current = new Date(Math.min(start, end));
-        const endDate = new Date(Math.max(start, end));
-        while (current <= endDate) {
+        let current = new Date(start);
+        while (current <= end) {
             selectedDateRange.push(current.toISOString().split('T')[0]);
             current.setDate(current.getDate() + 1);
         }
         
-        // Update UI
+        // Update calendar UI
         document.querySelectorAll('.calendar-day').forEach(d => {
             d.classList.remove('selected', 'range-selected');
             if (selectedDateRange.includes(d.dataset.date)) {
@@ -612,105 +809,100 @@
         });
         
         // Show range panel
+        document.getElementById('noWorkItemPanel').style.display = 'none';
         document.getElementById('singleDayPanel').style.display = 'none';
         document.getElementById('rangeDayPanel').style.display = 'block';
         
+        // Update title
         const startDate = new Date(selectedDateRange[0]);
-        const endDateObj = new Date(selectedDateRange[selectedDateRange.length - 1]);
+        const endDate = new Date(selectedDateRange[selectedDateRange.length - 1]);
         document.getElementById('rangeDayTitle').textContent = 
-            `Bulk Entry: ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+            `Bulk Entry: ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
         document.getElementById('rangeDayCount').textContent = selectedDateRange.length + ' days';
         
         // Initialize bulk entry form
         initBulkEntryForm();
     }
-
-    // Day Entries
+    
+    // ============================================
+    // SINGLE DAY ENTRIES
+    // ============================================
     function loadDayEntries(dateStr) {
-        if (!selectedEnhancement) return;
+        const listEl = document.getElementById('dayEntriesList');
+        listEl.innerHTML = '<p class="text-muted"><i class="bi bi-hourglass-split"></i> Loading...</p>';
         
-        document.getElementById('dayEntriesLoading').style.display = 'block';
-        document.getElementById('dayEntriesTable').style.display = 'none';
-        document.getElementById('dayEntriesEmpty').style.display = 'none';
-        document.getElementById('addEntryForm').style.display = 'none';
-        
-        fetch(`/timesheet/day-entries?enhancementId=${selectedEnhancement.id}&date=${dateStr}`)
+        fetch(`/timesheet/day-entries?date=${dateStr}&enhancementId=${encodeURIComponent(selectedWorkItem.id)}`)
             .then(r => r.json())
             .then(entries => {
-                document.getElementById('dayEntriesLoading').style.display = 'none';
-                
                 if (entries.length === 0) {
-                    document.getElementById('dayEntriesEmpty').style.display = 'block';
-                } else {
-                    renderDayEntries(entries);
-                    document.getElementById('dayEntriesTable').style.display = 'table';
+                    listEl.innerHTML = '<p class="text-muted text-center py-3"><i class="bi bi-inbox me-1"></i>No entries for this day</p>';
+                    return;
                 }
+                
+                let html = '<div class="list-group list-group-flush">';
+                entries.forEach(e => {
+                    html += `
+                        <div class="list-group-item d-flex justify-content-between align-items-start px-0">
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between">
+                                    <strong>${e.workPhaseName || 'Unknown'}</strong>
+                                    <span class="badge bg-primary">${e.hours.toFixed(2)}h</span>
+                                </div>
+                                ${e.notes ? `<small class="text-muted d-block mt-1"><i class="bi bi-chat-left-text me-1"></i>${e.notes}</small>` : ''}
+                            </div>
+                            <div class="btn-group btn-group-sm ms-2">
+                                <button class="btn btn-outline-primary" onclick="editEntry('${e.id}', '${e.workPhaseId}', ${e.hours}, ${e.contributedHours}, '${(e.notes || '').replace(/'/g, "\\'")}')">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteEntry('${e.id}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                listEl.innerHTML = html;
+            })
+            .catch(err => {
+                console.error('Error loading entries:', err);
+                listEl.innerHTML = '<p class="text-danger">Error loading entries</p>';
             });
     }
-
-    function renderDayEntries(entries) {
-        const tbody = document.getElementById('dayEntriesBody');
-        let totalHours = 0;
-        let totalContributed = 0;
+    
+    window.updateNewEntryContributed = function() {
+        const workPhaseSelect = document.getElementById('newEntryWorkPhase');
+        const hoursInput = document.getElementById('newEntryHours');
+        const contributedInput = document.getElementById('newEntryContributed');
         
-        tbody.innerHTML = entries.map(e => {
-            totalHours += e.hours;
-            totalContributed += e.contributedHours;
-            const isLocked = e.isConsolidated;
-            return `
-                <tr>
-                    <td>
-                        <strong>${e.workPhaseName}</strong>
-                        ${e.notes ? `<br><small class="text-muted">${e.notes}</small>` : ''}
-                    </td>
-                    <td class="text-center">${e.hours.toFixed(1)}</td>
-                    <td class="text-center">${e.contributedHours.toFixed(1)}</td>
-                    <td>
-                        ${isLocked ? '<i class="bi bi-lock text-warning" title="Consolidated"></i>' : `
-                            <button class="btn btn-sm btn-outline-primary" onclick="editEntry('${e.id}', '${e.workPhaseId}', ${e.hours}, ${e.contributedHours}, '${(e.notes || '').replace(/'/g, "\\'")}')"><i class="bi bi-pencil"></i></button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteEntry('${e.id}')"><i class="bi bi-trash"></i></button>
-                        `}
-                    </td>
-                </tr>
-            `;
-        }).join('');
+        const selectedOption = workPhaseSelect.options[workPhaseSelect.selectedIndex];
+        const contribution = parseInt(selectedOption?.dataset?.contribution) || 100;
+        const hours = parseFloat(hoursInput.value) || 0;
         
-        document.getElementById('dayTotalHours').textContent = totalHours.toFixed(1);
-        document.getElementById('dayTotalContributed').textContent = totalContributed.toFixed(1);
-    }
-
-    function showAddEntryForm() {
-        document.getElementById('addEntryForm').style.display = 'block';
-        document.getElementById('newEntryWorkPhase').value = '';
-        document.getElementById('newEntryHours').value = '';
-        document.getElementById('newEntryNotes').value = '';
-    }
-
-    function updateNewEntryContributed() {
-        const wpSelect = document.getElementById('newEntryWorkPhase');
-        const hours = parseFloat(document.getElementById('newEntryHours').value) || 0;
-        const contribution = parseInt(wpSelect.options[wpSelect.selectedIndex]?.dataset?.contribution) || 100;
-        // Contributed hours calculated server-side based on work phase
-    }
-
-    function saveNewEntry() {
+        contributedInput.value = (hours * contribution / 100).toFixed(2);
+    };
+    
+    window.saveNewEntry = function() {
         const workPhaseId = document.getElementById('newEntryWorkPhase').value;
-        const hours = document.getElementById('newEntryHours').value;
+        const hours = parseFloat(document.getElementById('newEntryHours').value);
+        const contributed = parseFloat(document.getElementById('newEntryContributed').value);
         const notes = document.getElementById('newEntryNotes').value;
         
-        if (!workPhaseId || !hours) {
-            alert('Please select work type and enter hours.');
+        if (!workPhaseId || !hours || hours <= 0) {
+            alert('Please select a work type and enter hours.');
             return;
         }
         
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        
         const formData = new URLSearchParams();
-        formData.append('EnhancementId', selectedEnhancement.id);
+        formData.append('EnhancementId', selectedWorkItem.id);
         formData.append('WorkPhaseId', workPhaseId);
         formData.append('StartDate', selectedDate);
-        formData.append('EndDate', selectedDate);
         formData.append('Hours', hours);
+        formData.append('ContributedHours', contributed || hours);
         formData.append('Notes', notes);
-        formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+        formData.append('__RequestVerificationToken', token);
         
         fetch('/timesheet/entry/save', {
             method: 'POST',
@@ -720,17 +912,30 @@
         .then(r => r.json())
         .then(result => {
             if (result.success) {
+                // Clear form
+                document.getElementById('newEntryWorkPhase').value = '';
+                document.getElementById('newEntryHours').value = '';
+                document.getElementById('newEntryContributed').value = '';
+                document.getElementById('newEntryNotes').value = '';
+                
+                // Reload
                 loadDayEntries(selectedDate);
                 loadCalendarData();
-                loadOverview();
-                document.getElementById('addEntryForm').style.display = 'none';
+                loadTotals();
             } else {
                 alert(result.message || 'Error saving entry');
             }
+        })
+        .catch(err => {
+            console.error('Error saving entry:', err);
+            alert('Error saving entry');
         });
-    }
-
-    function editEntry(id, workPhaseId, hours, contributed, notes) {
+    };
+    
+    // ============================================
+    // EDIT/DELETE ENTRY
+    // ============================================
+    window.editEntry = function(id, workPhaseId, hours, contributed, notes) {
         document.getElementById('editEntryId').value = id;
         document.getElementById('editWorkPhase').value = workPhaseId;
         document.getElementById('editHours').value = hours;
@@ -738,20 +943,36 @@
         document.getElementById('editNotes').value = notes;
         
         new bootstrap.Modal(document.getElementById('editEntryModal')).show();
-    }
-
-    function updateEntry() {
+    };
+    
+    window.updateEditContributed = function() {
+        const workPhaseSelect = document.getElementById('editWorkPhase');
+        const hoursInput = document.getElementById('editHours');
+        const contributedInput = document.getElementById('editContributed');
+        
+        const selectedOption = workPhaseSelect.options[workPhaseSelect.selectedIndex];
+        const contribution = parseInt(selectedOption?.dataset?.contribution) || 100;
+        const hours = parseFloat(hoursInput.value) || 0;
+        
+        contributedInput.value = (hours * contribution / 100).toFixed(2);
+    };
+    
+    window.updateEntry = function() {
         const id = document.getElementById('editEntryId').value;
+        const workPhaseId = document.getElementById('editWorkPhase').value;
+        const hours = parseFloat(document.getElementById('editHours').value);
+        const contributed = parseFloat(document.getElementById('editContributed').value);
+        const notes = document.getElementById('editNotes').value;
+        
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        
         const formData = new URLSearchParams();
         formData.append('Id', id);
-        formData.append('EnhancementId', selectedEnhancement.id);
-        formData.append('WorkPhaseId', document.getElementById('editWorkPhase').value);
-        formData.append('StartDate', selectedDate);
-        formData.append('EndDate', selectedDate);
-        formData.append('Hours', document.getElementById('editHours').value);
-        formData.append('ContributedHours', document.getElementById('editContributed').value);
-        formData.append('Notes', document.getElementById('editNotes').value);
-        formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+        formData.append('WorkPhaseId', workPhaseId);
+        formData.append('Hours', hours);
+        formData.append('ContributedHours', contributed);
+        formData.append('Notes', notes);
+        formData.append('__RequestVerificationToken', token);
         
         fetch('/timesheet/entry/save', {
             method: 'POST',
@@ -764,19 +985,21 @@
                 bootstrap.Modal.getInstance(document.getElementById('editEntryModal')).hide();
                 loadDayEntries(selectedDate);
                 loadCalendarData();
-                loadOverview();
+                loadTotals();
             } else {
                 alert(result.message || 'Error updating entry');
             }
         });
-    }
-
-    function deleteEntry(id) {
+    };
+    
+    window.deleteEntry = function(id) {
         if (!confirm('Delete this entry?')) return;
+        
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
         
         const formData = new URLSearchParams();
         formData.append('id', id);
-        formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+        formData.append('__RequestVerificationToken', token);
         
         fetch('/timesheet/entry/delete', {
             method: 'POST',
@@ -788,25 +1011,28 @@
             if (result.success) {
                 loadDayEntries(selectedDate);
                 loadCalendarData();
-                loadOverview();
+                loadTotals();
             } else {
                 alert(result.message || 'Error deleting entry');
             }
         });
-    }
-
-    // Bulk Entry
-    let bulkRowCounter = 0;
+    };
     
+    // ============================================
+    // BULK ENTRY
+    // ============================================
     function initBulkEntryForm() {
         document.getElementById('bulkEntriesBody').innerHTML = '';
+        document.getElementById('bulkEntryNotes').value = '';
         bulkRowCounter = 0;
         addBulkEntryRow();
         updateBulkPreview();
     }
-
-    function addBulkEntryRow() {
+    
+    window.addBulkEntryRow = function() {
         const rowId = 'bulk_' + (++bulkRowCounter);
+        
+        // Build work phase options
         const options = workPhases.map(wp => 
             `<option value="${wp.id}" data-contribution="${wp.defaultContributionPercent}">${wp.name}</option>`
         ).join('');
@@ -825,21 +1051,21 @@
                        step="0.5" min="0.5" placeholder="0" onchange="updateBulkPreview()">
             </td>
             <td>
-                <button class="btn btn-sm btn-outline-danger" onclick="removeBulkRow('${rowId}')">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBulkRow('${rowId}')">
                     <i class="bi bi-x"></i>
                 </button>
             </td>
         `;
         
         document.getElementById('bulkEntriesBody').appendChild(row);
-    }
-
-    function removeBulkRow(rowId) {
+    };
+    
+    window.removeBulkRow = function(rowId) {
         document.getElementById(rowId)?.remove();
         updateBulkPreview();
-    }
-
-    function updateBulkPreview() {
+    };
+    
+    window.updateBulkPreview = function() {
         let totalHoursPerDay = 0;
         document.querySelectorAll('#bulkEntriesBody tr').forEach(row => {
             const hours = parseFloat(row.querySelector('.bulk-hours')?.value) || 0;
@@ -848,48 +1074,62 @@
         
         const days = selectedDateRange.length;
         const total = days * totalHoursPerDay;
+        const rowCount = document.querySelectorAll('#bulkEntriesBody tr').length;
         
         document.getElementById('bulkPreviewText').textContent = 
-            `${days} days × ${totalHoursPerDay} hrs/day = ${total} hours total`;
+            `${days} days × ${totalHoursPerDay.toFixed(1)} hrs/day = ${total.toFixed(1)} hours total`;
         document.getElementById('saveBulkBtn').textContent = 
-            `Create ${days * document.querySelectorAll('#bulkEntriesBody tr').length} Entries`;
-    }
-
-    function cancelBulkEntry() {
+            `Create ${days * rowCount} Entries`;
+    };
+    
+    window.cancelBulkEntry = function() {
         selectedDateRange = [];
         document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('range-selected'));
         document.getElementById('rangeDayPanel').style.display = 'none';
-    }
-
-    async function saveBulkEntries() {
+        document.getElementById('noWorkItemPanel').style.display = selectedWorkItem ? 'none' : 'block';
+    };
+    
+    window.saveBulkEntries = async function() {
         const entries = [];
+        const notes = document.getElementById('bulkEntryNotes').value;
+        
         document.querySelectorAll('#bulkEntriesBody tr').forEach(row => {
             const workPhaseId = row.querySelector('.bulk-workphase')?.value;
             const hours = parseFloat(row.querySelector('.bulk-hours')?.value) || 0;
             if (workPhaseId && hours > 0) {
-                entries.push({ workPhaseId, hours });
+                // Get contribution percentage
+                const select = row.querySelector('.bulk-workphase');
+                const contribution = parseInt(select.options[select.selectedIndex]?.dataset?.contribution) || 100;
+                const contributed = hours * contribution / 100;
+                
+                entries.push({ workPhaseId, hours, contributed, notes });
             }
         });
         
         if (entries.length === 0) {
-            alert('Please add at least one valid entry.');
+            alert('Please add at least one valid entry with work type and hours.');
             return;
         }
         
         const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
         let successCount = 0;
+        let errorCount = 0;
         
-        document.getElementById('saveBulkBtn').disabled = true;
-        document.getElementById('saveBulkBtn').innerHTML = '<i class="bi bi-hourglass"></i> Saving...';
+        // Disable button during save
+        const saveBtn = document.getElementById('saveBulkBtn');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving...';
         
+        // Create entries for each day and each work type
         for (const dateStr of selectedDateRange) {
             for (const entry of entries) {
                 const formData = new URLSearchParams();
-                formData.append('EnhancementId', selectedEnhancement.id);
+                formData.append('EnhancementId', selectedWorkItem.id);
                 formData.append('WorkPhaseId', entry.workPhaseId);
                 formData.append('StartDate', dateStr);
-                formData.append('EndDate', dateStr);
                 formData.append('Hours', entry.hours);
+                formData.append('ContributedHours', entry.contributed);
+                formData.append('Notes', entry.notes);
                 formData.append('__RequestVerificationToken', token);
                 
                 try {
@@ -899,122 +1139,46 @@
                         body: formData.toString()
                     });
                     const result = await response.json();
-                    if (result.success) successCount++;
-                } catch (e) {
-                    console.error(e);
+                    if (result.success) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (err) {
+                    errorCount++;
                 }
             }
         }
         
-        alert(`Created ${successCount} entries.`);
+        // Show result
+        if (errorCount > 0) {
+            alert(`Created ${successCount} entries. ${errorCount} failed.`);
+        }
+        
+        // Reset and reload
         cancelBulkEntry();
         loadCalendarData();
-        loadOverview();
-        
-        document.getElementById('saveBulkBtn').disabled = false;
-        document.getElementById('saveBulkBtn').innerHTML = '<i class="bi bi-check-lg me-1"></i> Create Entries';
-    }
-
-    // Overview
-    function loadOverview() {
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth() + 1;
-        
-        document.getElementById('overviewLoading').style.display = 'block';
-        document.getElementById('overviewTable').style.display = 'none';
-        
-        fetch(`/timesheet/month-overview?year=${year}&month=${month}`)
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById('overviewLoading').style.display = 'none';
-                document.getElementById('overviewTable').style.display = 'table';
-                
-                const tbody = document.getElementById('overviewBody');
-                if (data.enhancements && data.enhancements.length > 0) {
-                    tbody.innerHTML = data.enhancements.map(e => `
-                        <tr>
-                            <td>
-                                <span class="badge ${e.id === selectedEnhancement?.id ? 'bg-primary' : 'bg-secondary'}">${e.workId}</span>
-                                ${e.description ? e.description.substring(0, 30) : ''}
-                            </td>
-                            <td class="text-end"><strong>${e.hours}h</strong></td>
-                        </tr>
-                    `).join('');
-                    document.getElementById('overviewTotal').textContent = data.totalHours + 'h';
-                } else {
-                    tbody.innerHTML = '<tr><td colspan="2" class="text-muted text-center">No entries this month</td></tr>';
-                    document.getElementById('overviewTotal').textContent = '0h';
-                }
-                
-                document.getElementById('monthTotalBadge').textContent = 
-                    `${currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}: ${data.totalHours || 0} hrs`;
-            });
-    }
-
-    // Click outside to close dropdown
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('#enhancementSearch') && !e.target.closest('#enhancementDropdown')) {
-            hideEnhancementDropdown();
-        }
-    });
+        loadTotals();
+    };
+    
+    // ============================================
+    // CALENDAR NAVIGATION
+    // ============================================
+    window.changeMonth = function(delta) {
+        currentMonth.setMonth(currentMonth.getMonth() + delta);
+        resetDayPanels();
+        loadCalendarGrid();
+        loadTotals();
+    };
+    
+    window.goToToday = function() {
+        currentMonth = new Date();
+        currentMonth.setDate(1);
+        resetDayPanels();
+        loadCalendarGrid();
+        loadTotals();
+    };
+    
+})();
 </script>
-@Html.AntiForgeryToken()
 }
-
-<style>
-    .calendar-day {
-        height: 65px;
-        border: 1px solid #dee2e6;
-        cursor: pointer;
-        transition: all 0.15s;
-        position: relative;
-        font-size: 0.85rem;
-    }
-    .calendar-day:hover {
-        background-color: #e7f1ff;
-        border-color: #0d6efd;
-    }
-    .calendar-day.selected {
-        background-color: #cfe2ff;
-        border: 2px solid #0d6efd;
-    }
-    .calendar-day.range-selected {
-        background-color: #fff3cd;
-        border: 2px dashed #ffc107;
-    }
-    .calendar-day .day-number {
-        font-weight: bold;
-    }
-    .calendar-day .hours-badge {
-        position: absolute;
-        bottom: 2px;
-        right: 4px;
-        font-size: 0.75rem;
-        font-weight: bold;
-        color: #198754;
-    }
-    .calendar-day.has-hours {
-        background-color: #d1e7dd;
-    }
-    .calendar-day.has-hours:hover {
-        background-color: #badbcc;
-    }
-    .calendar-day.other-month {
-        background-color: #f8f9fa;
-        color: #adb5bd;
-    }
-    .calendar-day.today {
-        border: 2px solid #ffc107;
-    }
-    .calendar-day.weekend {
-        background-color: #fafafa;
-    }
-    .calendar-header {
-        background-color: #f8f9fa;
-        font-weight: bold;
-        text-align: center;
-        padding: 6px;
-        border: 1px solid #dee2e6;
-        font-size: 0.8rem;
-    }
-</style>

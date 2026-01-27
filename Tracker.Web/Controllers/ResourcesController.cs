@@ -76,7 +76,7 @@ public class ResourcesController : BaseController
     }
 
     [HttpPost("save")]
-    [ValidateAntiForgeryToken]
+    //[ValidateAntiForgeryToken]
     [Authorize(Policy = "SuperAdmin")]
     public async Task<IActionResult> Save(EditResourceViewModel model)
     {
