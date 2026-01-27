@@ -6,37 +6,97 @@ namespace Tracker.Web.Services.Interfaces;
 
 public interface IResourceService
 {
-    // Legacy methods
-    Task<List<ResourceListItem>> GetAllAsync(string? search = null, string? typeFilter = null);
-    Task<Resource?> GetByIdAsync(string id);
-    Task<Resource> CreateAsync(string name, string? email, string? resourceTypeId, List<string>? skillIds = null);
-    Task UpdateAsync(string id, string name, string? email, string? resourceTypeId, bool isActive, List<string>? skillIds = null);
-    Task DeleteAsync(string id);
-    Task<List<Resource>> GetActiveAsync();
-    Task<List<SelectListItem>> GetResourceTypesSelectListAsync();
-    Task<List<SelectListItem>> GetSkillsSelectListAsync(List<string>? selectedIds = null);
-    Task<List<string>> GetResourceSkillIdsAsync(string resourceId);
-    Task<List<Resource>> GetByResourceTypeNameAsync(string typeName);
+    #region Resource CRUD
     
-    // New methods
+    Task<List<ResourceListItem>> GetAllAsync(string? search = null, string? typeFilter = null);
     Task<List<ResourceListItem>> GetAllWithFiltersAsync(string? search, OrganizationType? orgType, string? serviceAreaId);
+    Task<Resource?> GetByIdAsync(string id);
     Task<EditResourceViewModel?> GetForEditAsync(string id);
     Task<ResourceOperationResult> CreateResourceAsync(EditResourceViewModel model);
     Task<ResourceOperationResult> UpdateResourceAsync(EditResourceViewModel model);
     Task<ResourceOperationResult> DeleteResourceAsync(string id);
     
-    // Service area memberships
+    // Legacy methods
+    Task<Resource> CreateAsync(string name, string? email, string? resourceTypeId, List<string>? skillIds = null);
+    Task UpdateAsync(string id, string name, string? email, string? resourceTypeId, bool isActive, List<string>? skillIds = null);
+    Task DeleteAsync(string id);
+    Task<List<Resource>> GetActiveAsync();
+    Task<List<Resource>> GetByResourceTypeNameAsync(string typeName);
+    
+    #endregion
+    
+    #region Authentication & Password Management
+    
+    /// <summary>
+    /// Set password for a resource (creates login access)
+    /// </summary>
+    Task<ResourceOperationResult> SetPasswordAsync(string resourceId, string password);
+    
+    /// <summary>
+    /// Reset password for a resource
+    /// </summary>
+    Task<ResourceOperationResult> ResetPasswordAsync(string resourceId, string newPassword);
+    
+    /// <summary>
+    /// Change password (requires current password verification)
+    /// </summary>
+    Task<ResourceOperationResult> ChangePasswordAsync(string resourceId, string currentPassword, string newPassword);
+    
+    /// <summary>
+    /// Enable or disable login access for a resource
+    /// </summary>
+    Task<ResourceOperationResult> SetLoginAccessAsync(string resourceId, bool hasAccess);
+    
+    /// <summary>
+    /// Set admin status for a resource (with last-admin protection)
+    /// </summary>
+    Task<ResourceOperationResult> SetAdminStatusAsync(string resourceId, bool isAdmin);
+    
+    #endregion
+    
+    #region Service Area Memberships
+    
     Task<ResourceOperationResult> AddServiceAreaMembershipAsync(string resourceId, string serviceAreaId, bool isPrimary, Permissions permissions);
     Task<ResourceOperationResult> RemoveServiceAreaMembershipAsync(string membershipId);
     Task<ResourceOperationResult> UpdateServiceAreaPermissionsAsync(string membershipId, Permissions permissions);
     
-    // Lookups
+    #endregion
+    
+    #region Skills
+    
+    Task<List<SelectListItem>> GetSkillsSelectListAsync(List<string>? selectedIds = null);
+    Task<List<string>> GetResourceSkillIdsAsync(string resourceId);
+    Task<List<SkillGroupViewModel>> GetSkillsGroupedByServiceAreaAsync(string? resourceId = null, List<string>? memberServiceAreaIds = null);
+    
+    #endregion
+    
+    #region Lookups
+    
+    Task<List<SelectListItem>> GetResourceTypesSelectListAsync();
     List<SelectListItem> GetOrganizationTypesSelectList(OrganizationType? selected = null);
     Task<List<SelectListItem>> GetServiceAreasSelectListAsync(string? selected = null);
     Task<List<ServiceAreaOption>> GetAvailableServiceAreasAsync();
-    Task<List<SkillGroupViewModel>> GetSkillsGroupedByServiceAreaAsync(string? resourceId = null, List<string>? memberServiceAreaIds = null);
     
-    // Permission queries
+    #endregion
+    
+    #region Permission Queries
+    
     Task<List<Resource>> GetResourcesForColumnAsync(string serviceAreaId, string columnName);
     Task<bool> HasPermissionAsync(string resourceId, string serviceAreaId, Permissions permission);
+    
+    #endregion
+    
+    #region Admin Queries
+    
+    /// <summary>
+    /// Get count of active administrators
+    /// </summary>
+    Task<int> GetActiveAdminCountAsync();
+    
+    /// <summary>
+    /// Check if resource is the last active admin
+    /// </summary>
+    Task<bool> IsLastAdminAsync(string resourceId);
+    
+    #endregion
 }

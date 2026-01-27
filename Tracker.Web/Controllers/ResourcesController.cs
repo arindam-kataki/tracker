@@ -22,13 +22,9 @@ public class ResourcesController : BaseController
         _logger = logger;
     }
 
-    /// <summary>
-    /// List all resources with filtering
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index(string? search, string? orgType, string? serviceArea)
     {
-        // Parse org type filter
         OrganizationType? orgTypeFilter = null;
         if (!string.IsNullOrEmpty(orgType) && Enum.TryParse<OrganizationType>(orgType, out var parsed))
         {
@@ -51,9 +47,6 @@ public class ResourcesController : BaseController
         return View("Resources", model);
     }
 
-    /// <summary>
-    /// Full-page Create resource form
-    /// </summary>
     [HttpGet("create")]
     [Authorize(Policy = "SuperAdmin")]
     public async Task<IActionResult> Create()
@@ -71,9 +64,6 @@ public class ResourcesController : BaseController
         return View("Edit", model);
     }
 
-    /// <summary>
-    /// Full-page Edit resource form
-    /// </summary>
     [HttpGet("edit/{id}")]
     public async Task<IActionResult> Edit(string id)
     {
@@ -85,17 +75,19 @@ public class ResourcesController : BaseController
         return View("Edit", model);
     }
 
-    /// <summary>
-    /// Save resource (create or update)
-    /// </summary>
     [HttpPost("save")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = "SuperAdmin")]
     public async Task<IActionResult> Save(EditResourceViewModel model)
     {
+        // Validate password requirement for new login users
+        if (model.IsNew && model.HasLoginAccess && string.IsNullOrEmpty(model.NewPassword))
+        {
+            ModelState.AddModelError("NewPassword", "Password is required for users with login access.");
+        }
+
         if (!ModelState.IsValid)
         {
-            // Reload dropdown options
             model.OrganizationTypeOptions = _resourceService.GetOrganizationTypesSelectList(model.OrganizationType);
             model.AvailableServiceAreas = await _resourceService.GetAvailableServiceAreasAsync();
             model.AvailableSkillsGrouped = await _resourceService.GetSkillsGroupedByServiceAreaAsync(
@@ -147,9 +139,6 @@ public class ResourcesController : BaseController
         return RedirectToAction("Index");
     }
 
-    /// <summary>
-    /// Delete resource
-    /// </summary>
     [HttpPost("delete/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = "SuperAdmin")]
@@ -174,9 +163,36 @@ public class ResourcesController : BaseController
         return RedirectToAction("Index");
     }
 
-    /// <summary>
-    /// AJAX: Get service area membership partial for dynamically adding
-    /// </summary>
+    [HttpPost("reset-password/{id}")]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = "SuperAdmin")]
+    public async Task<IActionResult> ResetPassword(string id, string newPassword)
+    {
+        var resource = await _resourceService.GetByIdAsync(id);
+        if (resource == null)
+            return NotFound();
+
+        if (string.IsNullOrEmpty(newPassword) || newPassword.Length < 8)
+        {
+            TempData["ErrorMessage"] = "Password must be at least 8 characters.";
+            return RedirectToAction("Edit", new { id });
+        }
+
+        var result = await _resourceService.ResetPasswordAsync(id, newPassword);
+        
+        if (result.Success)
+        {
+            _logger.LogInformation("Password reset for {Name} by {User}", resource.Name, CurrentUserEmail);
+            TempData["SuccessMessage"] = $"Password reset for '{resource.Name}'.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = string.Join(", ", result.Errors);
+        }
+
+        return RedirectToAction("Edit", new { id });
+    }
+
     [HttpGet("service-area-membership-template")]
     public async Task<IActionResult> GetServiceAreaMembershipTemplate(string serviceAreaId, int index)
     {
@@ -192,7 +208,6 @@ public class ResourcesController : BaseController
             ServiceAreaCode = sa.Code,
             ServiceAreaName = sa.Name,
             IsPrimary = false,
-            // Default permissions for new membership
             ViewEnhancements = true,
             ViewResources = true
         };
@@ -201,9 +216,6 @@ public class ResourcesController : BaseController
         return PartialView("_ServiceAreaMembership", model);
     }
 
-    /// <summary>
-    /// AJAX: Get resources eligible for a specific enhancement column
-    /// </summary>
     [HttpGet("for-column")]
     public async Task<IActionResult> GetResourcesForColumn(string serviceAreaId, string column)
     {

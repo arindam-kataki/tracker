@@ -1,11 +1,16 @@
 @model Tracker.Web.ViewModels.EditResourceViewModel
 @{
     ViewData["Title"] = Model.PageTitle;
+    var isLastAdminDisabled = Model.IsLastAdmin ? "disabled" : null;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">
         <i class="bi bi-person me-2"></i>@Model.PageTitle
+        @if (Model.IsAdmin)
+        {
+            <span class="badge bg-danger ms-2">Administrator</span>
+        }
     </h4>
     <a href="/resources" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i> Back to Resources
@@ -24,6 +29,14 @@
     </div>
 }
 
+@if (Model.IsLastAdmin)
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>This is the last administrator.</strong> Admin status and login access cannot be removed.
+    </div>
+}
+
 <form method="post" action="/resources/save" id="resourceForm">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="Id" />
@@ -31,20 +44,22 @@
     <!-- Tabs -->
     <ul class="nav nav-tabs mb-3" id="resourceTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic-panel" 
-                    type="button" role="tab">
+            <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic-panel" type="button" role="tab">
                 <i class="bi bi-person-badge me-1"></i> Basic Info
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="skills-tab" data-bs-toggle="tab" data-bs-target="#skills-panel" 
-                    type="button" role="tab">
+            <button class="nav-link" id="access-tab" data-bs-toggle="tab" data-bs-target="#access-panel" type="button" role="tab">
+                <i class="bi bi-shield-lock me-1"></i> Login & Access
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="skills-tab" data-bs-toggle="tab" data-bs-target="#skills-panel" type="button" role="tab">
                 <i class="bi bi-tools me-1"></i> Skills
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="availability-tab" data-bs-toggle="tab" data-bs-target="#availability-panel" 
-                    type="button" role="tab">
+            <button class="nav-link" id="availability-tab" data-bs-toggle="tab" data-bs-target="#availability-panel" type="button" role="tab">
                 <i class="bi bi-calendar3 me-1"></i> Availability
             </button>
         </li>
@@ -54,7 +69,6 @@
         <!-- TAB 1: Basic Info -->
         <div class="tab-pane fade show active" id="basic-panel" role="tabpanel">
             <div class="row">
-                <!-- Left Column: Resource Details -->
                 <div class="col-lg-5">
                     <div class="card mb-3">
                         <div class="card-header">
@@ -98,7 +112,6 @@
                     </div>
                 </div>
                 
-                <!-- Right Column: Service Area Memberships -->
                 <div class="col-lg-7">
                     <div class="card mb-3">
                         <div class="card-header d-flex justify-content-between align-items-center">
@@ -131,16 +144,132 @@
             </div>
         </div>
         
-        <!-- TAB 2: Skills -->
+        <!-- TAB 2: Login & Access -->
+        <div class="tab-pane fade" id="access-panel" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Login Access</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check form-switch mb-3">
+                                @if (Model.IsLastAdmin)
+                                {
+                                    <input asp-for="HasLoginAccess" class="form-check-input" id="hasLoginAccess" disabled />
+                                    <input type="hidden" asp-for="HasLoginAccess" />
+                                }
+                                else
+                                {
+                                    <input asp-for="HasLoginAccess" class="form-check-input" id="hasLoginAccess" />
+                                }
+                                <label class="form-check-label" for="hasLoginAccess">
+                                    <strong>Enable Login Access</strong>
+                                </label>
+                                <div class="form-text">Allow this person to log in to the system</div>
+                            </div>
+                            
+                            <div id="loginOptionsSection" style="display: @(Model.HasLoginAccess ? "block" : "none");">
+                                <hr />
+                                
+                                <div class="mb-3">
+                                    <label asp-for="NewPassword" class="form-label">
+                                        @(Model.IsNew ? "Password" : "New Password")
+                                        @if (Model.IsNew)
+                                        {
+                                            <span class="text-danger">*</span>
+                                        }
+                                    </label>
+                                    <input asp-for="NewPassword" type="password" class="form-control" 
+                                           placeholder="@(Model.IsNew ? "Enter password" : "Leave blank to keep current")" />
+                                    <span asp-validation-for="NewPassword" class="text-danger small"></span>
+                                    <small class="text-muted">Minimum 8 characters</small>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    @if (Model.IsLastAdmin)
+                                    {
+                                        <input asp-for="IsAdmin" class="form-check-input" id="isAdmin" disabled />
+                                        <input type="hidden" asp-for="IsAdmin" />
+                                    }
+                                    else
+                                    {
+                                        <input asp-for="IsAdmin" class="form-check-input" id="isAdmin" />
+                                    }
+                                    <label class="form-check-label" for="isAdmin">
+                                        <strong>Administrator</strong>
+                                        <span class="badge bg-danger ms-1">SuperAdmin</span>
+                                    </label>
+                                    <div class="form-text">Full access to all features and all service areas</div>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="CanConsolidate" class="form-check-input" />
+                                    <label asp-for="CanConsolidate" class="form-check-label">
+                                        <strong>Can Consolidate</strong>
+                                    </label>
+                                    <div class="form-text">Access to the Consolidation feature</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Login History</h6>
+                        </div>
+                        <div class="card-body">
+                            @if (Model.IsNew)
+                            {
+                                <p class="text-muted mb-0">No login history available for new resources.</p>
+                            }
+                            else if (Model.LastLoginAt.HasValue)
+                            {
+                                <p class="mb-0">
+                                    <strong>Last Login:</strong> @Model.LastLoginAt.Value.ToString("MMMM dd, yyyy 'at' HH:mm")
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="text-muted mb-0">This resource has never logged in.</p>
+                            }
+                        </div>
+                    </div>
+                    
+                    @if (!Model.IsNew && Model.HasLoginAccess)
+                    {
+                        <div class="card mb-3 border-warning">
+                            <div class="card-header bg-warning bg-opacity-10">
+                                <h6 class="mb-0"><i class="bi bi-key me-2"></i>Password Reset</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="small text-muted mb-2">Generate a new password for this user:</p>
+                                <form method="post" action="/resources/reset-password/@Model.Id" id="resetPasswordForm">
+                                    @Html.AntiForgeryToken()
+                                    <div class="input-group">
+                                        <input type="password" name="newPassword" class="form-control" placeholder="New password (min 8 chars)" />
+                                        <button type="submit" class="btn btn-warning" onclick="return confirm('Reset password for this user?')">
+                                            <i class="bi bi-key me-1"></i> Reset
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <!-- TAB 3: Skills -->
         <div class="tab-pane fade" id="skills-panel" role="tabpanel">
             <div class="card">
                 <div class="card-header">
                     <h6 class="mb-0"><i class="bi bi-tools me-2"></i>Skills</h6>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted mb-3">
-                        Select skills for this resource. Skills are grouped by Service Area.
-                    </p>
+                    <p class="text-muted mb-3">Select skills for this resource. Skills are grouped by Service Area.</p>
                     
                     @if (Model.AvailableSkillsGrouped?.Any() != true)
                     {
@@ -161,7 +290,7 @@
                                     <strong>@group.ServiceAreaCode - @group.ServiceAreaName</strong>
                                     @if (!isMember)
                                     {
-                                        <span class="badge bg-warning text-dark ms-2" title="Resource is not a member of this service area">
+                                        <span class="badge bg-warning text-dark ms-2">
                                             <i class="bi bi-exclamation-triangle me-1"></i>Not a member
                                         </span>
                                     }
@@ -180,10 +309,8 @@
                                                     <div class="form-check">
                                                         <input type="checkbox" class="form-check-input" 
                                                                name="SelectedSkillIds" value="@skill.Id" 
-                                                               id="skill_@skill.Id"
-                                                               checked="@skill.IsSelected" />
-                                                        <label class="form-check-label" for="skill_@skill.Id" 
-                                                               title="@skill.Description">
+                                                               id="skill_@skill.Id" checked="@skill.IsSelected" />
+                                                        <label class="form-check-label" for="skill_@skill.Id" title="@skill.Description">
                                                             @skill.Name
                                                         </label>
                                                     </div>
@@ -199,7 +326,7 @@
             </div>
         </div>
         
-        <!-- TAB 3: Availability -->
+        <!-- TAB 4: Availability -->
         <div class="tab-pane fade" id="availability-panel" role="tabpanel">
             <div class="card">
                 <div class="card-header">
@@ -210,13 +337,6 @@
                         <i class="bi bi-hourglass display-4 d-block mb-3"></i>
                         <h5>Coming Soon</h5>
                         <p class="mb-0">This feature is planned for a future release.</p>
-                        <p class="small">Planned functionality includes:</p>
-                        <ul class="list-unstyled small">
-                            <li><i class="bi bi-check text-success me-1"></i> Calendar-based availability tracking</li>
-                            <li><i class="bi bi-check text-success me-1"></i> Planned leave / PTO management</li>
-                            <li><i class="bi bi-check text-success me-1"></i> Capacity planning per service area</li>
-                            <li><i class="bi bi-check text-success me-1"></i> Integration with timesheet data</li>
-                        </ul>
                     </div>
                 </div>
             </div>
@@ -251,9 +371,7 @@
                         <option value="">-- Select Service Area --</option>
                         @foreach (var sa in Model.AvailableServiceAreas ?? new List<ServiceAreaOption>())
                         {
-                            <option value="@sa.Id" data-code="@sa.Code" data-name="@sa.Name">
-                                @sa.Code - @sa.Name
-                            </option>
+                            <option value="@sa.Id" data-code="@sa.Code" data-name="@sa.Name">@sa.Code - @sa.Name</option>
                         }
                     </select>
                 </div>
@@ -279,59 +397,56 @@
     var addedServiceAreas = [@Html.Raw(string.Join(",", (Model.ServiceAreaMemberships ?? new List<EditResourceServiceAreaViewModel>()).Select(sa => $"'{sa.ServiceAreaId}'")))];
     var addModal = new bootstrap.Modal(document.getElementById('addServiceAreaModal'));
     
-    // Add Service Area button
+    // Toggle login options
+    var hasLoginCheckbox = document.getElementById('hasLoginAccess');
+    var loginOptionsSection = document.getElementById('loginOptionsSection');
+    
+    if (hasLoginCheckbox) {
+        hasLoginCheckbox.addEventListener('change', function() {
+            loginOptionsSection.style.display = this.checked ? 'block' : 'none';
+            if (!this.checked) {
+                var isAdminCheckbox = document.getElementById('isAdmin');
+                if (isAdminCheckbox) isAdminCheckbox.checked = false;
+            }
+        });
+    }
+    
     document.getElementById('addServiceAreaBtn').addEventListener('click', function() {
         updateServiceAreaDropdown();
         addModal.show();
     });
     
-    // Confirm Add Service Area
     document.getElementById('confirmAddServiceArea').addEventListener('click', function() {
         var select = document.getElementById('newServiceAreaId');
         var serviceAreaId = select.value;
-        
-        if (!serviceAreaId) {
-            alert('Please select a service area');
-            return;
-        }
+        if (!serviceAreaId) { alert('Please select a service area'); return; }
         
         var isPrimary = document.getElementById('newIsPrimary').checked;
         
-        // Fetch the partial view for the new membership
         fetch('/resources/service-area-membership-template?serviceAreaId=' + encodeURIComponent(serviceAreaId) + '&index=' + membershipIndex)
-            .then(function(response) { return response.text(); })
+            .then(function(r) { return r.text(); })
             .then(function(html) {
-                // Remove "no memberships" message if present
                 var noMsg = document.getElementById('noMembershipsMessage');
                 if (noMsg) noMsg.remove();
                 
-                // Add the new membership card
                 var container = document.getElementById('serviceAreaMemberships');
                 var div = document.createElement('div');
                 div.innerHTML = html;
                 container.appendChild(div.firstElementChild);
                 
-                // If isPrimary, update checkbox and clear others
-                if (isPrimary) {
-                    setPrimaryServiceArea(membershipIndex);
-                }
+                if (isPrimary) setPrimaryServiceArea(membershipIndex);
                 
-                // Track added service area
                 addedServiceAreas.push(serviceAreaId);
                 membershipIndex++;
-                
-                // Reset and close modal
                 select.value = '';
                 document.getElementById('newIsPrimary').checked = false;
                 addModal.hide();
             });
     });
     
-    // Update dropdown to disable already-added service areas
     function updateServiceAreaDropdown() {
         var select = document.getElementById('newServiceAreaId');
-        var options = select.querySelectorAll('option');
-        options.forEach(function(opt) {
+        select.querySelectorAll('option').forEach(function(opt) {
             if (opt.value && addedServiceAreas.includes(opt.value)) {
                 opt.disabled = true;
                 opt.textContent = opt.dataset.code + ' - ' + opt.dataset.name + ' (already added)';
@@ -342,87 +457,51 @@
         });
     }
     
-    // Remove membership
     document.getElementById('serviceAreaMemberships').addEventListener('click', function(e) {
         var removeBtn = e.target.closest('.remove-membership-btn');
         if (removeBtn) {
             var card = removeBtn.closest('.sa-membership-card');
-            var serviceAreaId = card.dataset.serviceAreaId;
-            
-            // Remove from tracking array
-            var idx = addedServiceAreas.indexOf(serviceAreaId);
+            var idx = addedServiceAreas.indexOf(card.dataset.serviceAreaId);
             if (idx > -1) addedServiceAreas.splice(idx, 1);
-            
-            // Remove the card
             card.remove();
             
-            // Show "no memberships" message if empty
             var container = document.getElementById('serviceAreaMemberships');
             if (container.querySelectorAll('.sa-membership-card').length === 0) {
-                container.innerHTML = '<div id="noMembershipsMessage" class="text-center text-muted py-4">' +
-                    '<i class="bi bi-diagram-3 display-6 d-block mb-2"></i>' +
-                    'No service area memberships. Click "Add Service Area" to add one.</div>';
+                container.innerHTML = '<div id="noMembershipsMessage" class="text-center text-muted py-4"><i class="bi bi-diagram-3 display-6 d-block mb-2"></i>No service area memberships.</div>';
             }
-            
-            // Reindex remaining memberships
             reindexMemberships();
         }
     });
     
-    // Handle Primary checkbox changes
     document.getElementById('serviceAreaMemberships').addEventListener('change', function(e) {
         if (e.target.classList.contains('primary-checkbox') && e.target.checked) {
-            var card = e.target.closest('.sa-membership-card');
-            var index = parseInt(card.dataset.index);
-            setPrimaryServiceArea(index);
+            setPrimaryServiceArea(parseInt(e.target.closest('.sa-membership-card').dataset.index));
         }
     });
     
-    // Set primary service area (uncheck others)
     function setPrimaryServiceArea(primaryIndex) {
-        var checkboxes = document.querySelectorAll('.primary-checkbox');
-        checkboxes.forEach(function(cb) {
+        document.querySelectorAll('.primary-checkbox').forEach(function(cb) {
             var card = cb.closest('.sa-membership-card');
             var idx = parseInt(card.dataset.index);
             cb.checked = (idx === primaryIndex);
-            
-            // Update badge
             var badge = card.querySelector('.primary-badge');
-            if (idx === primaryIndex) {
-                badge.classList.remove('d-none');
-            } else {
-                badge.classList.add('d-none');
-            }
+            badge.classList.toggle('d-none', idx !== primaryIndex);
         });
     }
     
-    // Reindex memberships after removal
     function reindexMemberships() {
         var cards = document.querySelectorAll('.sa-membership-card');
-        cards.forEach(function(card, newIndex) {
-            card.dataset.index = newIndex;
-            
-            // Update all input names
-            card.querySelectorAll('input, select').forEach(function(input) {
-                var name = input.name;
-                if (name) {
-                    input.name = name.replace(/\[\d+\]/, '[' + newIndex + ']');
-                }
-                var id = input.id;
-                if (id) {
-                    input.id = id.replace(/_\d+$/, '_' + newIndex);
-                }
+        cards.forEach(function(card, i) {
+            card.dataset.index = i;
+            card.querySelectorAll('input, select').forEach(function(inp) {
+                if (inp.name) inp.name = inp.name.replace(/\[\d+\]/, '[' + i + ']');
+                if (inp.id) inp.id = inp.id.replace(/_\d+$/, '_' + i);
             });
-            
-            // Update labels
-            card.querySelectorAll('label').forEach(function(label) {
-                var forAttr = label.getAttribute('for');
-                if (forAttr) {
-                    label.setAttribute('for', forAttr.replace(/_\d+$/, '_' + newIndex));
-                }
+            card.querySelectorAll('label').forEach(function(lbl) {
+                var f = lbl.getAttribute('for');
+                if (f) lbl.setAttribute('for', f.replace(/_\d+$/, '_' + i));
             });
         });
-        
         membershipIndex = cards.length;
     }
 })();

@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Filters;
 using Tracker.Web.Entities;
 using Tracker.Web.Services.Interfaces;
 using Tracker.Web.ViewModels;
@@ -41,6 +40,11 @@ public abstract class BaseController : Controller
     protected bool IsSuperAdmin => User.IsInRole("SuperAdmin");
 
     /// <summary>
+    /// Whether current user can access Consolidation
+    /// </summary>
+    protected bool CanConsolidate => User.HasClaim("CanConsolidate", "true");
+
+    /// <summary>
     /// Get sidebar view model for layout
     /// </summary>
     protected async Task<SidebarViewModel> GetSidebarViewModelAsync(string? currentServiceAreaId = null, string? currentPage = null)
@@ -57,7 +61,13 @@ public abstract class BaseController : Controller
             ServiceAreas = serviceAreas,
             CurrentServiceAreaId = currentServiceAreaId,
             CurrentPage = currentPage,
-            IsSuperAdmin = IsSuperAdmin
+            IsSuperAdmin = IsSuperAdmin,
+            CanConsolidate = CanConsolidate,
+            
+            // User info for footer
+            UserEmail = CurrentUserEmail,
+            UserName = CurrentUserName,
+            UserRole = IsSuperAdmin ? "Administrator" : "User"
         };
     }
 

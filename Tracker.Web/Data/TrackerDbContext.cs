@@ -610,11 +610,7 @@ public class TrackerDbContext : DbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
-            // Optional link to User
-            entity.HasOne(e => e.User)
-                .WithOne()
-                .HasForeignKey<Resource>(e => e.UserId)
-                .OnDelete(DeleteBehavior.SetNull);
+            
         });
 
     }

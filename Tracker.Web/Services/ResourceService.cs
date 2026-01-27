@@ -18,15 +18,11 @@ public class ResourceService : IResourceService
         _logger = logger;
     }
 
-    #region Legacy Methods
+    #region Resource CRUD
 
     public async Task<List<ResourceListItem>> GetAllAsync(string? search = null, string? typeFilter = null)
     {
-        var query = _db.Resources
-            .Include(r => r.ResourceType)
-            .Include(r => r.Skills).ThenInclude(rs => rs.Skill)
-            .Include(r => r.ServiceAreas).ThenInclude(rsa => rsa.ServiceArea)
-            .AsQueryable();
+        var query = BuildResourceQuery();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -37,198 +33,12 @@ public class ResourceService : IResourceService
         if (!string.IsNullOrWhiteSpace(typeFilter))
             query = query.Where(r => r.ResourceTypeId == typeFilter);
 
-        return await query
-            .OrderBy(r => r.OrganizationType).ThenBy(r => r.Name)
-            .Select(r => new ResourceListItem
-            {
-                Id = r.Id,
-                Name = r.Name,
-                Email = r.Email,
-                ResourceTypeId = r.ResourceTypeId,
-                ResourceTypeName = r.ResourceType != null ? r.ResourceType.Name : null,
-                OrganizationType = r.OrganizationType,
-                IsActive = r.IsActive,
-                HasLogin = r.UserId != null,
-                UserId = r.UserId,
-                SkillNames = r.Skills.Select(s => s.Skill.Name).ToList(),
-                ServiceAreas = r.ServiceAreas.Select(sa => new ResourceServiceAreaSummary
-                {
-                    ServiceAreaId = sa.ServiceAreaId,
-                    Code = sa.ServiceArea != null ? sa.ServiceArea.Code : "",
-                    Name = sa.ServiceArea != null ? sa.ServiceArea.Name : "",
-                    IsPrimary = sa.IsPrimary,
-                    Permissions = sa.Permissions
-                }).ToList()
-            })
-            .ToListAsync();
+        return await ProjectToListItems(query);
     }
-
-    public async Task<Resource?> GetByIdAsync(string id)
-    {
-        return await _db.Resources
-            .Include(r => r.ResourceType)
-            .Include(r => r.Skills).ThenInclude(rs => rs.Skill)
-            .Include(r => r.ServiceAreas).ThenInclude(rsa => rsa.ServiceArea)
-            .Include(r => r.User)
-            .FirstOrDefaultAsync(r => r.Id == id);
-    }
-
-    public async Task<Resource> CreateAsync(string name, string? email, string? resourceTypeId, List<string>? skillIds = null)
-    {
-        var resource = new Resource
-        {
-            Name = name,
-            Email = email,
-            ResourceTypeId = resourceTypeId,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        // Infer OrganizationType from ResourceType
-        if (!string.IsNullOrEmpty(resourceTypeId))
-        {
-            var rt = await _db.ResourceTypeLookups.FindAsync(resourceTypeId);
-            if (rt != null)
-            {
-                var typeName = rt.Name.ToLower();
-                if (typeName.Contains("client") || typeName.Contains("sponsor"))
-                    resource.OrganizationType = OrganizationType.Client;
-                else if (typeName.Contains("vendor"))
-                    resource.OrganizationType = OrganizationType.Vendor;
-                else
-                    resource.OrganizationType = OrganizationType.Implementor;
-            }
-        }
-
-        _db.Resources.Add(resource);
-        await _db.SaveChangesAsync();
-
-        if (skillIds != null && skillIds.Any())
-        {
-            foreach (var skillId in skillIds)
-                _db.ResourceSkills.Add(new ResourceSkill { ResourceId = resource.Id, SkillId = skillId });
-            await _db.SaveChangesAsync();
-        }
-
-        return resource;
-    }
-
-    public async Task UpdateAsync(string id, string name, string? email, string? resourceTypeId, bool isActive, List<string>? skillIds = null)
-    {
-        var resource = await _db.Resources.Include(r => r.Skills).FirstOrDefaultAsync(r => r.Id == id);
-        if (resource == null) return;
-
-        resource.Name = name;
-        resource.Email = email;
-        resource.ResourceTypeId = resourceTypeId;
-        resource.IsActive = isActive;
-        resource.UpdatedAt = DateTime.UtcNow;
-
-        // Update OrganizationType
-        if (!string.IsNullOrEmpty(resourceTypeId))
-        {
-            var rt = await _db.ResourceTypeLookups.FindAsync(resourceTypeId);
-            if (rt != null)
-            {
-                var typeName = rt.Name.ToLower();
-                if (typeName.Contains("client") || typeName.Contains("sponsor"))
-                    resource.OrganizationType = OrganizationType.Client;
-                else if (typeName.Contains("vendor"))
-                    resource.OrganizationType = OrganizationType.Vendor;
-                else
-                    resource.OrganizationType = OrganizationType.Implementor;
-            }
-        }
-
-        // Update skills
-        _db.ResourceSkills.RemoveRange(resource.Skills);
-        if (skillIds != null && skillIds.Any())
-        {
-            foreach (var skillId in skillIds)
-                _db.ResourceSkills.Add(new ResourceSkill { ResourceId = resource.Id, SkillId = skillId });
-        }
-
-        await _db.SaveChangesAsync();
-    }
-
-    public async Task DeleteAsync(string id)
-    {
-        var resource = await _db.Resources
-            .Include(r => r.Skills)
-            .Include(r => r.ServiceAreas)
-            .FirstOrDefaultAsync(r => r.Id == id);
-        if (resource == null) return;
-
-        _db.ResourceSkills.RemoveRange(resource.Skills);
-        _db.ResourceServiceAreas.RemoveRange(resource.ServiceAreas);
-        _db.Resources.Remove(resource);
-        await _db.SaveChangesAsync();
-    }
-
-    public async Task<List<Resource>> GetActiveAsync()
-    {
-        return await _db.Resources
-            .Include(r => r.ResourceType)
-            .Where(r => r.IsActive)
-            .OrderBy(r => r.Name)
-            .ToListAsync();
-    }
-
-    public async Task<List<SelectListItem>> GetResourceTypesSelectListAsync()
-    {
-        return await _db.ResourceTypeLookups
-            .Where(rt => rt.IsActive)
-            .OrderBy(rt => rt.DisplayOrder).ThenBy(rt => rt.Name)
-            .Select(rt => new SelectListItem { Value = rt.Id, Text = rt.Name })
-            .ToListAsync();
-    }
-
-    public async Task<List<SelectListItem>> GetSkillsSelectListAsync(List<string>? selectedIds = null)
-    {
-        selectedIds ??= new List<string>();
-        var skills = await _db.Skills
-            .Include(s => s.ServiceArea)
-            .Where(s => s.IsActive)
-            .OrderBy(s => s.ServiceArea!.Code).ThenBy(s => s.Name)
-            .ToListAsync();
-
-        return skills.Select(s => new SelectListItem
-        {
-            Value = s.Id,
-            Text = s.Name,
-            Group = new SelectListGroup { Name = s.ServiceArea?.Code ?? "General" },
-            Selected = selectedIds.Contains(s.Id)
-        }).ToList();
-    }
-
-    public async Task<List<string>> GetResourceSkillIdsAsync(string resourceId)
-    {
-        return await _db.ResourceSkills
-            .Where(rs => rs.ResourceId == resourceId)
-            .Select(rs => rs.SkillId)
-            .ToListAsync();
-    }
-
-    public async Task<List<Resource>> GetByResourceTypeNameAsync(string typeName)
-    {
-        return await _db.Resources
-            .Include(r => r.ResourceType)
-            .Where(r => r.IsActive && r.ResourceType != null && r.ResourceType.Name == typeName)
-            .OrderBy(r => r.Name)
-            .ToListAsync();
-    }
-
-    #endregion
-
-    #region New Methods
 
     public async Task<List<ResourceListItem>> GetAllWithFiltersAsync(string? search, OrganizationType? orgType, string? serviceAreaId)
     {
-        var query = _db.Resources
-            .Include(r => r.ResourceType)
-            .Include(r => r.Skills).ThenInclude(rs => rs.Skill)
-            .Include(r => r.ServiceAreas).ThenInclude(rsa => rsa.ServiceArea)
-            .AsQueryable();
+        var query = BuildResourceQuery();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -242,36 +52,63 @@ public class ResourceService : IResourceService
         if (!string.IsNullOrEmpty(serviceAreaId))
             query = query.Where(r => r.ServiceAreas.Any(sa => sa.ServiceAreaId == serviceAreaId));
 
-        return await query
+        return await ProjectToListItems(query);
+    }
+
+    private IQueryable<Resource> BuildResourceQuery()
+    {
+        return _db.Resources
+            .Include(r => r.ResourceType)
+            .Include(r => r.Skills).ThenInclude(rs => rs.Skill)
+            .Include(r => r.ServiceAreas).ThenInclude(rsa => rsa.ServiceArea)
+            .AsQueryable();
+    }
+
+    private async Task<List<ResourceListItem>> ProjectToListItems(IQueryable<Resource> query)
+    {
+        var resources = await query
             .OrderBy(r => r.OrganizationType).ThenBy(r => r.Name)
-            .Select(r => new ResourceListItem
-            {
-                Id = r.Id,
-                Name = r.Name,
-                Email = r.Email,
-                ResourceTypeId = r.ResourceTypeId,
-                ResourceTypeName = r.ResourceType != null ? r.ResourceType.Name : null,
-                OrganizationType = r.OrganizationType,
-                IsActive = r.IsActive,
-                HasLogin = r.UserId != null,
-                UserId = r.UserId,
-                SkillNames = r.Skills.Select(s => s.Skill.Name).ToList(),
-                ServiceAreas = r.ServiceAreas.Select(sa => new ResourceServiceAreaSummary
-                {
-                    ServiceAreaId = sa.ServiceAreaId,
-                    Code = sa.ServiceArea != null ? sa.ServiceArea.Code : "",
-                    Name = sa.ServiceArea != null ? sa.ServiceArea.Name : "",
-                    IsPrimary = sa.IsPrimary,
-                    Permissions = sa.Permissions
-                }).ToList()
-            })
             .ToListAsync();
+
+        return resources.Select(r => new ResourceListItem
+        {
+            Id = r.Id,
+            Name = r.Name,
+            Email = r.Email,
+            OrganizationType = r.OrganizationType,
+            IsActive = r.IsActive,
+            HasLoginAccess = r.HasLoginAccess,
+            IsAdmin = r.IsAdmin,
+            LastLoginAt = r.LastLoginAt,
+            ResourceTypeId = r.ResourceTypeId,
+            ResourceTypeName = r.ResourceType?.Name,
+            SkillNames = r.Skills.Select(s => s.Skill.Name).ToList(),
+            ServiceAreas = r.ServiceAreas.Select(sa => new ResourceServiceAreaSummary
+            {
+                ServiceAreaId = sa.ServiceAreaId,
+                Code = sa.ServiceArea?.Code ?? "",
+                Name = sa.ServiceArea?.Name ?? "",
+                IsPrimary = sa.IsPrimary,
+                Permissions = sa.Permissions
+            }).ToList()
+        }).ToList();
+    }
+
+    public async Task<Resource?> GetByIdAsync(string id)
+    {
+        return await _db.Resources
+            .Include(r => r.ResourceType)
+            .Include(r => r.Skills).ThenInclude(rs => rs.Skill)
+            .Include(r => r.ServiceAreas).ThenInclude(rsa => rsa.ServiceArea)
+            .FirstOrDefaultAsync(r => r.Id == id);
     }
 
     public async Task<EditResourceViewModel?> GetForEditAsync(string id)
     {
         var resource = await GetByIdAsync(id);
         if (resource == null) return null;
+
+        var isLastAdmin = resource.IsAdmin && await IsLastAdminAsync(id);
 
         var model = new EditResourceViewModel
         {
@@ -281,6 +118,11 @@ public class ResourceService : IResourceService
             Phone = resource.Phone,
             OrganizationType = resource.OrganizationType,
             IsActive = resource.IsActive,
+            HasLoginAccess = resource.HasLoginAccess,
+            IsAdmin = resource.IsAdmin,
+            CanConsolidate = resource.CanConsolidate,
+            IsLastAdmin = isLastAdmin,
+            LastLoginAt = resource.LastLoginAt,
             ResourceTypeId = resource.ResourceTypeId,
             SkillIds = resource.Skills.Select(s => s.SkillId).ToList(),
             SelectedSkillIds = resource.Skills.Select(s => s.SkillId).ToList(),
@@ -319,7 +161,7 @@ public class ResourceService : IResourceService
             if (!string.IsNullOrEmpty(model.Email))
             {
                 if (await _db.Resources.AnyAsync(r => r.Email == model.Email))
-                    return new ResourceOperationResult { Success = false, Errors = new List<string> { "Email already exists." } };
+                    return new ResourceOperationResult { Success = false, Errors = new List<string> { "A resource with this email already exists." } };
             }
 
             var resource = new Resource
@@ -329,13 +171,23 @@ public class ResourceService : IResourceService
                 Phone = model.Phone,
                 OrganizationType = model.OrganizationType,
                 IsActive = model.IsActive,
+                HasLoginAccess = model.HasLoginAccess,
+                IsAdmin = model.HasLoginAccess && model.IsAdmin,
+                CanConsolidate = model.CanConsolidate,
                 ResourceTypeId = model.ResourceTypeId,
                 CreatedAt = DateTime.UtcNow
             };
 
+            // If login access and password provided, hash it
+            if (model.HasLoginAccess && !string.IsNullOrEmpty(model.NewPassword))
+            {
+                resource.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+            }
+
             _db.Resources.Add(resource);
 
-            foreach (var sa in model.ServiceAreaMemberships)
+            // Add service area memberships
+            foreach (var sa in model.ServiceAreaMemberships ?? new List<EditResourceServiceAreaViewModel>())
             {
                 _db.ResourceServiceAreas.Add(new ResourceServiceArea
                 {
@@ -347,17 +199,20 @@ public class ResourceService : IResourceService
                 });
             }
 
+            // Add skills
             var skillIds = model.SelectedSkillIds ?? model.SkillIds ?? new List<string>();
             foreach (var skillId in skillIds)
                 _db.ResourceSkills.Add(new ResourceSkill { ResourceId = resource.Id, SkillId = skillId });
 
             await _db.SaveChangesAsync();
-            return new ResourceOperationResult { Success = true, ResourceId = resource.Id, Message = "Resource created." };
+            _logger.LogInformation("Created resource {Name} with ID {Id}", resource.Name, resource.Id);
+
+            return new ResourceOperationResult { Success = true, ResourceId = resource.Id, Message = "Resource created successfully." };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating resource");
-            return new ResourceOperationResult { Success = false, Errors = new List<string> { "Error creating resource." } };
+            _logger.LogError(ex, "Error creating resource {Name}", model.Name);
+            return new ResourceOperationResult { Success = false, Errors = new List<string> { "An error occurred while creating the resource." } };
         }
     }
 
@@ -373,10 +228,24 @@ public class ResourceService : IResourceService
             if (resource == null)
                 return new ResourceOperationResult { Success = false, Errors = new List<string> { "Resource not found." } };
 
+            // Check last admin protection
+            if (resource.IsAdmin && !model.IsAdmin)
+            {
+                if (await IsLastAdminAsync(resource.Id))
+                    return new ResourceOperationResult { Success = false, Errors = new List<string> { "Cannot remove admin access from the last administrator." } };
+            }
+
+            if (resource.IsAdmin && !model.IsActive)
+            {
+                if (await IsLastAdminAsync(resource.Id))
+                    return new ResourceOperationResult { Success = false, Errors = new List<string> { "Cannot deactivate the last administrator." } };
+            }
+
+            // Email uniqueness check
             if (!string.IsNullOrEmpty(model.Email) && model.Email != resource.Email)
             {
                 if (await _db.Resources.AnyAsync(r => r.Email == model.Email && r.Id != model.Id))
-                    return new ResourceOperationResult { Success = false, Errors = new List<string> { "Email already exists." } };
+                    return new ResourceOperationResult { Success = false, Errors = new List<string> { "A resource with this email already exists." } };
             }
 
             resource.Name = model.Name;
@@ -384,11 +253,28 @@ public class ResourceService : IResourceService
             resource.Phone = model.Phone;
             resource.OrganizationType = model.OrganizationType;
             resource.IsActive = model.IsActive;
+            resource.HasLoginAccess = model.HasLoginAccess;
+            resource.IsAdmin = model.HasLoginAccess && model.IsAdmin;
+            resource.CanConsolidate = model.CanConsolidate;
             resource.ResourceTypeId = model.ResourceTypeId;
             resource.UpdatedAt = DateTime.UtcNow;
 
+            // If disabling login, clear auth fields
+            if (!model.HasLoginAccess)
+            {
+                resource.IsAdmin = false;
+                // Don't clear password hash - in case they want to re-enable later
+            }
+
+            // If new password provided, update it
+            if (model.HasLoginAccess && !string.IsNullOrEmpty(model.NewPassword))
+            {
+                resource.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+            }
+
+            // Update service area memberships
             _db.ResourceServiceAreas.RemoveRange(resource.ServiceAreas);
-            foreach (var sa in model.ServiceAreaMemberships)
+            foreach (var sa in model.ServiceAreaMemberships ?? new List<EditResourceServiceAreaViewModel>())
             {
                 _db.ResourceServiceAreas.Add(new ResourceServiceArea
                 {
@@ -400,18 +286,21 @@ public class ResourceService : IResourceService
                 });
             }
 
+            // Update skills
             _db.ResourceSkills.RemoveRange(resource.Skills);
             var skillIds = model.SelectedSkillIds ?? model.SkillIds ?? new List<string>();
             foreach (var skillId in skillIds)
                 _db.ResourceSkills.Add(new ResourceSkill { ResourceId = resource.Id, SkillId = skillId });
 
             await _db.SaveChangesAsync();
-            return new ResourceOperationResult { Success = true, ResourceId = resource.Id, Message = "Resource updated." };
+            _logger.LogInformation("Updated resource {Name} with ID {Id}", resource.Name, resource.Id);
+
+            return new ResourceOperationResult { Success = true, ResourceId = resource.Id, Message = "Resource updated successfully." };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating resource");
-            return new ResourceOperationResult { Success = false, Errors = new List<string> { "Error updating resource." } };
+            _logger.LogError(ex, "Error updating resource {Id}", model.Id);
+            return new ResourceOperationResult { Success = false, Errors = new List<string> { "An error occurred while updating the resource." } };
         }
     }
 
@@ -427,17 +316,216 @@ public class ResourceService : IResourceService
             if (resource == null)
                 return new ResourceOperationResult { Success = false, Errors = new List<string> { "Resource not found." } };
 
+            // Last admin protection
+            if (resource.IsAdmin && resource.IsActive)
+            {
+                if (await IsLastAdminAsync(id))
+                    return new ResourceOperationResult { Success = false, Errors = new List<string> { "Cannot delete the last administrator." } };
+            }
+
             _db.ResourceSkills.RemoveRange(resource.Skills);
             _db.ResourceServiceAreas.RemoveRange(resource.ServiceAreas);
             _db.Resources.Remove(resource);
             await _db.SaveChangesAsync();
 
-            return new ResourceOperationResult { Success = true, Message = "Resource deleted." };
+            _logger.LogInformation("Deleted resource {Name} with ID {Id}", resource.Name, id);
+            return new ResourceOperationResult { Success = true, Message = "Resource deleted successfully." };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting resource");
-            return new ResourceOperationResult { Success = false, Errors = new List<string> { "Error deleting resource." } };
+            _logger.LogError(ex, "Error deleting resource {Id}", id);
+            return new ResourceOperationResult { Success = false, Errors = new List<string> { "An error occurred while deleting the resource." } };
+        }
+    }
+
+    #endregion
+
+    #region Legacy Methods
+
+    public async Task<Resource> CreateAsync(string name, string? email, string? resourceTypeId, List<string>? skillIds = null)
+    {
+        var resource = new Resource
+        {
+            Name = name,
+            Email = email,
+            ResourceTypeId = resourceTypeId,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.Resources.Add(resource);
+        await _db.SaveChangesAsync();
+
+        if (skillIds != null && skillIds.Any())
+        {
+            foreach (var skillId in skillIds)
+                _db.ResourceSkills.Add(new ResourceSkill { ResourceId = resource.Id, SkillId = skillId });
+            await _db.SaveChangesAsync();
+        }
+
+        return resource;
+    }
+
+    public async Task UpdateAsync(string id, string name, string? email, string? resourceTypeId, bool isActive, List<string>? skillIds = null)
+    {
+        var resource = await _db.Resources.Include(r => r.Skills).FirstOrDefaultAsync(r => r.Id == id);
+        if (resource == null) return;
+
+        resource.Name = name;
+        resource.Email = email;
+        resource.ResourceTypeId = resourceTypeId;
+        resource.IsActive = isActive;
+        resource.UpdatedAt = DateTime.UtcNow;
+
+        _db.ResourceSkills.RemoveRange(resource.Skills);
+        if (skillIds != null && skillIds.Any())
+        {
+            foreach (var skillId in skillIds)
+                _db.ResourceSkills.Add(new ResourceSkill { ResourceId = resource.Id, SkillId = skillId });
+        }
+
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(string id)
+    {
+        var resource = await _db.Resources.Include(r => r.Skills).Include(r => r.ServiceAreas).FirstOrDefaultAsync(r => r.Id == id);
+        if (resource == null) return;
+
+        _db.ResourceSkills.RemoveRange(resource.Skills);
+        _db.ResourceServiceAreas.RemoveRange(resource.ServiceAreas);
+        _db.Resources.Remove(resource);
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task<List<Resource>> GetActiveAsync()
+    {
+        return await _db.Resources.Include(r => r.ResourceType).Where(r => r.IsActive).OrderBy(r => r.Name).ToListAsync();
+    }
+
+    public async Task<List<Resource>> GetByResourceTypeNameAsync(string typeName)
+    {
+        return await _db.Resources
+            .Include(r => r.ResourceType)
+            .Where(r => r.IsActive && r.ResourceType != null && r.ResourceType.Name == typeName)
+            .OrderBy(r => r.Name)
+            .ToListAsync();
+    }
+
+    #endregion
+
+    #region Authentication & Password Management
+
+    public async Task<ResourceOperationResult> SetPasswordAsync(string resourceId, string password)
+    {
+        try
+        {
+            var resource = await _db.Resources.FindAsync(resourceId);
+            if (resource == null)
+                return new ResourceOperationResult { Success = false, Errors = new List<string> { "Resource not found." } };
+
+            if (string.IsNullOrEmpty(password) || password.Length < 8)
+                return new ResourceOperationResult { Success = false, Errors = new List<string> { "Password must be at least 8 characters." } };
+
+            resource.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+            resource.HasLoginAccess = true;
+            await _db.SaveChangesAsync();
+
+            return new ResourceOperationResult { Success = true, Message = "Password set successfully." };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting password for resource {Id}", resourceId);
+            return new ResourceOperationResult { Success = false, Errors = new List<string> { "An error occurred." } };
+        }
+    }
+
+    public async Task<ResourceOperationResult> ResetPasswordAsync(string resourceId, string newPassword)
+    {
+        return await SetPasswordAsync(resourceId, newPassword);
+    }
+
+    public async Task<ResourceOperationResult> ChangePasswordAsync(string resourceId, string currentPassword, string newPassword)
+    {
+        try
+        {
+            var resource = await _db.Resources.FindAsync(resourceId);
+            if (resource == null)
+                return new ResourceOperationResult { Success = false, Errors = new List<string> { "Resource not found." } };
+
+            if (string.IsNullOrEmpty(resource.PasswordHash) || !BCrypt.Net.BCrypt.Verify(currentPassword, resource.PasswordHash))
+                return new ResourceOperationResult { Success = false, Errors = new List<string> { "Current password is incorrect." } };
+
+            if (string.IsNullOrEmpty(newPassword) || newPassword.Length < 8)
+                return new ResourceOperationResult { Success = false, Errors = new List<string> { "New password must be at least 8 characters." } };
+
+            resource.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            await _db.SaveChangesAsync();
+
+            return new ResourceOperationResult { Success = true, Message = "Password changed successfully." };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error changing password for resource {Id}", resourceId);
+            return new ResourceOperationResult { Success = false, Errors = new List<string> { "An error occurred." } };
+        }
+    }
+
+    public async Task<ResourceOperationResult> SetLoginAccessAsync(string resourceId, bool hasAccess)
+    {
+        try
+        {
+            var resource = await _db.Resources.FindAsync(resourceId);
+            if (resource == null)
+                return new ResourceOperationResult { Success = false, Errors = new List<string> { "Resource not found." } };
+
+            // If disabling login for admin, check last admin
+            if (!hasAccess && resource.IsAdmin && resource.IsActive)
+            {
+                if (await IsLastAdminAsync(resourceId))
+                    return new ResourceOperationResult { Success = false, Errors = new List<string> { "Cannot disable login for the last administrator." } };
+            }
+
+            resource.HasLoginAccess = hasAccess;
+            if (!hasAccess)
+                resource.IsAdmin = false;
+
+            await _db.SaveChangesAsync();
+
+            return new ResourceOperationResult { Success = true, Message = hasAccess ? "Login access enabled." : "Login access disabled." };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting login access for resource {Id}", resourceId);
+            return new ResourceOperationResult { Success = false, Errors = new List<string> { "An error occurred." } };
+        }
+    }
+
+    public async Task<ResourceOperationResult> SetAdminStatusAsync(string resourceId, bool isAdmin)
+    {
+        try
+        {
+            var resource = await _db.Resources.FindAsync(resourceId);
+            if (resource == null)
+                return new ResourceOperationResult { Success = false, Errors = new List<string> { "Resource not found." } };
+
+            // If removing admin, check last admin
+            if (!isAdmin && resource.IsAdmin && resource.IsActive)
+            {
+                if (await IsLastAdminAsync(resourceId))
+                    return new ResourceOperationResult { Success = false, Errors = new List<string> { "Cannot remove admin status from the last administrator." } };
+            }
+
+            // Can only be admin if has login access
+            resource.IsAdmin = isAdmin && resource.HasLoginAccess;
+            await _db.SaveChangesAsync();
+
+            return new ResourceOperationResult { Success = true, Message = isAdmin ? "Admin status granted." : "Admin status removed." };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting admin status for resource {Id}", resourceId);
+            return new ResourceOperationResult { Success = false, Errors = new List<string> { "An error occurred." } };
         }
     }
 
@@ -473,7 +561,7 @@ public class ResourceService : IResourceService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error adding membership");
-            return new ResourceOperationResult { Success = false, Errors = new List<string> { "Error adding membership." } };
+            return new ResourceOperationResult { Success = false, Errors = new List<string> { "An error occurred." } };
         }
     }
 
@@ -491,7 +579,7 @@ public class ResourceService : IResourceService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error removing membership");
-            return new ResourceOperationResult { Success = false, Errors = new List<string> { "Error." } };
+            return new ResourceOperationResult { Success = false, Errors = new List<string> { "An error occurred." } };
         }
     }
 
@@ -509,13 +597,75 @@ public class ResourceService : IResourceService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating permissions");
-            return new ResourceOperationResult { Success = false, Errors = new List<string> { "Error." } };
+            return new ResourceOperationResult { Success = false, Errors = new List<string> { "An error occurred." } };
         }
     }
 
     #endregion
 
+    #region Skills
+
+    public async Task<List<SelectListItem>> GetSkillsSelectListAsync(List<string>? selectedIds = null)
+    {
+        selectedIds ??= new List<string>();
+        var skills = await _db.Skills
+            .Include(s => s.ServiceArea)
+            .Where(s => s.IsActive)
+            .OrderBy(s => s.ServiceArea!.Code).ThenBy(s => s.Name)
+            .ToListAsync();
+
+        return skills.Select(s => new SelectListItem
+        {
+            Value = s.Id,
+            Text = s.Name,
+            Group = new SelectListGroup { Name = s.ServiceArea?.Code ?? "General" },
+            Selected = selectedIds.Contains(s.Id)
+        }).ToList();
+    }
+
+    public async Task<List<string>> GetResourceSkillIdsAsync(string resourceId)
+    {
+        return await _db.ResourceSkills.Where(rs => rs.ResourceId == resourceId).Select(rs => rs.SkillId).ToListAsync();
+    }
+
+    public async Task<List<SkillGroupViewModel>> GetSkillsGroupedByServiceAreaAsync(string? resourceId = null, List<string>? memberServiceAreaIds = null)
+    {
+        var selectedSkillIds = new List<string>();
+        if (!string.IsNullOrEmpty(resourceId))
+            selectedSkillIds = await GetResourceSkillIdsAsync(resourceId);
+
+        var serviceAreas = await _db.ServiceAreas.Where(sa => sa.IsActive).OrderBy(sa => sa.DisplayOrder).ThenBy(sa => sa.Code).ToListAsync();
+        var skills = await _db.Skills.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
+
+        return serviceAreas.Select(sa => new SkillGroupViewModel
+        {
+            ServiceAreaId = sa.Id,
+            ServiceAreaCode = sa.Code,
+            ServiceAreaName = sa.Name,
+            IsMember = memberServiceAreaIds?.Contains(sa.Id) ?? false,
+            Skills = skills.Where(s => s.ServiceAreaId == sa.Id)
+                .Select(s => new SkillOptionViewModel
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Description = s.Description,
+                    IsSelected = selectedSkillIds.Contains(s.Id)
+                }).ToList()
+        }).ToList();
+    }
+
+    #endregion
+
     #region Lookups
+
+    public async Task<List<SelectListItem>> GetResourceTypesSelectListAsync()
+    {
+        return await _db.ResourceTypeLookups
+            .Where(rt => rt.IsActive)
+            .OrderBy(rt => rt.DisplayOrder).ThenBy(rt => rt.Name)
+            .Select(rt => new SelectListItem { Value = rt.Id, Text = rt.Name })
+            .ToListAsync();
+    }
 
     public List<SelectListItem> GetOrganizationTypesSelectList(OrganizationType? selected = null)
     {
@@ -550,32 +700,6 @@ public class ResourceService : IResourceService
             .ToListAsync();
     }
 
-    public async Task<List<SkillGroupViewModel>> GetSkillsGroupedByServiceAreaAsync(string? resourceId = null, List<string>? memberServiceAreaIds = null)
-    {
-        var selectedSkillIds = new List<string>();
-        if (!string.IsNullOrEmpty(resourceId))
-            selectedSkillIds = await GetResourceSkillIdsAsync(resourceId);
-
-        var serviceAreas = await _db.ServiceAreas.Where(sa => sa.IsActive).OrderBy(sa => sa.DisplayOrder).ThenBy(sa => sa.Code).ToListAsync();
-        var skills = await _db.Skills.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
-
-        return serviceAreas.Select(sa => new SkillGroupViewModel
-        {
-            ServiceAreaId = sa.Id,
-            ServiceAreaCode = sa.Code,
-            ServiceAreaName = sa.Name,
-            IsMember = memberServiceAreaIds?.Contains(sa.Id) ?? false,
-            Skills = skills.Where(s => s.ServiceAreaId == sa.Id)
-                .Select(s => new SkillOptionViewModel
-                {
-                    Id = s.Id,
-                    Name = s.Name,
-                    Description = s.Description,
-                    IsSelected = selectedSkillIds.Contains(s.Id)
-                }).ToList()
-        }).ToList();
-    }
-
     #endregion
 
     #region Permission Queries
@@ -596,6 +720,21 @@ public class ResourceService : IResourceService
     {
         var m = await _db.ResourceServiceAreas.FirstOrDefaultAsync(rsa => rsa.ResourceId == resourceId && rsa.ServiceAreaId == serviceAreaId);
         return m?.HasPermission(permission) ?? false;
+    }
+
+    #endregion
+
+    #region Admin Queries
+
+    public async Task<int> GetActiveAdminCountAsync()
+    {
+        return await _db.Resources.CountAsync(r => r.IsAdmin && r.IsActive && r.HasLoginAccess);
+    }
+
+    public async Task<bool> IsLastAdminAsync(string resourceId)
+    {
+        var adminCount = await _db.Resources.CountAsync(r => r.IsAdmin && r.IsActive && r.HasLoginAccess && r.Id != resourceId);
+        return adminCount == 0;
     }
 
     #endregion

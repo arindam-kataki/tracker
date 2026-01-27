@@ -5,6 +5,9 @@ using Tracker.Web.Services.Interfaces;
 
 namespace Tracker.Web.Services;
 
+/// <summary>
+/// Authentication service - now authenticates against Resources table
+/// </summary>
 public class AuthService : IAuthService
 {
     private readonly TrackerDbContext _db;
@@ -14,49 +17,59 @@ public class AuthService : IAuthService
         _db = db;
     }
 
-    public async Task<User?> ValidateCredentialsAsync(string email, string password)
+    public async Task<Resource?> ValidateCredentialsAsync(string email, string password)
     {
-        var user = await _db.Users
-            .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower() && u.IsActive);
+        var resource = await _db.Resources
+            .Include(r => r.ServiceAreas)
+                .ThenInclude(rsa => rsa.ServiceArea)
+            .FirstOrDefaultAsync(r => 
+                r.Email != null && 
+                r.Email.ToLower() == email.ToLower() && 
+                r.HasLoginAccess && 
+                r.IsActive);
 
-        if (user == null)
+        if (resource == null)
             return null;
 
-        if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        // Verify password
+        if (string.IsNullOrEmpty(resource.PasswordHash))
+            return null;
+            
+        if (!BCrypt.Net.BCrypt.Verify(password, resource.PasswordHash))
             return null;
 
         // Update last login
-        user.LastLoginAt = DateTime.UtcNow;
+        resource.LastLoginAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        return user;
+        return resource;
     }
 
-    public async Task<User?> GetUserByIdAsync(string userId)
+    public async Task<Resource?> GetResourceByIdAsync(string resourceId)
     {
-        return await _db.Users
-            .Include(u => u.ServiceAreas)
-            .ThenInclude(usa => usa.ServiceArea)
-            .FirstOrDefaultAsync(u => u.Id == userId);
+        return await _db.Resources
+            .Include(r => r.ServiceAreas)
+                .ThenInclude(rsa => rsa.ServiceArea)
+            .FirstOrDefaultAsync(r => r.Id == resourceId);
     }
 
-    public async Task<User?> GetUserByEmailAsync(string email)
+    public async Task<Resource?> GetResourceByEmailAsync(string email)
     {
-        return await _db.Users
-            .Include(u => u.ServiceAreas)
-            .ThenInclude(usa => usa.ServiceArea)
-            .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+        return await _db.Resources
+            .Include(r => r.ServiceAreas)
+                .ThenInclude(rsa => rsa.ServiceArea)
+            .FirstOrDefaultAsync(r => r.Email != null && r.Email.ToLower() == email.ToLower());
     }
 
-    public async Task<List<ServiceArea>> GetUserServiceAreasAsync(string userId)
+    public async Task<List<ServiceArea>> GetUserServiceAreasAsync(string resourceId)
     {
-        var user = await GetUserByIdAsync(userId);
+        var resource = await GetResourceByIdAsync(resourceId);
         
-        if (user == null)
+        if (resource == null)
             return new List<ServiceArea>();
 
         // SuperAdmin has access to all service areas
-        if (user.Role == UserRole.SuperAdmin)
+        if (resource.IsAdmin)
         {
             return await _db.ServiceAreas
                 .Where(sa => sa.IsActive)
@@ -64,24 +77,35 @@ public class AuthService : IAuthService
                 .ToListAsync();
         }
 
-        return user.ServiceAreas
-            .Select(usa => usa.ServiceArea)
-            .Where(sa => sa.IsActive)
+        // Regular users only have access to their assigned service areas
+        return resource.ServiceAreas
+            .Where(rsa => rsa.ServiceArea != null && rsa.ServiceArea.IsActive)
+            .Select(rsa => rsa.ServiceArea!)
             .OrderBy(sa => sa.DisplayOrder)
             .ToList();
     }
 
-    public async Task<bool> HasAccessToServiceAreaAsync(string userId, string serviceAreaId)
+    public async Task<bool> HasAccessToServiceAreaAsync(string resourceId, string serviceAreaId)
     {
-        var user = await GetUserByIdAsync(userId);
+        var resource = await GetResourceByIdAsync(resourceId);
         
-        if (user == null)
+        if (resource == null)
             return false;
 
         // SuperAdmin has access to all
-        if (user.Role == UserRole.SuperAdmin)
+        if (resource.IsAdmin)
             return true;
 
-        return user.ServiceAreas.Any(usa => usa.ServiceAreaId == serviceAreaId);
+        return resource.ServiceAreas.Any(rsa => rsa.ServiceAreaId == serviceAreaId);
+    }
+
+    public async Task UpdateLastLoginAsync(string resourceId)
+    {
+        var resource = await _db.Resources.FindAsync(resourceId);
+        if (resource != null)
+        {
+            resource.LastLoginAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
     }
 }

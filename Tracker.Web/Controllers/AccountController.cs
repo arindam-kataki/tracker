@@ -9,7 +9,7 @@ namespace Tracker.Web.Controllers;
 
 /// <summary>
 /// Controller for authentication (login/logout)
-/// Does NOT inherit from BaseController since it handles unauthenticated users
+/// Now authenticates against Resources table instead of Users
 /// </summary>
 public class AccountController : Controller
 {
@@ -20,13 +20,9 @@ public class AccountController : Controller
         _authService = authService;
     }
 
-    /// <summary>
-    /// Login page
-    /// </summary>
     [HttpGet]
     public IActionResult Login(string? returnUrl = null)
     {
-        // Already logged in?
         if (User.Identity?.IsAuthenticated == true)
         {
             return RedirectToAction("Index", "Home");
@@ -35,9 +31,6 @@ public class AccountController : Controller
         return View(new LoginViewModel { ReturnUrl = returnUrl });
     }
 
-    /// <summary>
-    /// Process login
-    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginViewModel model)
@@ -47,22 +40,28 @@ public class AccountController : Controller
             return View(model);
         }
 
-        var user = await _authService.ValidateCredentialsAsync(model.Email, model.Password);
+        var resource = await _authService.ValidateCredentialsAsync(model.Email, model.Password);
 
-        if (user == null)
+        if (resource == null)
         {
             ModelState.AddModelError("", "Invalid email or password");
             return View(model);
         }
 
-        // Create claims
+        // Create claims - now using Resource fields
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, user.Id),
-            new(ClaimTypes.Email, user.Email),
-            new(ClaimTypes.Name, user.DisplayName),
-            new(ClaimTypes.Role, user.Role.ToString())
+            new(ClaimTypes.NameIdentifier, resource.Id),
+            new(ClaimTypes.Email, resource.Email ?? ""),
+            new(ClaimTypes.Name, resource.Name), // Use Name instead of DisplayName
+            new(ClaimTypes.Role, resource.RoleString) // RoleString returns "SuperAdmin" or "User"
         };
+
+        // Add CanConsolidate claim if applicable
+        if (resource.CanConsolidate)
+        {
+            claims.Add(new Claim("CanConsolidate", "true"));
+        }
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
@@ -84,9 +83,6 @@ public class AccountController : Controller
         return RedirectToAction("Index", "Home");
     }
 
-    /// <summary>
-    /// Logout
-    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
@@ -95,9 +91,6 @@ public class AccountController : Controller
         return RedirectToAction(nameof(Login));
     }
 
-    /// <summary>
-    /// Access denied page
-    /// </summary>
     [HttpGet]
     public IActionResult AccessDenied()
     {

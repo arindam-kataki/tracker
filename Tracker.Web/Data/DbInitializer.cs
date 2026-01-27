@@ -9,8 +9,15 @@ public static class DbInitializer
     {
         await context.Database.EnsureCreatedAsync();
         
-        // Enable WAL mode for better concurrent access
-        await context.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
+        // Enable WAL mode for better concurrent access (SQLite)
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
+        }
+        catch
+        {
+            // Ignore if not SQLite
+        }
 
         // Create new tables if they don't exist (for existing databases)
         await CreateNewTablesIfNeededAsync(context);
@@ -18,24 +25,68 @@ public static class DbInitializer
         // Migrate existing resources to new type system
         await MigrateResourceTypesAsync(context);
 
-        // Seed SuperAdmin user
-        if (!await context.Users.AnyAsync())
-        {
-            var adminUser = new User
-            {
-                Id = "user-admin",
-                Email = "admin@tracker.local",
-                DisplayName = "System Administrator",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
-                Role = UserRole.SuperAdmin,
-                IsActive = true
-            };
-            context.Users.Add(adminUser);
-            await context.SaveChangesAsync();
-        }
+        // Seed Admin Resource (replaces User seeding)
+        await SeedAdminResourceAsync(context);
 
         // Seed Time Recording Categories (Business Areas)
         await SeedTimeRecordingCategoriesAsync(context);
+    }
+
+    /// <summary>
+    /// Seeds the default administrator resource with login access.
+    /// This replaces the old User seeding - Resources now handle authentication.
+    /// </summary>
+    private static async Task SeedAdminResourceAsync(TrackerDbContext context)
+    {
+        // Check if any admin resource exists
+        if (await context.Resources.AnyAsync(r => r.IsAdmin && r.HasLoginAccess))
+            return;
+
+        // Check if there's an existing resource with admin email that needs upgrading
+        var existingAdmin = await context.Resources
+            .FirstOrDefaultAsync(r => r.Email != null && r.Email.ToLower() == "admin@tracker.local");
+
+        if (existingAdmin != null)
+        {
+            // Upgrade existing resource to admin
+            existingAdmin.HasLoginAccess = true;
+            existingAdmin.IsAdmin = true;
+            existingAdmin.CanConsolidate = true;
+            if (string.IsNullOrEmpty(existingAdmin.PasswordHash))
+            {
+                existingAdmin.PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!");
+            }
+            await context.SaveChangesAsync();
+            return;
+        }
+
+        // Create new admin resource
+        var adminResource = new Resource
+        {
+            Id = "resource-admin-001",
+            Name = "System Administrator",
+            Email = "admin@tracker.local",
+            OrganizationType = OrganizationType.Implementor,
+            IsActive = true,
+            
+            // Authentication fields
+            HasLoginAccess = true,
+            IsAdmin = true,
+            CanConsolidate = true,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
+            
+            CreatedAt = DateTime.UtcNow
+        };
+
+        context.Resources.Add(adminResource);
+        await context.SaveChangesAsync();
+
+        Console.WriteLine("==============================================");
+        Console.WriteLine("  DEFAULT ADMIN CREATED");
+        Console.WriteLine("  Email: admin@tracker.local");
+        Console.WriteLine("  Password: Admin123!");
+        Console.WriteLine("  ** CHANGE THIS PASSWORD IMMEDIATELY **");
+        Console.WriteLine("==============================================");
     }
 
     private static async Task SeedTimeRecordingCategoriesAsync(TrackerDbContext context)
@@ -54,7 +105,7 @@ public static class DbInitializer
             new() { Id = Guid.NewGuid().ToString(), Name = "Integration", Description = "API, ETL, system integrations", DisplayOrder = 7, IsActive = true },
             new() { Id = Guid.NewGuid().ToString(), Name = "Infrastructure", Description = "Servers, networks, cloud", DisplayOrder = 8, IsActive = true },
             new() { Id = Guid.NewGuid().ToString(), Name = "Security", Description = "Security & compliance work", DisplayOrder = 9, IsActive = true },
-            new() { Id = Guid.NewGuid().ToString(), Name = "Other", Description = "Miscellaneous", DisplayOrder = 10, IsActive = true },
+            new() { Id = Guid.NewGuid().ToString(), Name = "Other", Description = "Miscellaneous", DisplayOrder = 10, IsActive = true }
         };
 
         context.TimeRecordingCategories.AddRange(categories);
@@ -63,181 +114,102 @@ public static class DbInitializer
 
     private static async Task CreateNewTablesIfNeededAsync(TrackerDbContext context)
     {
-        // Check if SavedFilters table exists
-        if (!await TableExistsAsync(context, "SavedFilters"))
-        {
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE TABLE SavedFilters (" +
-                "Id TEXT PRIMARY KEY, " +
-                "UserId TEXT NOT NULL, " +
-                "ServiceAreaId TEXT NOT NULL, " +
-                "Name TEXT NOT NULL, " +
-                "FilterJson TEXT NOT NULL, " +
-                "IsDefault INTEGER NOT NULL DEFAULT 0, " +
-                "CreatedAt TEXT NOT NULL, " +
-                "ModifiedAt TEXT, " +
-                "FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE, " +
-                "FOREIGN KEY (ServiceAreaId) REFERENCES ServiceAreas(Id) ON DELETE CASCADE)");
-            
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE INDEX IX_SavedFilters_UserId_ServiceAreaId ON SavedFilters(UserId, ServiceAreaId)");
-        }
-
-        // Check if UserColumnPreferences table exists
-        if (!await TableExistsAsync(context, "UserColumnPreferences"))
-        {
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE TABLE UserColumnPreferences (" +
-                "Id TEXT PRIMARY KEY, " +
-                "UserId TEXT NOT NULL, " +
-                "ServiceAreaId TEXT NOT NULL, " +
-                "ColumnsJson TEXT NOT NULL, " +
-                "ModifiedAt TEXT NOT NULL, " +
-                "FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE, " +
-                "FOREIGN KEY (ServiceAreaId) REFERENCES ServiceAreas(Id) ON DELETE CASCADE)");
-            
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE UNIQUE INDEX IX_UserColumnPreferences_UserId_ServiceAreaId ON UserColumnPreferences(UserId, ServiceAreaId)");
-        }
-
-        // New tables for Enhancement Details feature
+        // This method creates tables that might not exist in older databases
+        // EF will handle this automatically with migrations, but this is a safety net
         
-        // EnhancementNotes table
-        if (!await TableExistsAsync(context, "EnhancementNotes"))
+        try
         {
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE TABLE EnhancementNotes (" +
-                "Id TEXT PRIMARY KEY, " +
-                "EnhancementId TEXT NOT NULL, " +
-                "NoteText TEXT NOT NULL, " +
-                "CreatedBy TEXT, " +
-                "CreatedAt TEXT NOT NULL, " +
-                "ModifiedBy TEXT, " +
-                "ModifiedAt TEXT, " +
-                "FOREIGN KEY (EnhancementId) REFERENCES Enhancements(Id) ON DELETE CASCADE, " +
-                "FOREIGN KEY (CreatedBy) REFERENCES Users(Id) ON DELETE SET NULL)");
-            
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE INDEX IX_EnhancementNotes_EnhancementId ON EnhancementNotes(EnhancementId)");
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE INDEX IX_EnhancementNotes_CreatedAt ON EnhancementNotes(CreatedAt)");
+            // Check if ResourceServiceAreas table exists by trying to query it
+            _ = await context.ResourceServiceAreas.AnyAsync();
         }
-
-        // EnhancementAttachments table
-        if (!await TableExistsAsync(context, "EnhancementAttachments"))
+        catch
         {
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE TABLE EnhancementAttachments (" +
-                "Id TEXT PRIMARY KEY, " +
-                "EnhancementId TEXT NOT NULL, " +
-                "FileName TEXT NOT NULL, " +
-                "StoredFileName TEXT NOT NULL, " +
-                "ContentType TEXT NOT NULL, " +
-                "FileSize INTEGER NOT NULL, " +
-                "StoragePath TEXT NOT NULL, " +
-                "UploadedBy TEXT, " +
-                "UploadedAt TEXT NOT NULL, " +
-                "FOREIGN KEY (EnhancementId) REFERENCES Enhancements(Id) ON DELETE CASCADE, " +
-                "FOREIGN KEY (UploadedBy) REFERENCES Users(Id) ON DELETE SET NULL)");
-            
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE INDEX IX_EnhancementAttachments_EnhancementId ON EnhancementAttachments(EnhancementId)");
-        }
-
-        // TimeRecordingCategories table
-        if (!await TableExistsAsync(context, "TimeRecordingCategories"))
-        {
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE TABLE TimeRecordingCategories (" +
-                "Id TEXT PRIMARY KEY, " +
-                "Name TEXT NOT NULL, " +
-                "Description TEXT, " +
-                "DisplayOrder INTEGER NOT NULL DEFAULT 0, " +
-                "IsActive INTEGER NOT NULL DEFAULT 1, " +
-                "CreatedAt TEXT NOT NULL)");
-            
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE INDEX IX_TimeRecordingCategories_DisplayOrder ON TimeRecordingCategories(DisplayOrder)");
-        }
-
-        // EnhancementTimeCategories table (junction)
-        if (!await TableExistsAsync(context, "EnhancementTimeCategories"))
-        {
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE TABLE EnhancementTimeCategories (" +
-                "EnhancementId TEXT NOT NULL, " +
-                "TimeCategoryId TEXT NOT NULL, " +
-                "DisplayOrder INTEGER NOT NULL DEFAULT 0, " +
-                "PRIMARY KEY (EnhancementId, TimeCategoryId), " +
-                "FOREIGN KEY (EnhancementId) REFERENCES Enhancements(Id) ON DELETE CASCADE, " +
-                "FOREIGN KEY (TimeCategoryId) REFERENCES TimeRecordingCategories(Id) ON DELETE CASCADE)");
-        }
-
-        // EnhancementTimeEntries table
-        if (!await TableExistsAsync(context, "EnhancementTimeEntries"))
-        {
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE TABLE EnhancementTimeEntries (" +
-                "Id TEXT PRIMARY KEY, " +
-                "EnhancementId TEXT NOT NULL, " +
-                "PeriodStart TEXT NOT NULL, " +
-                "PeriodEnd TEXT NOT NULL, " +
-                "HoursJson TEXT NOT NULL, " +
-                "Notes TEXT, " +
-                "CreatedBy TEXT, " +
-                "CreatedAt TEXT NOT NULL, " +
-                "ModifiedBy TEXT, " +
-                "ModifiedAt TEXT, " +
-                "FOREIGN KEY (EnhancementId) REFERENCES Enhancements(Id) ON DELETE CASCADE)");
-            
-            await context.Database.ExecuteSqlRawAsync(
-                "CREATE INDEX IX_EnhancementTimeEntries_EnhancementId ON EnhancementTimeEntries(EnhancementId)");
+            // Table doesn't exist - it will be created by migration
+            // Just log and continue
+            Console.WriteLine("Note: ResourceServiceAreas table will be created by migration.");
         }
     }
 
     private static async Task MigrateResourceTypesAsync(TrackerDbContext context)
     {
-        // Migrate old IsClientResource to new Type system
-        try
+        // Migrate resources from legacy ResourceType to OrganizationType
+        var resourcesNeedingMigration = await context.Resources
+            .Include(r => r.ResourceType)
+            .Where(r => r.ResourceType != null && r.OrganizationType == OrganizationType.Implementor)
+            .ToListAsync();
+
+        if (!resourcesNeedingMigration.Any())
+            return;
+
+        foreach (var resource in resourcesNeedingMigration)
         {
-            await context.Database.ExecuteSqlRawAsync(
-                "UPDATE Resources SET Type = 0 WHERE IsClientResource = 1 AND Type = 2");
+            var typeName = resource.ResourceType?.Name?.ToLower() ?? "";
+            
+            if (typeName.Contains("client") || typeName.Contains("sponsor") || typeName.Contains("customer"))
+            {
+                resource.OrganizationType = OrganizationType.Client;
+            }
+            else if (typeName.Contains("vendor") || typeName.Contains("contractor") || typeName.Contains("external"))
+            {
+                resource.OrganizationType = OrganizationType.Vendor;
+            }
+            else
+            {
+                resource.OrganizationType = OrganizationType.Implementor;
+            }
         }
-        catch
-        {
-            // Ignore if column doesn't exist
-        }
+
+        await context.SaveChangesAsync();
+        Console.WriteLine($"Migrated {resourcesNeedingMigration.Count} resources to new OrganizationType system.");
     }
 
-    private static async Task<bool> TableExistsAsync(TrackerDbContext context, string tableName)
+    /// <summary>
+    /// Migrates existing Users to Resources (one-time migration helper).
+    /// Call this manually if you have existing Users that need to be converted.
+    /// </summary>
+    public static async Task MigrateUsersToResourcesAsync(TrackerDbContext context)
     {
-        var connection = context.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-            await connection.OpenAsync();
+        // This is a helper method for manual migration if needed
+        // It matches Users to Resources by email and copies auth fields
         
-        using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{tableName}'";
-        var result = await command.ExecuteScalarAsync();
+        var users = await context.Users.ToListAsync();
         
-        return Convert.ToInt32(result) > 0;
-    }
-
-    private static async Task<bool> ColumnExistsAsync(TrackerDbContext context, string tableName, string columnName)
-    {
-        var connection = context.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-            await connection.OpenAsync();
-        
-        using var command = connection.CreateCommand();
-        command.CommandText = $"PRAGMA table_info({tableName})";
-        
-        using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
+        foreach (var user in users)
         {
-            if (reader.GetString(1).Equals(columnName, StringComparison.OrdinalIgnoreCase))
-                return true;
+            var resource = await context.Resources
+                .FirstOrDefaultAsync(r => r.Email != null && r.Email.ToLower() == user.Email.ToLower());
+
+            if (resource != null)
+            {
+                // Update existing resource with user's auth info
+                resource.HasLoginAccess = true;
+                resource.PasswordHash = user.PasswordHash;
+                resource.IsAdmin = user.Role == UserRole.SuperAdmin;
+                resource.CanConsolidate = user.CanConsolidate;
+                resource.LastLoginAt = user.LastLoginAt;
+            }
+            else
+            {
+                // Create new resource from user
+                var newResource = new Resource
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Name = user.DisplayName,
+                    Email = user.Email,
+                    OrganizationType = OrganizationType.Implementor,
+                    IsActive = user.IsActive,
+                    HasLoginAccess = true,
+                    PasswordHash = user.PasswordHash,
+                    IsAdmin = user.Role == UserRole.SuperAdmin,
+                    CanConsolidate = user.CanConsolidate,
+                    LastLoginAt = user.LastLoginAt,
+                    CreatedAt = user.CreatedAt
+                };
+                context.Resources.Add(newResource);
+            }
         }
-        
-        return false;
+
+        await context.SaveChangesAsync();
+        Console.WriteLine($"Migrated {users.Count} users to resources.");
     }
 }

@@ -6,7 +6,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">
         <i class="bi bi-people me-2"></i>Resources
-        <small class="text-muted fs-6">(@Model.ActiveCount active of @Model.TotalCount)</small>
+        <small class="text-muted fs-6">(@Model.ActiveCount active of @Model.TotalCount, @Model.AdminCount admins)</small>
     </h4>
     @if (User.IsInRole("SuperAdmin"))
     {
@@ -79,7 +79,8 @@
     <span class="badge bg-info">Client</span>
     <span class="badge bg-primary">Implementor</span>
     <span class="badge bg-warning text-dark">Vendor</span>
-    <span class="ms-3"><strong>*</strong> = Primary Service Area</span>
+    <span class="ms-3"><span class="badge bg-danger">Admin</span> = Administrator</span>
+    <span class="ms-2"><strong>*</strong> = Primary Service Area</span>
 </div>
 
 <!-- Table -->
@@ -92,7 +93,7 @@
                     <th style="width: 100px;">Organization</th>
                     <th>Email</th>
                     <th>Service Areas</th>
-                    <th style="width: 70px;">Login</th>
+                    <th style="width: 90px;">Access</th>
                     <th style="width: 80px;">Status</th>
                     @if (User.IsInRole("SuperAdmin"))
                     {
@@ -113,7 +114,13 @@
                 @foreach (var resource in Model.Resources)
                 {
                     <tr class="@(!resource.IsActive ? "table-secondary" : "")">
-                        <td><strong>@resource.Name</strong></td>
+                        <td>
+                            <strong>@resource.Name</strong>
+                            @if (resource.IsAdmin)
+                            {
+                                <span class="badge bg-danger ms-1" title="Administrator">Admin</span>
+                            }
+                        </td>
                         <td>
                             <span class="badge @resource.OrganizationTypeBadgeClass">@resource.OrganizationTypeDisplay</span>
                         </td>
@@ -143,9 +150,11 @@
                             }
                         </td>
                         <td>
-                            @if (resource.HasLogin)
+                            @if (resource.HasLoginAccess)
                             {
-                                <span class="badge bg-success" title="Has login access">Yes</span>
+                                <span class="badge bg-success" title="Last login: @resource.LastLoginDisplay">
+                                    <i class="bi bi-check-lg"></i> Login
+                                </span>
                             }
                             else
                             {
@@ -170,7 +179,8 @@
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     <button type="button" class="btn btn-outline-danger delete-btn" 
-                                            data-id="@resource.Id" data-name="@resource.Name" title="Delete">
+                                            data-id="@resource.Id" data-name="@resource.Name" 
+                                            data-admin="@resource.IsAdmin.ToString().ToLower()" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
@@ -183,7 +193,7 @@
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
+<!-- Delete Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -193,7 +203,11 @@
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete <strong id="deleteResourceName"></strong>?</p>
-                <p class="text-muted small mb-0">This action cannot be undone. All service area memberships and skill assignments will also be removed.</p>
+                <p class="text-muted small mb-0">This action cannot be undone.</p>
+                <div id="adminWarning" class="alert alert-warning mt-3 d-none">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This is an administrator account. Deleting it may affect system access.
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -217,9 +231,11 @@
         btn.addEventListener('click', function() {
             var id = this.dataset.id;
             var name = this.dataset.name;
+            var isAdmin = this.dataset.admin === 'true';
             
             document.getElementById('deleteResourceName').textContent = name;
             document.getElementById('deleteForm').action = '/resources/delete/' + encodeURIComponent(id);
+            document.getElementById('adminWarning').classList.toggle('d-none', !isAdmin);
             
             deleteModal.show();
         });
