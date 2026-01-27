@@ -1,0 +1,379 @@
+@model Tracker.Web.ViewModels.TimesheetEntriesViewModel
+@{
+    ViewData["Title"] = "Admin Timesheet";
+    Layout = "_Layout";
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-clock-fill me-2"></i>All Timesheets
+        </h2>
+        <div>
+            <button type="button" class="btn btn-outline-success" id="exportBtn">
+                <i class="bi bi-file-earmark-excel me-1"></i>Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-funnel me-2"></i>Filters
+        </div>
+        <div class="card-body">
+            <form method="get" id="filterForm">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Service Area</label>
+                        <select name="serviceAreaId" id="serviceAreaId" class="form-select">
+                            <option value="">All Service Areas</option>
+                            @foreach (var sa in Model.AvailableServiceAreas)
+                            {
+                                <option value="@sa.Id" selected="@(sa.Id == Model.ServiceAreaId)">@sa.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Resource</label>
+                        <select name="resourceId" id="resourceId" class="form-select">
+                            <option value="">All Resources</option>
+                            @{
+                                var resources = Model.Entries
+                                    .Where(e => e.Resource != null)
+                                    .Select(e => e.Resource)
+                                    .DistinctBy(r => r!.Id)
+                                    .OrderBy(r => r!.Name);
+                            }
+                            @foreach (var r in resources)
+                            {
+                                <option value="@r!.Id" selected="@(r.Id == Model.ResourceId)">@r.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="startDate" id="startDate" class="form-control" 
+                               value="@Model.StartDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="endDate" id="endDate" class="form-control" 
+                               value="@Model.EndDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search me-1"></i>Filter
+                        </button>
+                        <a href="@Url.Action("AdminView", "Timesheet")" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Quick Date Filters -->
+                <div class="mt-3">
+                    <span class="text-muted me-2">Quick:</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary quick-date" data-range="today">Today</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary quick-date" data-range="week">This Week</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary quick-date" data-range="month">This Month</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary quick-date" data-range="lastmonth">Last Month</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary quick-date" data-range="year">This Year</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-1 opacity-75">Total Entries</h6>
+                            <h3 class="card-title mb-0">@Model.Entries.Count</h3>
+                        </div>
+                        <i class="bi bi-list-ul display-6 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-1 opacity-75">Total Hours</h6>
+                            <h3 class="card-title mb-0">@Model.TotalHours.ToString("N2")</h3>
+                        </div>
+                        <i class="bi bi-clock display-6 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-1 opacity-75">Contributed Hours</h6>
+                            <h3 class="card-title mb-0">@Model.TotalContributedHours.ToString("N2")</h3>
+                        </div>
+                        <i class="bi bi-check2-circle display-6 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-1 opacity-75">Unique Resources</h6>
+                            <h3 class="card-title mb-0">@Model.Entries.Select(e => e.ResourceId).Distinct().Count()</h3>
+                        </div>
+                        <i class="bi bi-people display-6 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary by Resource (Collapsible) -->
+    @if (Model.Entries.Any())
+    {
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center" 
+                 data-bs-toggle="collapse" data-bs-target="#resourceSummary" 
+                 style="cursor: pointer;">
+                <span><i class="bi bi-bar-chart me-2"></i>Summary by Resource</span>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse" id="resourceSummary">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Resource</th>
+                                    <th class="text-end">Entries</th>
+                                    <th class="text-end">Hours</th>
+                                    <th class="text-end">Contributed</th>
+                                    <th class="text-end">Contribution %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    var byResource = Model.Entries
+                                        .GroupBy(e => new { e.ResourceId, Name = e.Resource?.Name ?? "Unknown" })
+                                        .Select(g => new {
+                                            g.Key.Name,
+                                            Count = g.Count(),
+                                            Hours = g.Sum(e => e.Hours),
+                                            Contributed = g.Sum(e => e.ContributedHours)
+                                        })
+                                        .OrderByDescending(x => x.Hours);
+                                }
+                                @foreach (var item in byResource)
+                                {
+                                    var pct = item.Hours > 0 ? (item.Contributed / item.Hours * 100) : 0;
+                                    <tr>
+                                        <td>@item.Name</td>
+                                        <td class="text-end">@item.Count</td>
+                                        <td class="text-end">@item.Hours.ToString("N2")</td>
+                                        <td class="text-end">@item.Contributed.ToString("N2")</td>
+                                        <td class="text-end">@pct.ToString("N1")%</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light fw-bold">
+                                <tr>
+                                    <td>Total</td>
+                                    <td class="text-end">@Model.Entries.Count</td>
+                                    <td class="text-end">@Model.TotalHours.ToString("N2")</td>
+                                    <td class="text-end">@Model.TotalContributedHours.ToString("N2")</td>
+                                    <td class="text-end">
+                                        @((Model.TotalHours > 0 ? Model.TotalContributedHours / Model.TotalHours * 100 : 0).ToString("N1"))%
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Entries Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-table me-2"></i>Time Entries</span>
+            <span class="badge bg-secondary">@Model.Entries.Count entries</span>
+        </div>
+        <div class="card-body p-0">
+            @if (Model.Entries.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0" id="entriesTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="sortable" data-sort="date">
+                                    Date <i class="bi bi-arrow-down-up text-muted small"></i>
+                                </th>
+                                <th class="sortable" data-sort="resource">
+                                    Resource <i class="bi bi-arrow-down-up text-muted small"></i>
+                                </th>
+                                <th>Service Area</th>
+                                <th class="sortable" data-sort="enhancement">
+                                    Enhancement <i class="bi bi-arrow-down-up text-muted small"></i>
+                                </th>
+                                <th>Work Phase</th>
+                                <th class="text-end sortable" data-sort="hours">
+                                    Hours <i class="bi bi-arrow-down-up text-muted small"></i>
+                                </th>
+                                <th class="text-end">Contributed</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in Model.Entries.OrderByDescending(e => e.StartDate).ThenBy(e => e.Resource?.Name))
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="text-nowrap">@entry.StartDate.ToString("yyyy-MM-dd")</span>
+                                        @if (entry.StartDate != entry.EndDate)
+                                        {
+                                            <br />
+                                            <small class="text-muted">to @entry.EndDate.ToString("yyyy-MM-dd")</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="fw-medium">@entry.Resource?.Name</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">@entry.Enhancement?.ServiceArea?.Code</span>
+                                    </td>
+                                    <td>
+                                        <a href="@Url.Action("Details", "Enhancements", new { id = entry.EnhancementId })" 
+                                           class="text-decoration-none">
+                                            @entry.Enhancement?.WorkId
+                                        </a>
+                                        @if (!string.IsNullOrEmpty(entry.Enhancement?.Description))
+                                        {
+                                            <br />
+                                            <small class="text-muted text-truncate d-inline-block" style="max-width: 200px;" 
+                                                   title="@entry.Enhancement.Description">
+                                                @entry.Enhancement.Description
+                                            </small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-outline-primary border">@entry.WorkPhase?.Name</span>
+                                    </td>
+                                    <td class="text-end fw-medium">
+                                        @entry.Hours.ToString("N2")
+                                    </td>
+                                    <td class="text-end">
+                                        @entry.ContributedHours.ToString("N2")
+                                        @if (entry.Hours > 0)
+                                        {
+                                            var contribPct = entry.ContributedHours / entry.Hours * 100;
+                                            <br />
+                                            <small class="text-muted">(@contribPct.ToString("N0")%)</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(entry.Notes))
+                                        {
+                                            <span class="text-truncate d-inline-block" style="max-width: 150px;" 
+                                                  title="@entry.Notes">
+                                                @entry.Notes
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-light fw-bold">
+                            <tr>
+                                <td colspan="5">Total</td>
+                                <td class="text-end">@Model.TotalHours.ToString("N2")</td>
+                                <td class="text-end">@Model.TotalContributedHours.ToString("N2")</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-inbox display-1"></i>
+                    <p class="mt-3 mb-0">No time entries found.</p>
+                    <p class="small">Try adjusting your filter criteria.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Quick date filters
+        document.querySelectorAll('.quick-date').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const range = this.dataset.range;
+                const today = new Date();
+                let startDate, endDate;
+                
+                switch(range) {
+                    case 'today':
+                        startDate = endDate = today;
+                        break;
+                    case 'week':
+                        const dayOfWeek = today.getDay();
+                        startDate = new Date(today);
+                        startDate.setDate(today.getDate() - dayOfWeek);
+                        endDate = new Date(startDate);
+                        endDate.setDate(startDate.getDate() + 6);
+                        break;
+                    case 'month':
+                        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                        endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                        break;
+                    case 'lastmonth':
+                        startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                        break;
+                    case 'year':
+                        startDate = new Date(today.getFullYear(), 0, 1);
+                        endDate = new Date(today.getFullYear(), 11, 31);
+                        break;
+                }
+                
+                document.getElementById('startDate').value = formatDate(startDate);
+                document.getElementById('endDate').value = formatDate(endDate);
+                document.getElementById('filterForm').submit();
+            });
+        });
+        
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+        
+        // Export functionality
+        document.getElementById('exportBtn')?.addEventListener('click', function() {
+            const params = new URLSearchParams(window.location.search);
+            params.set('export', 'excel');
+            window.location.href = '@Url.Action("AdminView", "Timesheet")?' + params.toString();
+        });
+    });
+</script>
+}

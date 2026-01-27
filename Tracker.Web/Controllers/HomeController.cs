@@ -33,6 +33,7 @@ public class HomeController : Controller
         return View();
     }
 
+    [AllowAnonymous]
     public IActionResult Error()
     {
         return View();
