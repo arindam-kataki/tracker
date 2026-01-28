@@ -149,7 +149,7 @@ public class ResourcesController : BaseController
             return NotFound();
 
         var result = await _resourceService.DeleteResourceAsync(id);
-        
+
         if (result.Success)
         {
             _logger.LogInformation("Resource {Name} deleted by {User}", resource.Name, CurrentUserEmail);
@@ -179,7 +179,7 @@ public class ResourcesController : BaseController
         }
 
         var result = await _resourceService.ResetPasswordAsync(id, newPassword);
-        
+
         if (result.Success)
         {
             _logger.LogInformation("Password reset for {Name} by {User}", resource.Name, CurrentUserEmail);
@@ -198,7 +198,7 @@ public class ResourcesController : BaseController
     {
         var serviceAreas = await _resourceService.GetAvailableServiceAreasAsync();
         var sa = serviceAreas.FirstOrDefault(s => s.Id == serviceAreaId);
-        
+
         if (sa == null)
             return NotFound();
 
@@ -222,4 +222,33 @@ public class ResourcesController : BaseController
         var resources = await _resourceService.GetResourcesForColumnAsync(serviceAreaId, column);
         return Json(resources.Select(r => new { r.Id, r.Name, r.Email }));
     }
+
+    // Add this endpoint to ResourcesController.cs
+
+    /// <summary>
+    /// Gets potential managers for a service area (for AJAX dropdown population)
+    /// </summary>
+    [HttpGet("potential-managers")]
+    public async Task<IActionResult> GetPotentialManagers(string serviceAreaId, string? excludeResourceId = null)
+    {
+        if (string.IsNullOrEmpty(serviceAreaId))
+            return BadRequest("Service area ID is required");
+
+        var managers = await _resourceService.GetPotentialManagersAsync(serviceAreaId, excludeResourceId);
+        return Json(managers.Select(m => new { value = m.Value, text = m.Text }));
+    }
+
+    /// <summary>
+    /// Validates a reports-to assignment for circular references
+    /// </summary>
+    [HttpGet("validate-reports-to")]
+    public async Task<IActionResult> ValidateReportsTo(string resourceId, string serviceAreaId, string? reportsToResourceId)
+    {
+        if (string.IsNullOrEmpty(resourceId) || string.IsNullOrEmpty(serviceAreaId))
+            return BadRequest("Resource ID and Service Area ID are required");
+
+        var isValid = await _resourceService.ValidateReportsToAsync(resourceId, serviceAreaId, reportsToResourceId);
+        return Json(new { valid = isValid, message = isValid ? null : "This would create a circular reporting relationship." });
+    }
+
 }

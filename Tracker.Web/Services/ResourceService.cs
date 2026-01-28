@@ -738,4 +738,143 @@ public class ResourceService : IResourceService
     }
 
     #endregion
+
+
+    /// <summary>
+    /// Gets resources that can be selected as a manager for a given service area.
+    /// Excludes the specified resource (can't report to yourself).
+    /// Only includes active resources with membership in the specified service area.
+    /// </summary>
+    public async Task<List<SelectListItem>> GetPotentialManagersAsync(string serviceAreaId, string? excludeResourceId = null)
+    {
+        var query = _db.ResourceServiceAreas
+            .Include(rsa => rsa.Resource)
+            .Where(rsa => rsa.ServiceAreaId == serviceAreaId
+                       && rsa.Resource.IsActive);
+
+        if (!string.IsNullOrEmpty(excludeResourceId))
+        {
+            query = query.Where(rsa => rsa.ResourceId != excludeResourceId);
+        }
+
+        var managers = await query
+            .OrderBy(rsa => rsa.Resource.Name)
+            .Select(rsa => new SelectListItem
+            {
+                Value = rsa.ResourceId,
+                Text = rsa.Resource.Name
+            })
+            .ToListAsync();
+
+        // Add empty option at the beginning
+        managers.Insert(0, new SelectListItem { Value = "", Text = "-- No Manager --" });
+
+        return managers;
+    }
+
+    /// <summary>
+    /// Validates that a ReportsTo assignment doesn't create a circular reference.
+    /// Returns true if the assignment is valid (no circular reference).
+    /// </summary>
+    public async Task<bool> ValidateReportsToAsync(string resourceId, string serviceAreaId, string? reportsToResourceId)
+    {
+        if (string.IsNullOrEmpty(reportsToResourceId))
+            return true; // No manager is always valid
+
+        if (resourceId == reportsToResourceId)
+            return false; // Can't report to yourself
+
+        // Check for circular references by walking up the chain
+        var visited = new HashSet<string> { resourceId };
+        var currentManagerId = reportsToResourceId;
+
+        while (!string.IsNullOrEmpty(currentManagerId))
+        {
+            if (visited.Contains(currentManagerId))
+                return false; // Circular reference detected
+
+            visited.Add(currentManagerId);
+
+            // Get the manager's manager in this service area
+            var managerMembership = await _db.ResourceServiceAreas
+                .Where(rsa => rsa.ResourceId == currentManagerId && rsa.ServiceAreaId == serviceAreaId)
+                .Select(rsa => rsa.ReportsToResourceId)
+                .FirstOrDefaultAsync();
+
+            currentManagerId = managerMembership;
+        }
+
+        return true;
+    }
+
+
+    /// <summary>
+    /// Gets the direct reports for a resource within a service area.
+    /// </summary>
+    public async Task<List<ResourceListItem>> GetDirectReportsAsync(string resourceId, string serviceAreaId)
+    {
+        var directReports = await _db.ResourceServiceAreas
+            .Include(rsa => rsa.Resource)
+                .ThenInclude(r => r.ServiceAreas)
+                    .ThenInclude(sa => sa.ServiceArea)
+            .Where(rsa => rsa.ReportsToResourceId == resourceId
+                       && rsa.ServiceAreaId == serviceAreaId
+                       && rsa.Resource.IsActive)
+            .OrderBy(rsa => rsa.Resource.Name)
+            .Select(rsa => rsa.Resource)
+            .ToListAsync();
+
+        return directReports.Select(r => new ResourceListItem
+        {
+            Id = r.Id,
+            Name = r.Name,
+            Email = r.Email,
+            OrganizationType = r.OrganizationType,
+            IsActive = r.IsActive,
+            HasLoginAccess = r.HasLoginAccess,
+            IsAdmin = r.IsAdmin,
+            LastLoginAt = r.LastLoginAt,
+            ResourceTypeId = r.ResourceTypeId,
+            ServiceAreas = r.ServiceAreas.Select(sa => new ResourceServiceAreaSummary
+            {
+                ServiceAreaId = sa.ServiceAreaId,
+                Code = sa.ServiceArea?.Code ?? "",
+                Name = sa.ServiceArea?.Name ?? "",
+                IsPrimary = sa.IsPrimary,
+                Permissions = sa.Permissions
+            }).ToList()
+        }).ToList();
+    }
+
+
+    /// <summary>
+    /// Gets the full reporting chain (hierarchy) for a resource within a service area.
+    /// Returns list from immediate manager up to top of hierarchy.
+    /// </summary>
+    public async Task<List<(string ResourceId, string Name)>> GetReportingChainAsync(string resourceId, string serviceAreaId)
+    {
+        var chain = new List<(string ResourceId, string Name)>();
+        var visited = new HashSet<string> { resourceId };
+
+        var membership = await _db.ResourceServiceAreas
+            .Include(rsa => rsa.ReportsTo)
+            .Where(rsa => rsa.ResourceId == resourceId && rsa.ServiceAreaId == serviceAreaId)
+            .FirstOrDefaultAsync();
+
+        while (membership?.ReportsToResourceId != null)
+        {
+            if (visited.Contains(membership.ReportsToResourceId))
+                break; // Safety: break on circular reference
+
+            visited.Add(membership.ReportsToResourceId);
+            chain.Add((membership.ReportsToResourceId, membership.ReportsTo?.Name ?? "Unknown"));
+
+            membership = await _db.ResourceServiceAreas
+                .Include(rsa => rsa.ReportsTo)
+                .Where(rsa => rsa.ResourceId == membership.ReportsToResourceId && rsa.ServiceAreaId == serviceAreaId)
+                .FirstOrDefaultAsync();
+        }
+
+        return chain;
+    }
 }

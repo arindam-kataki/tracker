@@ -99,4 +99,44 @@ public interface IResourceService
     Task<bool> IsLastAdminAsync(string resourceId);
     
     #endregion
+
+      #region Reporting Hierarchy
+    
+    /// <summary>
+    /// Gets resources that can be selected as a manager for a given service area.
+    /// Excludes the specified resource (can't report to yourself).
+    /// Only includes active resources with membership in the specified service area.
+    /// </summary>
+    /// <param name="serviceAreaId">The service area to find managers for</param>
+    /// <param name="excludeResourceId">Resource to exclude from results (typically the resource being edited)</param>
+    /// <returns>SelectListItems for dropdown population</returns>
+    Task<List<SelectListItem>> GetPotentialManagersAsync(string serviceAreaId, string? excludeResourceId = null);
+    
+    /// <summary>
+    /// Validates that a ReportsTo assignment doesn't create a circular reference.
+    /// </summary>
+    /// <param name="resourceId">The resource who will report to someone</param>
+    /// <param name="serviceAreaId">The service area context</param>
+    /// <param name="reportsToResourceId">The proposed manager</param>
+    /// <returns>True if the assignment is valid (no circular reference), false otherwise</returns>
+    Task<bool> ValidateReportsToAsync(string resourceId, string serviceAreaId, string? reportsToResourceId);
+    
+    /// <summary>
+    /// Gets the direct reports for a resource within a service area.
+    /// </summary>
+    /// <param name="resourceId">The manager's resource ID</param>
+    /// <param name="serviceAreaId">The service area context</param>
+    /// <returns>List of resources who report to this manager in the specified service area</returns>
+    Task<List<ResourceListItem>> GetDirectReportsAsync(string resourceId, string serviceAreaId);
+    
+    /// <summary>
+    /// Gets the full reporting chain (hierarchy) for a resource within a service area.
+    /// Returns list from immediate manager up to top of hierarchy.
+    /// </summary>
+    /// <param name="resourceId">The resource to get the chain for</param>
+    /// <param name="serviceAreaId">The service area context</param>
+    /// <returns>List of (ResourceId, Name) tuples representing the management chain</returns>
+    Task<List<(string ResourceId, string Name)>> GetReportingChainAsync(string resourceId, string serviceAreaId);
+    
+    #endregion
 }
