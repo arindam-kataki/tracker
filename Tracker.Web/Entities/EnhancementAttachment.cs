@@ -41,7 +41,7 @@ public class EnhancementAttachment
     
     // Navigation
     public virtual Enhancement Enhancement { get; set; } = null!;
-    public virtual User? UploadedByUser { get; set; }
+    public virtual Resource? UploadedByResource { get; set; }
     
     // Constants
     public const long MaxFileSizeBytes = 104857600; // 100MB

@@ -192,7 +192,7 @@ public class EnhancementDetailsController : BaseController
                 ContentType = a.ContentType,
                 FileSize = a.FileSize,
                 UploadedBy = a.UploadedBy,
-                UploadedByName = a.UploadedByUser?.DisplayName ?? a.UploadedBy,
+                UploadedByName = a.UploadedByResource?.DisplayName ?? a.UploadedBy,
                 UploadedAt = a.UploadedAt
             }).ToList();
 
@@ -203,7 +203,7 @@ public class EnhancementDetailsController : BaseController
                 Id = n.Id,
                 NoteText = n.NoteText,
                 CreatedBy = n.CreatedBy,
-                CreatedByName = n.CreatedByUser?.DisplayName ?? n.CreatedBy,
+                CreatedByName = n.CreatedByResource?.DisplayName ?? n.CreatedBy,
                 CreatedAt = n.CreatedAt,
                 ModifiedBy = n.ModifiedBy,
                 ModifiedAt = n.ModifiedAt

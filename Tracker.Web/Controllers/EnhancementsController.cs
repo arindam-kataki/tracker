@@ -54,7 +54,7 @@ public class EnhancementsController : BaseController
         if (!string.IsNullOrEmpty(filterId))
         {
             loadedFilter = await _savedFilterService.GetByIdAsync(filterId);
-            if (loadedFilter != null && loadedFilter.UserId == CurrentUserId)
+            if (loadedFilter != null && loadedFilter.ResourceId == CurrentUserId)
             {
                 activeFilter = EnhancementFilterViewModel.FromJson(loadedFilter.FilterJson);
                 // Preserve page/sort from query if provided
@@ -355,7 +355,7 @@ public class EnhancementsController : BaseController
     public async Task<IActionResult> GetFilter(string id)
     {
         var filter = await _savedFilterService.GetByIdAsync(id);
-        if (filter == null || filter.UserId != CurrentUserId)
+        if (filter == null || filter.ResourceId != CurrentUserId)
             return NotFound();
 
         return Json(new

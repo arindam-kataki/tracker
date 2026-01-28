@@ -167,6 +167,8 @@ public static class DbInitializer
     /// Migrates existing Users to Resources (one-time migration helper).
     /// Call this manually if you have existing Users that need to be converted.
     /// </summary>
+    /// 
+    /*
     public static async Task MigrateUsersToResourcesAsync(TrackerDbContext context)
     {
         // This is a helper method for manual migration if needed
@@ -212,4 +214,6 @@ public static class DbInitializer
         await context.SaveChangesAsync();
         Console.WriteLine($"Migrated {users.Count} users to resources.");
     }
+
+    */
 }

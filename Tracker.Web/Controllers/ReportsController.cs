@@ -194,7 +194,7 @@ public class ReportsController : BaseController
             {
                 // Update existing
                 var existingReport = await _reportService.GetByIdAsync(request.Id);
-                if (existingReport == null || existingReport.UserId != CurrentUserId)
+                if (existingReport == null || existingReport.ResourceId != CurrentUserId)
                 {
                     return Json(new { success = false, error = "Report not found or access denied." });
                 }

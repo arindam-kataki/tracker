@@ -70,8 +70,8 @@ public class Consolidation
     // Navigation
     public virtual Enhancement Enhancement { get; set; } = null!;
     public virtual ServiceArea ServiceArea { get; set; } = null!;
-    public virtual User? CreatedBy { get; set; }
-    public virtual User? ModifiedBy { get; set; }
+    public virtual Resource? CreatedBy { get; set; }
+    public virtual Resource? ModifiedBy { get; set; }
     
     /// <summary>
     /// Source timesheet entries that contributed to this consolidation

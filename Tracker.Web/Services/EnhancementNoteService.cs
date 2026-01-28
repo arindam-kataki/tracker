@@ -17,7 +17,7 @@ public class EnhancementNoteService : IEnhancementNoteService
     public async Task<List<Note>> GetByEnhancementIdAsync(string enhancementId)
     {
         return await _db.EnhancementNotes
-            .Include(n => n.CreatedByUser)
+            .Include(n => n.CreatedByResource)
             .Where(n => n.EnhancementId == enhancementId)
             .OrderByDescending(n => n.CreatedAt)
             .ToListAsync();
@@ -26,7 +26,7 @@ public class EnhancementNoteService : IEnhancementNoteService
     public async Task<Note?> GetByIdAsync(string id)
     {
         return await _db.EnhancementNotes
-            .Include(n => n.CreatedByUser)
+            .Include(n => n.CreatedByResource)
             .FirstOrDefaultAsync(n => n.Id == id);
     }
 

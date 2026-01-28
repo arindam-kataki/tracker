@@ -16,7 +16,7 @@ public class NamedReport
     /// <summary>
     /// User who created the report.
     /// </summary>
-    public string UserId { get; set; } = string.Empty;
+    public string ResourceId { get; set; } = string.Empty;
     
     /// <summary>
     /// JSON array of service area IDs to include in this report.
@@ -45,5 +45,5 @@ public class NamedReport
     public DateTime? ModifiedAt { get; set; }
     
     // Navigation
-    public virtual User User { get; set; } = null!;
+    public virtual Resource Resource { get; set; } = null!;
 }

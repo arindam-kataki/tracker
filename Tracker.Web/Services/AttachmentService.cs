@@ -34,7 +34,7 @@ public class AttachmentService : IAttachmentService
     public async Task<List<EnhancementAttachment>> GetByEnhancementIdAsync(string enhancementId)
     {
         return await _db.EnhancementAttachments
-            .Include(a => a.UploadedByUser)
+            .Include(a => a.UploadedByResource)
             .Where(a => a.EnhancementId == enhancementId)
             .OrderByDescending(a => a.UploadedAt)
             .ToListAsync();
@@ -43,7 +43,7 @@ public class AttachmentService : IAttachmentService
     public async Task<EnhancementAttachment?> GetByIdAsync(string id)
     {
         return await _db.EnhancementAttachments
-            .Include(a => a.UploadedByUser)
+            .Include(a => a.UploadedByResource)
             .FirstOrDefaultAsync(a => a.Id == id);
     }
 

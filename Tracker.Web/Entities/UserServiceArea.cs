@@ -6,6 +6,6 @@ public class UserServiceArea
     public string ServiceAreaId { get; set; } = string.Empty;
 
     // Navigation
-    public virtual User User { get; set; } = null!;
+    public virtual Resource User { get; set; } = null!;
     public virtual ServiceArea ServiceArea { get; set; } = null!;
 }

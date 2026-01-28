@@ -19,7 +19,7 @@ public class SavedFilterService : ISavedFilterService
     public async Task<List<SavedFilter>> GetUserFiltersAsync(string userId, string serviceAreaId)
     {
         return await _db.SavedFilters
-            .Where(f => f.UserId == userId && f.ServiceAreaId == serviceAreaId)
+            .Where(f => f.ResourceId == userId && f.ServiceAreaId == serviceAreaId)
             .OrderBy(f => f.Name)
             .ToListAsync();
     }
@@ -32,7 +32,7 @@ public class SavedFilterService : ISavedFilterService
     public async Task<SavedFilter?> GetDefaultFilterAsync(string userId, string serviceAreaId)
     {
         return await _db.SavedFilters
-            .FirstOrDefaultAsync(f => f.UserId == userId && f.ServiceAreaId == serviceAreaId && f.IsDefault);
+            .FirstOrDefaultAsync(f => f.ResourceId == userId && f.ServiceAreaId == serviceAreaId && f.IsDefault);
     }
 
     public async Task<SavedFilter> SaveFilterAsync(string userId, SaveFilterRequest request)
@@ -45,7 +45,7 @@ public class SavedFilterService : ISavedFilterService
             filter = await _db.SavedFilters.FindAsync(request.Id) 
                 ?? throw new InvalidOperationException("Filter not found");
             
-            if (filter.UserId != userId)
+            if (filter.ResourceId != userId)
                 throw new UnauthorizedAccessException("Cannot modify another user's filter");
             
             filter.Name = request.Name;
@@ -58,7 +58,7 @@ public class SavedFilterService : ISavedFilterService
             // Create new
             filter = new SavedFilter
             {
-                UserId = userId,
+                ResourceId = userId,
                 ServiceAreaId = request.ServiceAreaId,
                 Name = request.Name,
                 FilterJson = request.Filter.ToJson(),
@@ -71,7 +71,7 @@ public class SavedFilterService : ISavedFilterService
         if (request.IsDefault)
         {
             var otherDefaults = await _db.SavedFilters
-                .Where(f => f.UserId == userId && 
+                .Where(f => f.ResourceId == userId && 
                            f.ServiceAreaId == request.ServiceAreaId && 
                            f.IsDefault && 
                            f.Id != filter.Id)
@@ -93,7 +93,7 @@ public class SavedFilterService : ISavedFilterService
         if (filter == null)
             return false;
         
-        if (filter.UserId != userId)
+        if (filter.ResourceId != userId)
             return false;
         
         _db.SavedFilters.Remove(filter);
@@ -103,8 +103,8 @@ public class SavedFilterService : ISavedFilterService
 
     public async Task<List<string>> GetUserColumnsAsync(string userId, string serviceAreaId)
     {
-        var pref = await _db.UserColumnPreferences
-            .FirstOrDefaultAsync(p => p.UserId == userId && p.ServiceAreaId == serviceAreaId);
+        var pref = await _db.ResourceColumnPreferences
+            .FirstOrDefaultAsync(p => p.ResourceId == userId && p.ServiceAreaId == serviceAreaId);
         
         if (pref == null)
             return ColumnDefinition.GetDefaultColumnKeys();
@@ -122,17 +122,17 @@ public class SavedFilterService : ISavedFilterService
 
     public async Task SaveUserColumnsAsync(string userId, string serviceAreaId, List<string> columns)
     {
-        var pref = await _db.UserColumnPreferences
-            .FirstOrDefaultAsync(p => p.UserId == userId && p.ServiceAreaId == serviceAreaId);
+        var pref = await _db.ResourceColumnPreferences
+            .FirstOrDefaultAsync(p => p.ResourceId == userId && p.ServiceAreaId == serviceAreaId);
         
         if (pref == null)
         {
-            pref = new UserColumnPreference
+            pref = new ResourceColumnPreference
             {
-                UserId = userId,
+                ResourceId = userId,
                 ServiceAreaId = serviceAreaId
             };
-            _db.UserColumnPreferences.Add(pref);
+            _db.ResourceColumnPreferences.Add(pref);
         }
         
         pref.ColumnsJson = JsonSerializer.Serialize(columns);

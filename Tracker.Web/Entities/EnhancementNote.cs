@@ -21,5 +21,5 @@ public class Note
     
     // Navigation
     public virtual Enhancement Enhancement { get; set; } = null!;
-    public virtual User? CreatedByUser { get; set; }
+    public virtual Resource? CreatedByResource { get; set; }
 }

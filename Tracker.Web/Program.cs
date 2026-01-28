@@ -40,7 +40,7 @@ builder.Services.AddAuthorization(options =>
 
 // Register Services
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IUserService, UserService>();
+//builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IResourceService, ResourceService>();
 builder.Services.AddScoped<IEnhancementService, EnhancementService>();
 builder.Services.AddScoped<IUploadService, UploadService>();

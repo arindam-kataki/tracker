@@ -74,9 +74,9 @@ public class TimeEntry
     public virtual Enhancement Enhancement { get; set; } = null!;
     public virtual Resource Resource { get; set; } = null!;
     public virtual WorkPhase WorkPhase { get; set; } = null!;
-    public virtual User? CreatedBy { get; set; }
-    public virtual User? ModifiedBy { get; set; }
-    
+    public virtual Resource? CreatedBy { get; set; }
+    public virtual Resource? ModifiedBy { get; set; }
+
     // For consolidation tracking
     public virtual ICollection<ConsolidationSource> ConsolidationSources { get; set; } = new List<ConsolidationSource>();
     
@@ -101,4 +101,7 @@ public class TimeEntry
     /// Get EndDate as DateTime (midnight local)
     /// </summary>
     public DateTime EndDateTime => EndDate.ToDateTime(TimeOnly.MinValue);
+
+    public decimal AvailableHours { get; set; }
+    public bool IsFullyConsolidated => AvailableHours <= 0;
 }

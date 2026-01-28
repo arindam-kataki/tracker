@@ -19,7 +19,7 @@ public class ReportService : IReportService
     public async Task<List<NamedReport>> GetUserReportsAsync(string userId)
     {
         return await _context.Set<NamedReport>()
-            .Where(r => r.UserId == userId)
+            .Where(r => r.ResourceId == userId)
             .OrderBy(r => r.Name)
             .ToListAsync();
     }
@@ -27,7 +27,7 @@ public class ReportService : IReportService
     public async Task<List<NamedReport>> GetAccessibleReportsAsync(string userId, bool isSuperAdmin, List<string> accessibleServiceAreaIds)
     {
         var reports = await _context.Set<NamedReport>()
-            .Where(r => r.UserId == userId)
+            .Where(r => r.ResourceId == userId)
             .OrderBy(r => r.Name)
             .ToListAsync();
 
@@ -54,7 +54,7 @@ public class ReportService : IReportService
     {
         var report = new NamedReport
         {
-            UserId = userId,
+            ResourceId = userId,
             Name = model.Name,
             Description = model.Description,
             ServiceAreaIdsJson = JsonSerializer.Serialize(model.SelectedServiceAreaIds ?? new List<string>()),
@@ -90,7 +90,7 @@ public class ReportService : IReportService
     public async Task<bool> DeleteReportAsync(string id, string userId)
     {
         var report = await GetByIdAsync(id);
-        if (report == null || report.UserId != userId)
+        if (report == null || report.ResourceId != userId)
             return false;
 
         _context.Set<NamedReport>().Remove(report);
@@ -221,7 +221,7 @@ public class ReportService : IReportService
             return false;
 
         // User must own the report
-        if (report.UserId != userId)
+        if (report.ResourceId != userId)
             return false;
 
         if (isSuperAdmin)
