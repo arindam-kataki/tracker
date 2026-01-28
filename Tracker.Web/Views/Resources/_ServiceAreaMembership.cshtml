@@ -1,6 +1,7 @@
 @model Tracker.Web.ViewModels.EditResourceServiceAreaViewModel
 @{
     var index = (int)ViewData["Index"];
+    var resourceId = ViewData["ResourceId"] as string ?? "";
 }
 
 <div class="card mb-3 sa-membership-card" data-service-area-id="@Model.ServiceAreaId" data-index="@index">
@@ -19,11 +20,30 @@
         <input type="hidden" name="ServiceAreaMemberships[@index].ServiceAreaCode" value="@Model.ServiceAreaCode" />
         <input type="hidden" name="ServiceAreaMemberships[@index].ServiceAreaName" value="@Model.ServiceAreaName" />
         
-        <div class="form-check mb-2">
-            <input type="checkbox" class="form-check-input primary-checkbox" 
-                   name="ServiceAreaMemberships[@index].IsPrimary" 
-                   id="primary_@index" value="true" checked="@Model.IsPrimary" />
-            <label class="form-check-label fw-semibold" for="primary_@index">Primary Service Area</label>
+        <div class="row mb-2">
+            <div class="col-md-6">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input primary-checkbox" 
+                           name="ServiceAreaMemberships[@index].IsPrimary" 
+                           id="primary_@index" value="true" checked="@Model.IsPrimary" />
+                    <label class="form-check-label fw-semibold" for="primary_@index">Primary Service Area</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label mb-1 small fw-semibold text-muted">Reports To</label>
+                <select class="form-select form-select-sm reports-to-select" 
+                        name="ServiceAreaMemberships[@index].ReportsToResourceId"
+                        id="reportsTo_@index"
+                        data-service-area-id="@Model.ServiceAreaId"
+                        data-resource-id="@resourceId">
+                    <option value="">-- No Manager --</option>
+                    @if (!string.IsNullOrEmpty(Model.ReportsToResourceId))
+                    {
+                        <option value="@Model.ReportsToResourceId" selected>@Model.ReportsToName</option>
+                    }
+                </select>
+                <input type="hidden" name="ServiceAreaMemberships[@index].ReportsToName" value="@Model.ReportsToName" />
+            </div>
         </div>
         
         <hr class="my-2" />

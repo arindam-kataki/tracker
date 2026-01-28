@@ -469,7 +469,7 @@ public class TrackerDbContext : DbContext
         });
 
         // TimeEntry
-      
+
 
         // Consolidation
         modelBuilder.Entity<Consolidation>(entity =>
@@ -556,6 +556,14 @@ public class TrackerDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.ServiceAreaId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // ReportsTo relationship
+            entity.HasIndex(e => e.ReportsToResourceId);
+
+            entity.HasOne(e => e.ReportsTo)
+                .WithMany()
+                .HasForeignKey(e => e.ReportsToResourceId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Update Resource configuration
@@ -604,12 +612,12 @@ public class TrackerDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(e => e.Resource)
-                 .WithMany(r => r.TimeEntries) 
+                 .WithMany(r => r.TimeEntries)
                 .HasForeignKey(e => e.ResourceId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(e => e.WorkPhase)
-                .WithMany(wp => wp.TimeEntries) 
+                .WithMany(wp => wp.TimeEntries)
                 .HasForeignKey(e => e.WorkPhaseId)
                 .OnDelete(DeleteBehavior.Restrict);
 

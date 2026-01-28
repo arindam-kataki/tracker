@@ -13,4 +13,6 @@ public class ResourceServiceArea
     public virtual ServiceArea ServiceArea { get; set; } = null!;
     
     public bool HasPermission(Permissions permission) => Permissions.HasFlag(permission);
+    public string? ReportsToResourceId { get; set; }
+    public virtual Resource? ReportsTo { get; set; }
 }

@@ -153,6 +153,16 @@ public class EditResourceServiceAreaViewModel
     public string ServiceAreaCode { get; set; } = string.Empty;
     public string ServiceAreaName { get; set; } = string.Empty;
     public bool IsPrimary { get; set; }
+        
+    /// <summary>
+    /// The resource ID this person reports to within this service area
+    /// </summary>
+    public string? ReportsToResourceId { get; set; }
+    
+    /// <summary>
+    /// Display name for the reporting manager (for UI display)
+    /// </summary>
+    public string? ReportsToName { get; set; }
     
     // Permissions
     public bool ViewEnhancements { get; set; }
