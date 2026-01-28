@@ -14,17 +14,21 @@ public class TimesheetController : BaseController
     private readonly IWorkPhaseService _workPhaseService;
     private readonly IServiceAreaService _serviceAreaService;
     private readonly ILogger<TimesheetController> _logger;
+    private readonly IResourceService _resourceService;
 
     public TimesheetController(
         IAuthService authService,
         ITimesheetService timesheetService,
+        IResourceService resourceService,
         IWorkPhaseService workPhaseService,
         IServiceAreaService serviceAreaService,
         ILogger<TimesheetController> logger) : base(authService)
     {
         _timesheetService = timesheetService;
+        _resourceService = resourceService;
         _workPhaseService = workPhaseService;
         _serviceAreaService = serviceAreaService;
+
         _logger = logger;
     }
 
@@ -544,4 +548,150 @@ public class TimesheetController : BaseController
         ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "timesheet-admin");
         return View("AdminTimesheet", model);
     }
+
+
+    // Add this action to TimesheetController.cs:
+
+    /// <summary>
+    /// Team Timesheet - Rollup view for managers showing their reportees' time entries
+    /// </summary>
+    [HttpGet("team")]
+    public async Task<IActionResult> TeamTimesheet(DateOnly? startDate = null, DateOnly? endDate = null)
+    {
+        var resourceId = CurrentUserId!;
+
+        // Get service areas where user has ViewAllTimesheets permission
+        var allServiceAreas = await _serviceAreaService.GetAllAsync();
+        var viewableServiceAreaIds = new List<string>();
+
+        foreach (var sa in allServiceAreas)
+        {
+            if (IsSuperAdmin || await _resourceService.HasPermissionAsync(resourceId, sa.Id, Permissions.ViewAllTimesheets))
+            {
+                viewableServiceAreaIds.Add(sa.Id);
+            }
+        }
+
+        if (!viewableServiceAreaIds.Any())
+        {
+            ViewBag.Message = "You do not have permission to view team timesheets. You need ViewAllTimesheets permission in at least one service area.";
+            ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "team-timesheet");
+            return View("NoPermission");
+        }
+
+        // Check if user has any direct reports in viewable service areas
+        var hasReports = await _resourceService.HasDirectReportsInServiceAreasAsync(resourceId, viewableServiceAreaIds);
+
+        if (!hasReports && !IsSuperAdmin)
+        {
+            ViewBag.Message = "You do not have any team members reporting to you in service areas where you have ViewAllTimesheets permission.";
+            ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "team-timesheet");
+            return View("NoPermission");
+        }
+
+        // Default to current week
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var start = startDate ?? today.AddDays(-(int)today.DayOfWeek);
+        var end = endDate ?? start.AddDays(6);
+
+        // Get all resources in reporting chain (including self)
+        var teamResources = await _resourceService.GetReportingChainDownwardsAsync(resourceId, viewableServiceAreaIds);
+        var teamResourceIds = teamResources.Select(r => r.Id).ToList();
+
+        // Get entries for all team members
+        var entries = await _timesheetService.GetEntriesForResourcesAsync(
+            teamResourceIds,
+            viewableServiceAreaIds,
+            start,
+            end);
+
+        // Get available work phases for grouping
+        var workPhases = await _workPhaseService.GetForTimeRecordingAsync();
+        var workPhaseDict = workPhases.ToDictionary(wp => wp.Id);
+
+        // Build team member summaries
+        var teamMembers = teamResources.Select(r => new TeamMemberViewModel
+        {
+            ResourceId = r.Id,
+            Name = r.Name,
+            Email = r.Email,
+            IsSelf = r.Id == resourceId,
+            TotalHours = entries.Where(e => e.ResourceId == r.Id).Sum(e => e.Hours),
+            TotalContributedHours = entries.Where(e => e.ResourceId == r.Id).Sum(e => e.ContributedHours),
+            EntryCount = entries.Count(e => e.ResourceId == r.Id)
+        })
+        .OrderByDescending(m => m.IsSelf) // Self first
+        .ThenBy(m => m.Name)
+        .ToList();
+
+        // Group entries by Service Area -> Enhancement -> Work Phase (aggregated across team)
+        var serviceAreaGroups = entries
+            .GroupBy(e => new
+            {
+                ServiceAreaId = e.Enhancement?.ServiceAreaId ?? "",
+                ServiceAreaCode = e.Enhancement?.ServiceArea?.Code ?? "Unknown",
+                ServiceAreaName = e.Enhancement?.ServiceArea?.Name ?? "Unknown"
+            })
+            .OrderBy(g => g.Key.ServiceAreaCode)
+            .Select(saGroup => new ServiceAreaGroupViewModel
+            {
+                ServiceAreaId = saGroup.Key.ServiceAreaId,
+                ServiceAreaCode = saGroup.Key.ServiceAreaCode,
+                ServiceAreaName = saGroup.Key.ServiceAreaName,
+                TotalHours = saGroup.Sum(e => e.Hours),
+                TotalContributedHours = saGroup.Sum(e => e.ContributedHours),
+                EntryCount = saGroup.Count(),
+                WorkItems = saGroup
+                    .GroupBy(e => new
+                    {
+                        EnhancementId = e.EnhancementId,
+                        WorkId = e.Enhancement?.WorkId ?? "Unknown",
+                        Description = e.Enhancement?.Description
+                    })
+                    .OrderBy(g => g.Key.WorkId)
+                    .Select(enhGroup => new WorkItemSummaryViewModel
+                    {
+                        EnhancementId = enhGroup.Key.EnhancementId,
+                        WorkId = enhGroup.Key.WorkId,
+                        Description = enhGroup.Key.Description,
+                        ServiceAreaId = saGroup.Key.ServiceAreaId,
+                        ServiceAreaCode = saGroup.Key.ServiceAreaCode,
+                        TotalHours = enhGroup.Sum(e => e.Hours),
+                        TotalContributedHours = enhGroup.Sum(e => e.ContributedHours),
+                        EntryCount = enhGroup.Count(),
+                        WorkPhaseBreakdown = enhGroup
+                            .GroupBy(e => e.WorkPhaseId)
+                            .OrderBy(g => workPhaseDict.TryGetValue(g.Key, out var wp) ? wp.DisplayOrder : 999)
+                            .Select(wpGroup => new WorkPhaseSummaryViewModel
+                            {
+                                WorkPhaseId = wpGroup.Key,
+                                WorkPhaseName = workPhaseDict.TryGetValue(wpGroup.Key, out var wp) ? wp.Name : "Unknown",
+                                WorkPhaseCode = workPhaseDict.TryGetValue(wpGroup.Key, out var wp2) ? wp2.Code : "?",
+                                Hours = wpGroup.Sum(e => e.Hours),
+                                ContributedHours = wpGroup.Sum(e => e.ContributedHours)
+                            })
+                            .ToList()
+                    })
+                    .ToList()
+            })
+            .ToList();
+
+        var model = new TeamTimesheetViewModel
+        {
+            ManagerId = resourceId,
+            ManagerName = CurrentUserName ?? "Unknown",
+            StartDate = start.ToDateTime(TimeOnly.MinValue),
+            EndDate = end.ToDateTime(TimeOnly.MinValue),
+            TeamMembers = teamMembers,
+            TotalHours = entries.Sum(e => e.Hours),
+            TotalContributedHours = entries.Sum(e => e.ContributedHours),
+            EntryCount = entries.Count,
+            ServiceAreaGroups = serviceAreaGroups,
+            ViewableServiceAreas = allServiceAreas.Where(sa => viewableServiceAreaIds.Contains(sa.Id)).ToList()
+        };
+
+        ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "team-timesheet");
+        return View("TeamTimesheet", model);
+    }
+
 }

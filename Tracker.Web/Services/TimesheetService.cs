@@ -113,9 +113,9 @@ public class TimesheetService : ITimesheetService
     {
         // Get work phase for default contribution
         var workPhase = await _workPhaseService.GetByIdAsync(workPhaseId);
-        
+
         // Calculate contributed hours if not provided
-        var actualContributedHours = contributedHours ?? 
+        var actualContributedHours = contributedHours ??
             (hours * (workPhase?.DefaultContributionPercent ?? 100) / 100m);
 
         var entry = new TimeEntry
@@ -158,7 +158,7 @@ public class TimesheetService : ITimesheetService
         // Check if entry is consolidated
         var isConsolidated = await _db.ConsolidationSources
             .AnyAsync(cs => cs.TimeEntryId == id);
-        
+
         if (isConsolidated)
         {
             // Only allow notes update for consolidated entries
@@ -246,7 +246,7 @@ public class TimesheetService : ITimesheetService
         var memberships = await _db.ResourceServiceAreas
             .Where(rsa => rsa.ResourceId == resourceId)
             .ToListAsync();
-        
+
         var serviceAreaIds = memberships
             .Where(rsa => rsa.Permissions.HasFlag(Permissions.LogTimesheet))
             .Select(rsa => rsa.ServiceAreaId)
@@ -267,7 +267,7 @@ public class TimesheetService : ITimesheetService
         var memberships = await _db.ResourceServiceAreas
             .Where(rsa => rsa.ResourceId == resourceId)
             .ToListAsync();
-            
+
         var permittedServiceAreaIds = memberships
             .Where(rsa => rsa.Permissions.HasFlag(Permissions.LogTimesheet))
             .Select(rsa => rsa.ServiceAreaId)
@@ -285,7 +285,7 @@ public class TimesheetService : ITimesheetService
         {
             if (!permittedServiceAreaIds.Contains(serviceAreaId))
                 return new List<Enhancement>();
-            
+
             query = query.Where(e => e.ServiceAreaId == serviceAreaId);
         }
 
@@ -293,7 +293,7 @@ public class TimesheetService : ITimesheetService
         if (!string.IsNullOrEmpty(search))
         {
             var searchLower = search.ToLower();
-            query = query.Where(e => 
+            query = query.Where(e =>
                 e.WorkId.ToLower().Contains(searchLower) ||
                 e.Description.ToLower().Contains(searchLower));
         }
@@ -315,12 +315,12 @@ public class TimesheetService : ITimesheetService
 
         // Get the resource's memberships and check in memory (for HasFlag)
         var membership = await _db.ResourceServiceAreas
-            .FirstOrDefaultAsync(rsa => 
-                rsa.ResourceId == resourceId && 
+            .FirstOrDefaultAsync(rsa =>
+                rsa.ResourceId == resourceId &&
                 rsa.ServiceAreaId == enhancement.ServiceAreaId);
-        
+
         if (membership == null) return false;
-        
+
         return membership.Permissions.HasFlag(Permissions.LogTimesheet);
     }
 
@@ -371,4 +371,49 @@ public class TimesheetService : ITimesheetService
     }
 
     #endregion
+
+    // Add this method to TimesheetService.cs:
+
+    /// <summary>
+    /// Gets time entries for multiple resources within a date range.
+    /// Used for team/manager timesheet rollup views.
+    /// </summary>
+    public async Task<List<TimeEntry>> GetEntriesForResourcesAsync(
+        List<string> resourceIds,
+        List<string>? serviceAreaIds = null,
+        DateOnly? startDate = null,
+        DateOnly? endDate = null)
+    {
+        if (resourceIds == null || !resourceIds.Any())
+            return new List<TimeEntry>();
+
+        var query = _db.TimeEntries
+            .Include(te => te.Resource)
+            .Include(te => te.Enhancement)
+                .ThenInclude(e => e.ServiceArea)
+            .Include(te => te.WorkPhase)
+            .Include(te => te.ConsolidationSources)
+            .Where(te => resourceIds.Contains(te.ResourceId));
+
+        // Filter by service areas if specified
+        if (serviceAreaIds != null && serviceAreaIds.Any())
+        {
+            query = query.Where(te => serviceAreaIds.Contains(te.Enhancement.ServiceAreaId));
+        }
+
+        // Filter by date range
+        if (startDate.HasValue)
+            query = query.Where(te => te.EndDate >= startDate.Value);
+
+        if (endDate.HasValue)
+            query = query.Where(te => te.StartDate <= endDate.Value);
+
+        return await query
+            .OrderBy(te => te.Enhancement.ServiceArea.Code)
+            .ThenBy(te => te.Enhancement.WorkId)
+            .ThenByDescending(te => te.StartDate)
+            .ToListAsync();
+    }
+
+
 }

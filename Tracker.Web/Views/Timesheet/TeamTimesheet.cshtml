@@ -1,0 +1,424 @@
+@model TeamTimesheetViewModel
+@{
+    ViewData["Title"] = "Team Timesheet";
+}
+
+<style>
+    /* Team timesheet styles */
+    .team-timesheet-container {
+        font-size: 1rem;
+    }
+    
+    /* Summary cards */
+    .summary-card {
+        transition: transform 0.15s;
+    }
+    .summary-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    /* Team members panel */
+    .team-members-list {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .team-member-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #eee;
+    }
+    .team-member-item:last-child {
+        border-bottom: none;
+    }
+    .team-member-item.is-self {
+        background-color: #e7f1ff;
+        margin: 0 -0.75rem;
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+        border-radius: 0.25rem;
+    }
+    
+    /* Service area accordion */
+    .service-area-header {
+        background-color: #e9ecef;
+        cursor: pointer;
+        padding: 0.75rem 1rem;
+        border-radius: 0.375rem;
+        margin-bottom: 0.5rem;
+        transition: background-color 0.15s;
+    }
+    .service-area-header:hover {
+        background-color: #dee2e6;
+    }
+    .service-area-header .toggle-icon {
+        transition: transform 0.2s;
+    }
+    .service-area-header.collapsed .toggle-icon {
+        transform: rotate(-90deg);
+    }
+    
+    /* Work items table */
+    .work-items-table {
+        font-size: 0.95rem;
+        margin-bottom: 0;
+    }
+    .work-items-table th {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        color: #6c757d;
+        border-bottom-width: 2px;
+    }
+    .work-items-table td {
+        vertical-align: middle;
+    }
+    .work-items-table .work-id {
+        font-weight: 600;
+        color: #0d6efd;
+    }
+    .work-items-table .work-id:hover {
+        text-decoration: underline;
+        cursor: pointer;
+    }
+    .work-items-table .description {
+        color: #6c757d;
+        font-size: 0.9rem;
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    /* Work phase badges - UPDATED for larger size and full names */
+    .phase-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .phase-badge {
+        font-size: 0.875rem;
+        font-weight: 500;
+        padding: 0.4rem 0.75rem;
+        border-radius: 0.375rem;
+        white-space: nowrap;
+    }
+    .phase-badge .phase-hours {
+        font-weight: 600;
+        margin-left: 0.25rem;
+    }
+    
+    /* Totals row */
+    .totals-row {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    .totals-row td {
+        border-top: 2px solid #dee2e6;
+    }
+    
+    /* Quick date buttons */
+    .quick-date-btn {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Empty state */
+    .empty-state {
+        padding: 3rem;
+        text-align: center;
+        color: #6c757d;
+    }
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+
+<div class="container-fluid team-timesheet-container">
+    @* Page Header *@
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">
+            <i class="bi bi-people me-2"></i>Team Timesheet
+        </h4>
+        <div>
+            <span class="text-muted me-2">Manager: @Model.ManagerName</span>
+            <a href="/timesheet/calendar" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-calendar3 me-1"></i> My Calendar
+            </a>
+        </div>
+    </div>
+
+    @* Date Filter Card *@
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Start Date</label>
+                    <input type="date" name="startDate" class="form-control" 
+                           value="@Model.StartDate.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">End Date</label>
+                    <input type="date" name="endDate" class="form-control" 
+                           value="@Model.EndDate.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-6 d-flex align-items-end gap-2 flex-wrap">
+                    <button type="button" class="btn btn-outline-secondary quick-date-btn" onclick="setDateRange('today')">Today</button>
+                    <button type="button" class="btn btn-outline-secondary quick-date-btn" onclick="setDateRange('week')">This Week</button>
+                    <button type="button" class="btn btn-outline-secondary quick-date-btn" onclick="setDateRange('month')">This Month</button>
+                    <button type="button" class="btn btn-outline-secondary quick-date-btn" onclick="setDateRange('lastMonth')">Last Month</button>
+                    <button type="submit" class="btn btn-primary ms-auto">
+                        <i class="bi bi-search me-1"></i> Apply
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        @* Summary Cards *@
+        <div class="col-lg-8">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white summary-card">
+                        <div class="card-body text-center py-3">
+                            <h3 class="mb-0">@Model.TotalHours.ToString("N1")</h3>
+                            <small>Total Hours</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white summary-card">
+                        <div class="card-body text-center py-3">
+                            <h3 class="mb-0">@Model.TotalContributedHours.ToString("N1")</h3>
+                            <small>Contributed</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white summary-card">
+                        <div class="card-body text-center py-3">
+                            <h3 class="mb-0">@Model.EntryCount</h3>
+                            <small>Entries</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-secondary text-white summary-card">
+                        <div class="card-body text-center py-3">
+                            <h3 class="mb-0">@Model.TeamMemberCount</h3>
+                            <small>Team Members</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        @* Team Members Panel *@
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header py-2">
+                    <i class="bi bi-people-fill me-1"></i>
+                    <strong>Team Members</strong>
+                    <span class="badge bg-secondary float-end">@Model.TeamMemberCount</span>
+                </div>
+                <div class="card-body py-2 team-members-list">
+                    @foreach (var member in Model.TeamMembers)
+                    {
+                        <div class="team-member-item @(member.IsSelf ? "is-self" : "")">
+                            <div>
+                                <span class="fw-semibold">@member.Name</span>
+                                @if (member.IsSelf)
+                                {
+                                    <span class="badge bg-primary ms-1">You</span>
+                                }
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-light text-dark">@member.TotalHours.ToString("N1")h</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Grouped Time Entries *@
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <i class="bi bi-list-check me-2"></i>
+                <strong>Team Time Entries</strong>
+            </span>
+            <span class="badge bg-secondary">@Model.DateRangeDisplay</span>
+        </div>
+        <div class="card-body">
+            @if (Model.ServiceAreaGroups.Any())
+            {
+                @foreach (var saGroup in Model.ServiceAreaGroups)
+                {
+                    var collapseId = $"collapse_{saGroup.ServiceAreaId.Replace("-", "")}";
+                    
+                    @* Service Area Header (Collapsible) *@
+                    <div class="service-area-header d-flex justify-content-between align-items-center" 
+                         data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="true">
+                        <div>
+                            <i class="bi bi-chevron-down toggle-icon me-2"></i>
+                            <i class="bi bi-folder me-1"></i>
+                            <strong>@saGroup.ServiceAreaCode</strong>
+                            <span class="text-muted ms-1">- @saGroup.ServiceAreaName</span>
+                            <span class="badge bg-secondary ms-2">@saGroup.WorkItems.Count items</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-primary me-2">@saGroup.TotalHours.ToString("N1") hrs</span>
+                            <span class="badge bg-success">@saGroup.TotalContributedHours.ToString("N1") contrib</span>
+                        </div>
+                    </div>
+                    
+                    @* Work Items Table (Collapsible Content) *@
+                    <div class="collapse show mb-3" id="@collapseId">
+                        <div class="table-responsive">
+                            <table class="table table-hover work-items-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 120px;">Work ID</th>
+                                        <th>Description</th>
+                                        <th>Work Phases</th>
+                                        <th class="text-end" style="width: 100px;">Hours</th>
+                                        <th class="text-end" style="width: 100px;">Contrib.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var workItem in saGroup.WorkItems)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <a href="/Enhancements/Details/@workItem.EnhancementId?serviceAreaId=@workItem.ServiceAreaId" 
+                                                   class="work-id text-decoration-none">
+                                                    @workItem.WorkId
+                                                </a>
+                                            </td>
+                                            <td class="description" title="@workItem.Description">
+                                                @(workItem.Description?.Length > 60 
+                                                    ? workItem.Description.Substring(0, 60) + "..." 
+                                                    : workItem.Description)
+                                            </td>
+                                            <td>
+                                                <div class="phase-badges">
+                                                    @foreach (var phase in workItem.WorkPhaseBreakdown)
+                                                    {
+                                                        <span class="phase-badge badge bg-secondary" title="@phase.WorkPhaseName: @phase.Hours.ToString("N1") hours">
+                                                            @phase.WorkPhaseName<span class="phase-hours">@phase.Hours.ToString("N1")h</span>
+                                                        </span>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td class="text-end fw-semibold">@workItem.TotalHours.ToString("N1")</td>
+                                            <td class="text-end">@workItem.TotalContributedHours.ToString("N1")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr class="totals-row">
+                                        <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                        <td class="text-end"><strong>@saGroup.TotalHours.ToString("N1")</strong></td>
+                                        <td class="text-end"><strong>@saGroup.TotalContributedHours.ToString("N1")</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                }
+                
+                @* Grand Total *@
+                <div class="card bg-light mt-3">
+                    <div class="card-body py-2">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <strong><i class="bi bi-calculator me-2"></i>Grand Total</strong>
+                                <span class="text-muted ms-2">(@Model.TeamMemberCount team members)</span>
+                            </div>
+                            <div class="col-auto text-end">
+                                <span class="badge bg-primary fs-6 me-2">@Model.TotalHours.ToString("N1") hours</span>
+                                <span class="badge bg-success fs-6">@Model.TotalContributedHours.ToString("N1") contributed</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <i class="bi bi-calendar-x d-block"></i>
+                    <h5>No Time Entries</h5>
+                    <p class="mb-0">No time entries found for your team in the selected date range.</p>
+                </div>
+            }
+        </div>
+    </div>
+    
+    @* Service Areas Info *@
+    <div class="mt-3 text-muted small">
+        <i class="bi bi-info-circle me-1"></i>
+        Showing data from service areas: 
+        @string.Join(", ", Model.ViewableServiceAreas.Select(sa => sa.Code))
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Quick date range buttons
+    function setDateRange(range) {
+        const today = new Date();
+        let startDate, endDate;
+        
+        switch (range) {
+            case 'today':
+                startDate = endDate = today;
+                break;
+            case 'week':
+                const dayOfWeek = today.getDay();
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - dayOfWeek);
+                endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 6);
+                break;
+            case 'month':
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                break;
+            case 'lastMonth':
+                startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                break;
+        }
+        
+        document.querySelector('input[name="startDate"]').value = formatDate(startDate);
+        document.querySelector('input[name="endDate"]').value = formatDate(endDate);
+    }
+    
+    function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    
+    // Toggle icon rotation on collapse
+    document.querySelectorAll('.service-area-header').forEach(header => {
+        const collapseEl = document.querySelector(header.dataset.bsTarget);
+        if (collapseEl) {
+            collapseEl.addEventListener('hide.bs.collapse', () => {
+                header.classList.add('collapsed');
+            });
+            collapseEl.addEventListener('show.bs.collapse', () => {
+                header.classList.remove('collapsed');
+            });
+        }
+    });
+</script>
+}

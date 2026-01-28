@@ -404,3 +404,4 @@ public class EstimationPhaseItemViewModel
     public decimal Hours { get; set; }
     public string? Notes { get; set; }
 }
+

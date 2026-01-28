@@ -877,4 +877,94 @@ public class ResourceService : IResourceService
 
         return chain;
     }
+
+    // Add these methods to ResourceService.cs in the #region Reporting Hierarchy section:
+
+    /// <summary>
+    /// Gets all direct reports for a resource across all service areas.
+    /// </summary>
+    public async Task<List<Resource>> GetAllDirectReportsAsync(string resourceId)
+    {
+        var directReportIds = await _db.ResourceServiceAreas
+            .Where(rsa => rsa.ReportsToResourceId == resourceId && rsa.Resource.IsActive)
+            .Select(rsa => rsa.ResourceId)
+            .Distinct()
+            .ToListAsync();
+
+        return await _db.Resources
+            .Where(r => directReportIds.Contains(r.Id))
+            .OrderBy(r => r.Name)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Gets all resources in the reporting chain downwards (direct + indirect reports) recursively.
+    /// Includes the manager themselves.
+    /// </summary>
+    public async Task<List<Resource>> GetReportingChainDownwardsAsync(string resourceId, List<string>? serviceAreaIds = null)
+    {
+        var allResourceIds = new HashSet<string> { resourceId }; // Include self
+        var toProcess = new Queue<string>();
+        toProcess.Enqueue(resourceId);
+
+        while (toProcess.Count > 0)
+        {
+            var currentId = toProcess.Dequeue();
+
+            // Find direct reports for current resource
+            var query = _db.ResourceServiceAreas
+                .Where(rsa => rsa.ReportsToResourceId == currentId && rsa.Resource.IsActive);
+
+            // Filter by service areas if specified
+            if (serviceAreaIds != null && serviceAreaIds.Any())
+            {
+                query = query.Where(rsa => serviceAreaIds.Contains(rsa.ServiceAreaId));
+            }
+
+            var directReportIds = await query
+                .Select(rsa => rsa.ResourceId)
+                .Distinct()
+                .ToListAsync();
+
+            foreach (var reportId in directReportIds)
+            {
+                if (allResourceIds.Add(reportId)) // Returns false if already exists
+                {
+                    toProcess.Enqueue(reportId); // Process this person's reports too
+                }
+            }
+        }
+
+        // Fetch full resource objects
+        return await _db.Resources
+            .Include(r => r.ServiceAreas)
+                .ThenInclude(sa => sa.ServiceArea)
+            .Where(r => allResourceIds.Contains(r.Id))
+            .OrderBy(r => r.Name)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Checks if a resource has any direct reports in any service area.
+    /// </summary>
+    public async Task<bool> HasDirectReportsAsync(string resourceId)
+    {
+        return await _db.ResourceServiceAreas
+            .AnyAsync(rsa => rsa.ReportsToResourceId == resourceId && rsa.Resource.IsActive);
+    }
+
+    /// <summary>
+    /// Checks if a resource has any direct reports in the specified service areas.
+    /// </summary>
+    public async Task<bool> HasDirectReportsInServiceAreasAsync(string resourceId, List<string> serviceAreaIds)
+    {
+        if (serviceAreaIds == null || !serviceAreaIds.Any())
+            return false;
+
+        return await _db.ResourceServiceAreas
+            .AnyAsync(rsa => rsa.ReportsToResourceId == resourceId
+                          && serviceAreaIds.Contains(rsa.ServiceAreaId)
+                          && rsa.Resource.IsActive);
+    }
+
 }

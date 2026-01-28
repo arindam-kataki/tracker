@@ -41,14 +41,20 @@
         </div>
         
         <!-- Timesheet Section -->
+        <!-- Timesheet Section -->
         <div class="sidebar-section mt-3 border-top border-secondary pt-3">
             <div class="sidebar-header px-3 py-2 text-uppercase small text-secondary">
                 <i class="bi bi-clock-history me-2"></i>Time Management
             </div>
             
-            <a href="@Url.Action("MyTimesheet", "Timesheet")" 
-               class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "timesheet" ? "active" : "")">
-                <i class="bi bi-clock me-2"></i>My Timesheet
+            <a href="@Url.Action("MyTimesheetCalendar", "Timesheet")" 
+               class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "timesheet-calendar" ? "active" : "")">
+                <i class="bi bi-calendar3 me-2"></i>My Timesheet
+            </a>
+            
+            <a href="@Url.Action("TeamTimesheet", "Timesheet")" 
+               class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "team-timesheet" ? "active" : "")">
+                <i class="bi bi-people me-2"></i>Team Timesheet
             </a>
             
             @if (Model.CanConsolidate)
