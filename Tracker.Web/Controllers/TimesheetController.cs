@@ -33,7 +33,7 @@ public class TimesheetController : BaseController
     /// </summary>
     [HttpGet("")]
     [HttpGet("my")]
-    public async Task<IActionResult> MyTimesheet(DateTime? startDate = null, DateTime? endDate = null)
+    public async Task<IActionResult> MyTimesheet(DateOnly? startDate = null, DateOnly? endDate = null)
     {
         var resourceId = CurrentUserId!;
 
@@ -48,7 +48,8 @@ public class TimesheetController : BaseController
         }
 
         // Default to current week
-        var start = startDate ?? DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek);
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var start = startDate ?? today.AddDays(-(int)today.DayOfWeek);
         var end = endDate ?? start.AddDays(6);
 
         // Get entries for this resource
@@ -61,8 +62,8 @@ public class TimesheetController : BaseController
         {
             ResourceId = resourceId,
             ResourceName = CurrentUserName ?? "Unknown",
-            StartDate = start,
-            EndDate = end,
+            StartDate = start.ToDateTime(TimeOnly.MinValue),
+            EndDate = end.ToDateTime(TimeOnly.MinValue),
             Entries = entries,
             WorkPhases = workPhases,
             AvailableServiceAreas = permittedServiceAreas,
@@ -81,7 +82,7 @@ public class TimesheetController : BaseController
     }
 
     /// <summary>
-    /// My Timesheet - Calendar view (new)
+    /// My Timesheet - Calendar view
     /// </summary>
     [HttpGet("calendar")]
     public async Task<IActionResult> MyTimesheetCalendar(int? year = null, int? month = null)
@@ -118,307 +119,357 @@ public class TimesheetController : BaseController
     }
 
     /// <summary>
-    /// Get calendar grid partial for a specific month
+    /// Get calendar data (hours per day) with optional filtering.
+    /// Uses DateOnly internally for timezone safety.
     /// </summary>
-    [HttpGet("calendar-grid")]
-    public async Task<IActionResult> GetCalendarGrid(int year, int month)
+    [HttpGet("calendar-data")]
+    public async Task<IActionResult> GetCalendarData(
+        string? enhancementId = null,
+        string? serviceAreaId = null,
+        int? year = null,
+        int? month = null)
     {
-        var model = new MyTimesheetViewModel
+        var resourceId = CurrentUserId!;
+        var targetYear = year ?? DateTime.Today.Year;
+        var targetMonth = month ?? DateTime.Today.Month;
+
+        var startDate = new DateOnly(targetYear, targetMonth, 1);
+        var endDate = startDate.AddMonths(1).AddDays(-1);
+
+        // Get entries based on filter level
+        List<TimeEntry> entries;
+
+        if (!string.IsNullOrEmpty(enhancementId))
         {
-            StartDate = new DateTime(year, month, 1)
-        };
-        return PartialView("_CalendarGrid", model);
+            entries = await _timesheetService.GetEntriesAsync(
+                enhancementId: enhancementId,
+                resourceId: resourceId,
+                startDate: startDate,
+                endDate: endDate);
+        }
+        else if (!string.IsNullOrEmpty(serviceAreaId))
+        {
+            entries = await _timesheetService.GetEntriesAsync(
+                serviceAreaId: serviceAreaId,
+                resourceId: resourceId,
+                startDate: startDate,
+                endDate: endDate);
+        }
+        else
+        {
+            entries = await _timesheetService.GetEntriesForResourceAsync(resourceId, startDate, endDate);
+        }
+
+        // Group by date - DateOnly.ToString("yyyy-MM-dd") is timezone-safe
+        var result = entries
+            .GroupBy(e => e.StartDate.ToString("yyyy-MM-dd"))
+            .Select(g => new
+            {
+                date = g.Key,
+                hours = g.Sum(e => e.Hours),
+                contributed = g.Sum(e => e.ContributedHours)
+            })
+            .ToList();
+
+        return Json(result);
     }
 
     /// <summary>
-    /// Get calendar data (hours per day) for an enhancement in a month
+    /// Get monthly totals with optional filtering
     /// </summary>
-    [HttpGet("deprecated-calendar-data")]
-    public async Task<IActionResult> GetCalendarData(string enhancementId, int year, int month)
+    [HttpGet("monthly-totals")]
+    public async Task<IActionResult> GetMonthlyTotals(
+        string? enhancementId = null,
+        string? serviceAreaId = null,
+        int? year = null,
+        int? month = null)
     {
         var resourceId = CurrentUserId!;
+        var targetYear = year ?? DateTime.Today.Year;
+        var targetMonth = month ?? DateTime.Today.Month;
 
-        // Verify permission
-        var canLog = await _timesheetService.CanLogTimeForEnhancementAsync(resourceId, enhancementId);
-        if (!canLog && !IsSuperAdmin)
-            return Forbid();
-
-        var startDate = new DateTime(year, month, 1);
+        var startDate = new DateOnly(targetYear, targetMonth, 1);
         var endDate = startDate.AddMonths(1).AddDays(-1);
 
-        var entries = await _timesheetService.GetEntriesAsync(
-            enhancementId: enhancementId,
-            resourceId: resourceId,
-            startDate: startDate,
-            endDate: endDate);
+        List<TimeEntry> entries;
 
-        // Group by date
-        var dayData = entries
-            .GroupBy(e => e.StartDate.ToString("yyyy-MM-dd"))
-            .ToDictionary(
-                g => g.Key,
-                g => new
-                {
-                    hours = g.Sum(e => e.Hours),
-                    contributed = g.Sum(e => e.ContributedHours),
-                    count = g.Count()
-                });
+        if (!string.IsNullOrEmpty(enhancementId))
+        {
+            entries = await _timesheetService.GetEntriesAsync(
+                enhancementId: enhancementId,
+                resourceId: resourceId,
+                startDate: startDate,
+                endDate: endDate);
+        }
+        else if (!string.IsNullOrEmpty(serviceAreaId))
+        {
+            entries = await _timesheetService.GetEntriesAsync(
+                serviceAreaId: serviceAreaId,
+                resourceId: resourceId,
+                startDate: startDate,
+                endDate: endDate);
+        }
+        else
+        {
+            entries = await _timesheetService.GetEntriesForResourceAsync(resourceId, startDate, endDate);
+        }
 
-        // Summary
-        var summary = new
+        var result = new
         {
             totalHours = entries.Sum(e => e.Hours),
-            contributedHours = entries.Sum(e => e.ContributedHours),
-            daysWorked = dayData.Count,
-            byWorkType = entries
+            totalContributed = entries.Sum(e => e.ContributedHours),
+            daysWorked = entries.Select(e => e.StartDate).Distinct().Count(),
+            byWorkPhase = entries
                 .GroupBy(e => e.WorkPhase?.Name ?? "Unknown")
                 .ToDictionary(g => g.Key, g => g.Sum(e => e.Hours))
         };
 
-        return Json(new { dayData, summary });
+        return Json(result);
     }
 
     /// <summary>
-    /// Get entries for a specific day and enhancement
+    /// Get monthly summary with work items breakdown
     /// </summary>
-    [HttpGet("deprecated-day-entries")]
-    public async Task<IActionResult> GetDayEntries(string enhancementId, DateTime date)
+    [HttpGet("monthly-summary")]
+    public async Task<IActionResult> GetMonthlySummary(
+        string? enhancementId = null,
+        string? serviceAreaId = null,
+        int? year = null,
+        int? month = null)
     {
         var resourceId = CurrentUserId!;
+        var targetYear = year ?? DateTime.Today.Year;
+        var targetMonth = month ?? DateTime.Today.Month;
 
-        var entries = await _timesheetService.GetEntriesAsync(
-            enhancementId: enhancementId,
-            resourceId: resourceId,
-            startDate: date.Date,
-            endDate: date.Date);
-
-        return Json(entries.Select(e => new
-        {
-            id = e.Id,
-            workPhaseId = e.WorkPhaseId,
-            workPhaseName = e.WorkPhase?.Name,
-            hours = e.Hours,
-            contributedHours = e.ContributedHours,
-            notes = e.Notes,
-            isConsolidated = e.ConsolidationSources?.Any() == true
-        }));
-    }
-
-    /// <summary>
-    /// Get month overview (all enhancements for current user)
-    /// </summary>
-    [HttpGet("month-overview")]
-    public async Task<IActionResult> GetMonthOverview(int year, int month)
-    {
-        var resourceId = CurrentUserId!;
-        var startDate = new DateTime(year, month, 1);
+        var startDate = new DateOnly(targetYear, targetMonth, 1);
         var endDate = startDate.AddMonths(1).AddDays(-1);
 
-        var entries = await _timesheetService.GetEntriesForResourceAsync(resourceId, startDate, endDate);
+        List<TimeEntry> entries;
 
-        var byEnhancement = entries
-            .GroupBy(e => new { e.EnhancementId, e.Enhancement?.WorkId, e.Enhancement?.Description })
+        if (!string.IsNullOrEmpty(enhancementId))
+        {
+            entries = await _timesheetService.GetEntriesAsync(
+                enhancementId: enhancementId,
+                resourceId: resourceId,
+                startDate: startDate,
+                endDate: endDate);
+
+            var totalHours = entries.Sum(e => e.Hours);
+            var totalContributed = entries.Sum(e => e.ContributedHours);
+            var byWorkPhase = entries
+                .GroupBy(e => e.WorkPhase?.Name ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.Sum(e => e.Hours));
+
+            return Json(new
+            {
+                totalHours,
+                totalContributed,
+                items = new[] { new {
+                    enhancementId,
+                    workId = entries.FirstOrDefault()?.Enhancement?.WorkId ?? "Unknown",
+                    description = entries.FirstOrDefault()?.Enhancement?.Description,
+                    serviceAreaId = entries.FirstOrDefault()?.Enhancement?.ServiceAreaId,
+                    serviceAreaCode = entries.FirstOrDefault()?.Enhancement?.ServiceArea?.Code,
+                    serviceAreaName = entries.FirstOrDefault()?.Enhancement?.ServiceArea?.Name,
+                    hours = totalHours,
+                    contributedHours = totalContributed,
+                    byWorkPhase
+                }}
+            });
+        }
+        else if (!string.IsNullOrEmpty(serviceAreaId))
+        {
+            entries = await _timesheetService.GetEntriesAsync(
+                serviceAreaId: serviceAreaId,
+                resourceId: resourceId,
+                startDate: startDate,
+                endDate: endDate);
+        }
+        else
+        {
+            entries = await _timesheetService.GetEntriesForResourceAsync(resourceId, startDate, endDate);
+        }
+
+        // Group by enhancement
+        var groupedByEnhancement = entries
+            .GroupBy(e => e.EnhancementId)
             .Select(g => new
             {
-                id = g.Key.EnhancementId,
-                workId = g.Key.WorkId,
-                description = g.Key.Description,
-                hours = g.Sum(e => e.Hours)
+                enhancementId = g.Key,
+                workId = g.First().Enhancement?.WorkId ?? "Unknown",
+                description = g.First().Enhancement?.Description,
+                serviceAreaId = g.First().Enhancement?.ServiceAreaId,
+                serviceAreaCode = g.First().Enhancement?.ServiceArea?.Code,
+                serviceAreaName = g.First().Enhancement?.ServiceArea?.Name,
+                hours = g.Sum(e => e.Hours),
+                contributedHours = g.Sum(e => e.ContributedHours),
+                byWorkPhase = g
+                    .GroupBy(e => e.WorkPhase?.Name ?? "Unknown")
+                    .ToDictionary(wp => wp.Key, wp => wp.Sum(e => e.Hours))
             })
-            .OrderByDescending(e => e.hours)
+            .OrderBy(e => e.serviceAreaCode)
+            .ThenBy(e => e.workId)
             .ToList();
 
         return Json(new
         {
-            enhancements = byEnhancement,
-            totalHours = entries.Sum(e => e.Hours)
+            totalHours = entries.Sum(e => e.Hours),
+            totalContributed = entries.Sum(e => e.ContributedHours),
+            items = groupedByEnhancement
         });
     }
 
     /// <summary>
-    /// Get enhancements for dropdown (AJAX) - filtered by resource's permissions
+    /// Get enhancements for dropdown - filtered by service area
     /// </summary>
-    [HttpGet("deprecated-enhancements")]
-    public async Task<IActionResult> GetEnhancements(
-        string? serviceAreaId = null,
-        string? status = null,
-        string? workIdSearch = null,
-        string? descriptionSearch = null,
-        string? tagSearch = null,
-        DateTime? startDateFrom = null,
-        DateTime? startDateTo = null)
+    [HttpGet("enhancements")]
+    public async Task<IActionResult> GetEnhancements(string? serviceAreaId = null, string? search = null)
     {
         var resourceId = CurrentUserId!;
 
         var enhancements = await _timesheetService.GetEnhancementsForTimesheetAsync(
             resourceId,
             serviceAreaId,
-            status,
-            workIdSearch,
-            descriptionSearch,
-            tagSearch,
-            startDateFrom,
-            startDateTo);
+            search);
 
-        return Json(enhancements.Select(e => new
+        var result = enhancements.Select(e => new
         {
             id = e.Id,
             workId = e.WorkId,
-            description = e.Description?.Length > 80 ? e.Description.Substring(0, 80) + "..." : e.Description,
-            serviceAreaCode = e.ServiceArea?.Code,
-            status = e.Status ?? e.InfStatus,
-            tags = e.Tags
-        }));
+            description = e.Description,
+            status = e.Status,
+            serviceAreaCode = e.ServiceArea?.Code
+        }).ToList();
+
+        return Json(result);
     }
 
     /// <summary>
-    /// Get the add/edit time entry modal
+    /// Get entries for a specific day and enhancement.
+    /// Date parameter is parsed as DateOnly for timezone safety.
     /// </summary>
-    [HttpGet("entry/edit")]
-    public async Task<IActionResult> EditEntry(string? id = null, string? enhancementId = null)
+    [HttpGet("day-entries")]
+    public async Task<IActionResult> GetDayEntries(string date, string enhancementId)
     {
         var resourceId = CurrentUserId!;
 
-        // Get service areas with permission
-        var permittedServiceAreas = await _timesheetService.GetServiceAreasWithTimesheetPermissionAsync(resourceId);
-
-        if (!permittedServiceAreas.Any() && !IsSuperAdmin)
-            return BadRequest("You do not have permission to log timesheets.");
-
-        // Get available work phases
-        var workPhases = await _workPhaseService.GetForTimeRecordingAsync();
-
-        var model = new TimeEntryEditViewModel
+        // Parse as DateOnly - this is timezone-safe
+        if (!DateOnly.TryParse(date, out var entryDate))
         {
-            ResourceId = resourceId,
-            AvailableServiceAreas = permittedServiceAreas,
-            AvailableWorkPhases = workPhases,
-            StartDate = DateTime.Today,
-            EndDate = DateTime.Today
-        };
-
-        if (!string.IsNullOrEmpty(id))
-        {
-            var entry = await _timesheetService.GetEntryByIdAsync(id);
-            if (entry == null)
-                return NotFound();
-
-            // Can only edit own entries (unless SuperAdmin)
-            if (entry.ResourceId != resourceId && !IsSuperAdmin)
-                return Forbid();
-
-            model.Id = entry.Id;
-            model.EnhancementId = entry.EnhancementId;
-            model.ServiceAreaId = entry.Enhancement?.ServiceAreaId;
-            model.WorkPhaseId = entry.WorkPhaseId;
-            model.StartDate = entry.StartDate;
-            model.EndDate = entry.EndDate;
-            model.Hours = entry.Hours;
-            model.ContributedHours = entry.ContributedHours;
-            model.Notes = entry.Notes;
-            model.EnhancementWorkId = entry.Enhancement?.WorkId;
-            model.EnhancementDescription = entry.Enhancement?.Description;
-            model.WorkPhaseName = entry.WorkPhase?.Name;
-            model.IsConsolidated = entry.ConsolidationSources?.Any() == true;
-        }
-        else if (!string.IsNullOrEmpty(enhancementId))
-        {
-            // Pre-select enhancement if provided
-            var canLog = await _timesheetService.CanLogTimeForEnhancementAsync(resourceId, enhancementId);
-            if (!canLog && !IsSuperAdmin)
-                return BadRequest("You do not have permission to log time for this enhancement.");
-
-            model.EnhancementId = enhancementId;
+            return BadRequest("Invalid date format. Use YYYY-MM-DD.");
         }
 
-        return PartialView("_EditTimeEntry", model);
+        var entries = await _timesheetService.GetEntriesAsync(
+            enhancementId: enhancementId,
+            resourceId: resourceId,
+            startDate: entryDate,
+            endDate: entryDate);
+
+        var result = entries.Select(e => new
+        {
+            id = e.Id,
+            workPhaseId = e.WorkPhaseId,
+            workPhaseName = e.WorkPhase?.Name ?? "Unknown",
+            hours = e.Hours,
+            contributedHours = e.ContributedHours,
+            notes = e.Notes,
+            isConsolidated = e.ConsolidationSources?.Any() == true
+        }).ToList();
+
+        return Json(result);
     }
 
     /// <summary>
-    /// Save a time entry
+    /// Save (create or update) a time entry.
+    /// Date is parsed as DateOnly for timezone safety.
     /// </summary>
     [HttpPost("entry/save")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveEntry(TimeEntryEditViewModel model)
+    public async Task<IActionResult> SaveEntry(
+        string? id,
+        string? enhancementId,
+        string workPhaseId,
+        string startDate,  // Accept as string for explicit parsing
+        decimal hours,
+        decimal contributedHours,
+        string? notes)
     {
         var resourceId = CurrentUserId!;
 
-        // Check permission for the enhancement
-        var canLog = await _timesheetService.CanLogTimeForEnhancementAsync(resourceId, model.EnhancementId);
-        if (!canLog && !IsSuperAdmin)
+        // Parse date as DateOnly - timezone safe
+        if (!DateOnly.TryParse(startDate, out var entryDate))
         {
-            return Json(new { success = false, message = "You do not have permission to log time for this enhancement." });
-        }
-
-        // Default contributed hours if not provided
-        if (model.ContributedHours == 0 && model.Hours > 0)
-        {
-            var workPhase = await _workPhaseService.GetByIdAsync(model.WorkPhaseId);
-            model.ContributedHours = model.Hours * (workPhase?.DefaultContributionPercent ?? 100) / 100;
-        }
-
-        // Validate
-        var validation = await _timesheetService.ValidateEntryAsync(
-            model.EnhancementId,
-            model.StartDate,
-            model.EndDate,
-            model.Hours,
-            model.ContributedHours);
-
-        if (!validation.isValid)
-        {
-            return Json(new { success = false, message = validation.error });
+            return Json(new { success = false, message = "Invalid date format. Use YYYY-MM-DD." });
         }
 
         try
         {
-            if (string.IsNullOrEmpty(model.Id))
+            if (string.IsNullOrEmpty(id))
             {
                 // Create new entry
-                await _timesheetService.CreateEntryAsync(
-                    model.EnhancementId,
+                if (string.IsNullOrEmpty(enhancementId))
+                {
+                    return Json(new { success = false, message = "Enhancement is required." });
+                }
+
+                // Verify permission
+                var canLog = await _timesheetService.CanLogTimeForEnhancementAsync(resourceId, enhancementId);
+                if (!canLog && !IsSuperAdmin)
+                {
+                    return Json(new { success = false, message = "You don't have permission to log time for this enhancement." });
+                }
+
+                // Validate
+                var validation = await _timesheetService.ValidateEntryAsync(
+                    enhancementId, entryDate, entryDate, hours, contributedHours);
+                if (!validation.isValid)
+                {
+                    return Json(new { success = false, message = validation.error });
+                }
+
+                var entry = await _timesheetService.CreateEntryAsync(
+                    enhancementId,
                     resourceId,
-                    model.WorkPhaseId,
-                    model.StartDate,
-                    model.EndDate,
-                    model.Hours,
-                    model.ContributedHours,
-                    model.Notes,
+                    workPhaseId,
+                    entryDate,
+                    entryDate,  // Single day entry
+                    hours,
+                    contributedHours,
+                    notes,
                     resourceId);
 
-                _logger.LogInformation("Time entry created by {Resource} for enhancement {Enhancement}",
-                    CurrentUserEmail, model.EnhancementId);
+                _logger.LogInformation("Time entry {Id} created by {User} for {Date}",
+                    entry.Id, CurrentUserEmail, entryDate);
+
+                return Json(new { success = true, id = entry.Id });
             }
             else
             {
                 // Update existing entry
-                var entry = await _timesheetService.GetEntryByIdAsync(model.Id);
-                if (entry == null)
-                    return Json(new { success = false, message = "Entry not found." });
-
-                // Can only edit own entries (unless SuperAdmin)
-                if (entry.ResourceId != resourceId && !IsSuperAdmin)
-                    return Json(new { success = false, message = "Cannot edit another user's entry." });
-
-                await _timesheetService.UpdateEntryAsync(
-                    model.Id,
-                    model.WorkPhaseId,
-                    model.StartDate,
-                    model.EndDate,
-                    model.Hours,
-                    model.ContributedHours,
-                    model.Notes,
+                var entry = await _timesheetService.UpdateEntryAsync(
+                    id,
+                    workPhaseId,
+                    entryDate,
+                    entryDate,
+                    hours,
+                    contributedHours,
+                    notes,
                     resourceId);
 
-                _logger.LogInformation("Time entry {Id} updated by {Resource}", model.Id, CurrentUserEmail);
-            }
+                if (entry == null)
+                {
+                    return Json(new { success = false, message = "Entry not found." });
+                }
 
-            return Json(new { success = true });
+                _logger.LogInformation("Time entry {Id} updated by {User}", id, CurrentUserEmail);
+
+                return Json(new { success = true, id = entry.Id });
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error saving time entry");
-            return Json(new { success = false, message = "An error occurred saving the entry." });
+            return Json(new { success = false, message = "An error occurred while saving." });
         }
     }
 
@@ -469,8 +520,8 @@ public class TimesheetController : BaseController
     public async Task<IActionResult> AdminView(
         string? serviceAreaId = null,
         string? resourceId = null,
-        DateTime? startDate = null,
-        DateTime? endDate = null)
+        DateOnly? startDate = null,
+        DateOnly? endDate = null)
     {
         var entries = await _timesheetService.GetEntriesAsync(
             serviceAreaId: serviceAreaId,
@@ -482,8 +533,8 @@ public class TimesheetController : BaseController
         {
             ServiceAreaId = serviceAreaId,
             ResourceId = resourceId,
-            StartDate = startDate,
-            EndDate = endDate,
+            StartDate = startDate?.ToDateTime(TimeOnly.MinValue),
+            EndDate = endDate?.ToDateTime(TimeOnly.MinValue),
             Entries = entries,
             TotalHours = entries.Sum(e => e.Hours),
             TotalContributedHours = entries.Sum(e => e.ContributedHours),
@@ -493,176 +544,4 @@ public class TimesheetController : BaseController
         ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "timesheet-admin");
         return View("AdminTimesheet", model);
     }
-
-    // Add these endpoints to TimesheetController.cs
-
-    /// <summary>
-    /// Get calendar data with optional filtering by service area or enhancement
-    /// Supports: all items, filtered by service area, or filtered by specific enhancement
-    /// </summary>
-    [HttpGet("calendar-data")]
-    public async Task<IActionResult> GetCalendarData(
-        string? enhancementId = null,
-        string? serviceAreaId = null,
-        int? year = null,
-        int? month = null)
-    {
-        var resourceId = CurrentUserId!;
-        var targetYear = year ?? DateTime.Today.Year;
-        var targetMonth = month ?? DateTime.Today.Month;
-
-        var startDate = new DateTime(targetYear, targetMonth, 1);
-        var endDate = startDate.AddMonths(1).AddDays(-1);
-
-        // Get entries based on filter level
-        List<TimeEntry> entries;
-
-        if (!string.IsNullOrEmpty(enhancementId))
-        {
-            // Specific enhancement
-            entries = await _timesheetService.GetEntriesAsync(
-                enhancementId: enhancementId,
-                resourceId: resourceId,
-                startDate: startDate,
-                endDate: endDate);
-        }
-        else if (!string.IsNullOrEmpty(serviceAreaId))
-        {
-            // All enhancements in service area
-            entries = await _timesheetService.GetEntriesAsync(
-                serviceAreaId: serviceAreaId,
-                resourceId: resourceId,
-                startDate: startDate,
-                endDate: endDate);
-        }
-        else
-        {
-            // All entries for user
-            entries = await _timesheetService.GetEntriesForResourceAsync(resourceId, startDate, endDate);
-        }
-
-        // Group by date and return
-        var result = entries
-            .GroupBy(e => e.StartDate.ToString("yyyy-MM-dd"))
-            .Select(g => new
-            {
-                date = g.Key,
-                hours = g.Sum(e => e.Hours),
-                contributed = g.Sum(e => e.ContributedHours)
-            })
-            .ToList();
-
-        return Json(result);
-    }
-
-    /// <summary>
-    /// Get monthly totals with optional filtering
-    /// </summary>
-    [HttpGet("monthly-totals")]
-    public async Task<IActionResult> GetMonthlyTotals(
-        string? enhancementId = null,
-        string? serviceAreaId = null,
-        int? year = null,
-        int? month = null)
-    {
-        var resourceId = CurrentUserId!;
-        var targetYear = year ?? DateTime.Today.Year;
-        var targetMonth = month ?? DateTime.Today.Month;
-
-        var startDate = new DateTime(targetYear, targetMonth, 1);
-        var endDate = startDate.AddMonths(1).AddDays(-1);
-
-        // Get entries based on filter level
-        List<TimeEntry> entries;
-
-        if (!string.IsNullOrEmpty(enhancementId))
-        {
-            entries = await _timesheetService.GetEntriesAsync(
-                enhancementId: enhancementId,
-                resourceId: resourceId,
-                startDate: startDate,
-                endDate: endDate);
-        }
-        else if (!string.IsNullOrEmpty(serviceAreaId))
-        {
-            entries = await _timesheetService.GetEntriesAsync(
-                serviceAreaId: serviceAreaId,
-                resourceId: resourceId,
-                startDate: startDate,
-                endDate: endDate);
-        }
-        else
-        {
-            entries = await _timesheetService.GetEntriesForResourceAsync(resourceId, startDate, endDate);
-        }
-
-        var result = new
-        {
-            totalHours = entries.Sum(e => e.Hours),
-            totalContributed = entries.Sum(e => e.ContributedHours),
-            daysWorked = entries.Select(e => e.StartDate.Date).Distinct().Count(),
-            byWorkPhase = entries
-                .GroupBy(e => e.WorkPhase?.Name ?? "Unknown")
-                .ToDictionary(g => g.Key, g => g.Sum(e => e.Hours))
-        };
-
-        return Json(result);
-    }
-
-    /// <summary>
-    /// Get enhancements for dropdown - filtered by service area
-    /// Returns WorkId + Description format
-    /// </summary>
-    [HttpGet("enhancements")]
-    public async Task<IActionResult> GetEnhancements(string? serviceAreaId = null, string? search = null)
-    {
-        var resourceId = CurrentUserId!;
-
-        // Get enhancements user can log time against
-        var enhancements = await _timesheetService.GetEnhancementsForTimesheetAsync(
-            resourceId,
-            serviceAreaId,
-            search);
-
-        var result = enhancements.Select(e => new
-        {
-            id = e.Id,
-            workId = e.WorkId,
-            description = e.Description,
-            status = e.Status,
-            serviceAreaCode = e.ServiceArea?.Code
-        }).ToList();
-
-        return Json(result);
-    }
-
-    /// <summary>
-    /// Get day entries - filtered by enhancement
-    /// </summary>
-    [HttpGet("day-entries")]
-    public async Task<IActionResult> GetDayEntries(DateTime date, string enhancementId)
-    {
-        var resourceId = CurrentUserId!;
-
-        var entries = await _timesheetService.GetEntriesAsync(
-            enhancementId: enhancementId,
-            resourceId: resourceId,
-            startDate: date.Date,
-            endDate: date.Date);
-
-        var result = entries.Select(e => new
-        {
-            id = e.Id,
-            workPhaseId = e.WorkPhaseId,
-            workPhaseName = e.WorkPhase?.Name ?? "Unknown",
-            hours = e.Hours,
-            contributedHours = e.ContributedHours,
-            notes = e.Notes,
-            isConsolidated = e.ConsolidationSources?.Any() == true
-        }).ToList();
-
-        return Json(result);
-    }
-
-
 }

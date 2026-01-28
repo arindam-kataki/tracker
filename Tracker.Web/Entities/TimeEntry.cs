@@ -3,6 +3,10 @@ namespace Tracker.Web.Entities;
 /// <summary>
 /// Represents a timesheet entry logged by a resource against an enhancement.
 /// Records actual hours worked, which can later be consolidated for billing.
+/// 
+/// NOTE: StartDate and EndDate use DateOnly to avoid timezone issues.
+/// When users log time for "January 27", it should be January 27 regardless
+/// of the user's or server's timezone.
 /// </summary>
 public class TimeEntry
 {
@@ -24,14 +28,16 @@ public class TimeEntry
     public string WorkPhaseId { get; set; } = string.Empty;
     
     /// <summary>
-    /// Start date of the work period
+    /// Start date of the work period.
+    /// Uses DateOnly to avoid timezone issues - a date is just a date.
     /// </summary>
-    public DateTime StartDate { get; set; }
+    public DateOnly StartDate { get; set; }
     
     /// <summary>
-    /// End date of the work period (can equal StartDate for single-day entries)
+    /// End date of the work period (can equal StartDate for single-day entries).
+    /// Uses DateOnly to avoid timezone issues.
     /// </summary>
-    public DateTime EndDate { get; set; }
+    public DateOnly EndDate { get; set; }
     
     /// <summary>
     /// Actual hours worked during this period
@@ -83,4 +89,16 @@ public class TimeEntry
     /// Remaining hours available to be pulled into consolidations
     /// </summary>
     public decimal RemainingHours => ContributedHours - TotalPulledHours;
+    
+    // Helper methods for DateTime compatibility (used in queries/reporting)
+    
+    /// <summary>
+    /// Get StartDate as DateTime (midnight local)
+    /// </summary>
+    public DateTime StartDateTime => StartDate.ToDateTime(TimeOnly.MinValue);
+    
+    /// <summary>
+    /// Get EndDate as DateTime (midnight local)
+    /// </summary>
+    public DateTime EndDateTime => EndDate.ToDateTime(TimeOnly.MinValue);
 }

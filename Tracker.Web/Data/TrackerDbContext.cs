@@ -469,47 +469,7 @@ public class TrackerDbContext : DbContext
         });
 
         // TimeEntry
-        modelBuilder.Entity<TimeEntry>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Hours).HasPrecision(10, 2);
-            entity.Property(e => e.ContributedHours).HasPrecision(10, 2);
-            entity.Property(e => e.Notes).HasMaxLength(1000);
-
-            entity.HasIndex(e => e.EnhancementId);
-            entity.HasIndex(e => e.ResourceId);
-            entity.HasIndex(e => e.WorkPhaseId);
-            entity.HasIndex(e => new { e.StartDate, e.EndDate });
-
-            entity.HasOne(e => e.Enhancement)
-                .WithMany(e => e.TimeEntriesNew)
-                .HasForeignKey(e => e.EnhancementId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(e => e.Resource)
-                .WithMany(r => r.TimeEntries)
-                .HasForeignKey(e => e.ResourceId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasOne(e => e.WorkPhase)
-                .WithMany(wp => wp.TimeEntries)
-                .HasForeignKey(e => e.WorkPhaseId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasOne(e => e.CreatedBy)
-                .WithMany()
-                .HasForeignKey(e => e.CreatedById)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            entity.HasOne(e => e.ModifiedBy)
-                .WithMany()
-                .HasForeignKey(e => e.ModifiedById)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            // Ignore computed properties
-            entity.Ignore(e => e.TotalPulledHours);
-            entity.Ignore(e => e.RemainingHours);
-        });
+      
 
         // Consolidation
         modelBuilder.Entity<Consolidation>(entity =>
@@ -610,8 +570,60 @@ public class TrackerDbContext : DbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
-            
+
         });
+
+
+        modelBuilder.Entity<TimeEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Hours).HasPrecision(10, 2);
+            entity.Property(e => e.ContributedHours).HasPrecision(10, 2);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+
+            entity.HasIndex(e => e.EnhancementId);
+            entity.HasIndex(e => e.ResourceId);
+            entity.HasIndex(e => e.WorkPhaseId);
+            entity.HasIndex(e => new { e.StartDate, e.EndDate });
+
+            // Value converters for DateOnly <-> DateTime
+            // This allows timezone-safe DateOnly in C# while keeping DateTime in SQLite
+            entity.Property(e => e.StartDate)
+                .HasConversion(
+                    dateOnly => dateOnly.ToDateTime(TimeOnly.MinValue),  // DateOnly -> DateTime for storage
+                    dateTime => DateOnly.FromDateTime(dateTime));         // DateTime -> DateOnly when reading
+
+            entity.Property(e => e.EndDate)
+                .HasConversion(
+                    dateOnly => dateOnly.ToDateTime(TimeOnly.MinValue),
+                    dateTime => DateOnly.FromDateTime(dateTime));
+
+            entity.HasOne(e => e.Enhancement)
+                .WithMany(en => en.TimeEntriesNew)
+                .HasForeignKey(e => e.EnhancementId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Resource)
+                 .WithMany(r => r.TimeEntries) 
+                .HasForeignKey(e => e.ResourceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.WorkPhase)
+                .WithMany(wp => wp.TimeEntries) 
+                .HasForeignKey(e => e.WorkPhaseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedById)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ModifiedBy)
+                .WithMany()
+                .HasForeignKey(e => e.ModifiedById)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
 
     }
 }

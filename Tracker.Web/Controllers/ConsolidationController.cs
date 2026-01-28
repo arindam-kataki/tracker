@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Tracker.Web.Entities;
+using Tracker.Web.Extensions;
 using Tracker.Web.Services.Interfaces;
 using Tracker.Web.ViewModels;
 
@@ -292,8 +293,8 @@ public class ConsolidationController : BaseController
             {
                 TimeEntryId = s.TimeEntryId,
                 ResourceName = s.TimeEntry?.Resource?.Name ?? "Unknown",
-                StartDate = s.TimeEntry?.StartDate ?? DateTime.MinValue,
-                EndDate = s.TimeEntry?.EndDate ?? DateTime.MinValue,
+                StartDate = s.TimeEntry?.StartDate ?? DateTime.MinValue.ToDateOnly(),
+                EndDate = s.TimeEntry?.EndDate ?? DateTime.MinValue.ToDateOnly(),
                 WorkPhaseName = s.TimeEntry?.WorkPhase?.Name ?? "Unknown",
                 OriginalHours = s.TimeEntry?.Hours ?? 0,
                 OriginalContributedHours = s.TimeEntry?.ContributedHours ?? 0,

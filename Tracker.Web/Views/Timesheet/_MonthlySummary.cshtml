@@ -1,0 +1,232 @@
+@* 
+    _MonthlySummary.cshtml
+    Partial view for displaying monthly timesheet summary
+    Shows work items grouped by service area with hours logged
+    
+    Loaded via AJAX into #monthlySummaryContainer
+*@
+
+<div class="card" id="monthlySummaryCard">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>
+            <i class="bi bi-list-check me-2"></i>
+            <strong id="summaryHeaderTitle">Work Items This Month</strong>
+        </span>
+        <span class="badge bg-primary" id="summaryTotalHours">0.0 hrs</span>
+    </div>
+    <div class="card-body p-0">
+        <div id="summaryContent">
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-hourglass-split me-1"></i> Loading summary...
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .summary-table {
+        font-size: 0.95rem;
+        margin-bottom: 0;
+    }
+    .summary-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .summary-table td {
+        vertical-align: middle;
+    }
+    .summary-table .work-id {
+        font-weight: 600;
+        color: #0d6efd;
+        cursor: pointer;
+    }
+    .summary-table .work-id:hover {
+        text-decoration: underline;
+    }
+    .summary-table .description {
+        color: #6c757d;
+        font-size: 0.9rem;
+        max-width: 250px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .summary-table .hours-cell {
+        font-weight: 600;
+        text-align: right;
+    }
+    .summary-table .service-area-row {
+        background-color: #e9ecef;
+        font-weight: 600;
+    }
+    .summary-table .service-area-row td {
+        padding: 0.5rem 0.75rem;
+    }
+    .work-phase-breakdown {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    .work-phase-breakdown .badge {
+        font-weight: normal;
+        margin-right: 0.25rem;
+    }
+    .no-entries-message {
+        padding: 2rem;
+        text-align: center;
+        color: #6c757d;
+    }
+    .no-entries-message i {
+        font-size: 2rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+</style>
+
+<script>
+(function() {
+    // This script is loaded when the partial is rendered
+    // It will be called by the parent page's loadMonthlySummary function
+    
+    window.renderMonthlySummary = function(data) {
+        const contentEl = document.getElementById('summaryContent');
+        const totalEl = document.getElementById('summaryTotalHours');
+        const titleEl = document.getElementById('summaryHeaderTitle');
+        
+        if (!data || !data.items || data.items.length === 0) {
+            contentEl.innerHTML = `
+                <div class="no-entries-message">
+                    <i class="bi bi-inbox"></i>
+                    <p class="mb-0">No time entries recorded this month.</p>
+                    <small>Select a work item and click on a day to add entries.</small>
+                </div>
+            `;
+            totalEl.textContent = '0.0 hrs';
+            return;
+        }
+        
+        // Update title based on filter
+        if (data.filterType === 'workItem') {
+            titleEl.textContent = `Hours for ${data.workItemId}`;
+        } else if (data.filterType === 'serviceArea') {
+            titleEl.textContent = `Work Items - ${data.serviceAreaName}`;
+        } else {
+            titleEl.textContent = 'All Work Items This Month';
+        }
+        
+        // Update total
+        totalEl.textContent = data.totalHours.toFixed(1) + ' hrs';
+        
+        // Build the table
+        let html = `
+            <table class="table table-hover summary-table">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Work ID</th>
+                        <th>Description</th>
+                        <th style="width: 100px;" class="text-end">Hours</th>
+                        <th style="width: 100px;" class="text-end">Contributed</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        // Group by service area if showing all
+        if (data.filterType === 'all' && data.groupByServiceArea) {
+            // Group items by service area
+            const grouped = {};
+            data.items.forEach(item => {
+                const sa = item.serviceAreaCode || 'Other';
+                if (!grouped[sa]) {
+                    grouped[sa] = { name: item.serviceAreaName || sa, items: [], totalHours: 0, totalContributed: 0 };
+                }
+                grouped[sa].items.push(item);
+                grouped[sa].totalHours += item.hours;
+                grouped[sa].totalContributed += item.contributedHours;
+            });
+            
+            // Render grouped
+            for (const [saCode, saData] of Object.entries(grouped)) {
+                html += `
+                    <tr class="service-area-row">
+                        <td colspan="2"><i class="bi bi-folder me-1"></i>${saCode} - ${saData.name}</td>
+                        <td class="text-end">${saData.totalHours.toFixed(1)}</td>
+                        <td class="text-end">${saData.totalContributed.toFixed(1)}</td>
+                    </tr>
+                `;
+                
+                saData.items.forEach(item => {
+                    html += renderWorkItemRow(item);
+                });
+            }
+        } else {
+            // Render flat list
+            data.items.forEach(item => {
+                html += renderWorkItemRow(item);
+            });
+        }
+        
+        html += `
+                </tbody>
+                <tfoot>
+                    <tr class="table-secondary">
+                        <td colspan="2"><strong>Total</strong></td>
+                        <td class="text-end"><strong>${data.totalHours.toFixed(1)}</strong></td>
+                        <td class="text-end"><strong>${data.totalContributed.toFixed(1)}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        `;
+        
+        contentEl.innerHTML = html;
+        
+        // Attach click handlers to work IDs for quick selection
+        contentEl.querySelectorAll('.work-id').forEach(el => {
+            el.addEventListener('click', function() {
+                const workItemId = this.dataset.id;
+                const workId = this.dataset.workid;
+                const serviceAreaId = this.dataset.servicearea;
+                
+                // Trigger selection in parent (if function exists)
+                if (window.selectWorkItemFromSummary) {
+                    window.selectWorkItemFromSummary(serviceAreaId, workItemId, workId);
+                }
+            });
+        });
+    };
+    
+    function renderWorkItemRow(item) {
+        // Build work phase breakdown if available
+        let phaseBreakdown = '';
+        if (item.byWorkPhase && Object.keys(item.byWorkPhase).length > 0) {
+            phaseBreakdown = '<div class="work-phase-breakdown">';
+            for (const [phase, hours] of Object.entries(item.byWorkPhase)) {
+                phaseBreakdown += `<span class="badge bg-secondary">${phase}: ${hours.toFixed(1)}h</span>`;
+            }
+            phaseBreakdown += '</div>';
+        }
+        
+        return `
+            <tr>
+                <td>
+                    <span class="work-id" 
+                          data-id="${item.enhancementId}" 
+                          data-workid="${item.workId}"
+                          data-servicearea="${item.serviceAreaId}"
+                          title="Click to select this work item">
+                        ${item.workId}
+                    </span>
+                </td>
+                <td>
+                    <div class="description" title="${item.description || ''}">${item.description || '-'}</div>
+                    ${phaseBreakdown}
+                </td>
+                <td class="hours-cell">${item.hours.toFixed(1)}</td>
+                <td class="hours-cell">${item.contributedHours.toFixed(1)}</td>
+            </tr>
+        `;
+    }
+})();
+</script>

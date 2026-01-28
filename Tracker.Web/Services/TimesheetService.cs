@@ -33,7 +33,7 @@ public class TimesheetService : ITimesheetService
             .ToListAsync();
     }
 
-    public async Task<List<TimeEntry>> GetEntriesForResourceAsync(string resourceId, DateTime? startDate = null, DateTime? endDate = null)
+    public async Task<List<TimeEntry>> GetEntriesForResourceAsync(string resourceId, DateOnly? startDate = null, DateOnly? endDate = null)
     {
         var query = _db.TimeEntries
             .Include(te => te.Enhancement)
@@ -58,8 +58,8 @@ public class TimesheetService : ITimesheetService
         string? serviceAreaId = null,
         string? enhancementId = null,
         string? resourceId = null,
-        DateTime? startDate = null,
-        DateTime? endDate = null)
+        DateOnly? startDate = null,
+        DateOnly? endDate = null)
     {
         var query = _db.TimeEntries
             .Include(te => te.Enhancement)
@@ -104,8 +104,8 @@ public class TimesheetService : ITimesheetService
         string enhancementId,
         string resourceId,
         string workPhaseId,
-        DateTime startDate,
-        DateTime endDate,
+        DateOnly startDate,
+        DateOnly endDate,
         decimal hours,
         decimal? contributedHours,
         string? notes,
@@ -116,75 +116,73 @@ public class TimesheetService : ITimesheetService
         
         // Calculate contributed hours if not provided
         var actualContributedHours = contributedHours ?? 
-            (hours * (workPhase?.DefaultContributionPercent ?? 100) / 100);
+            (hours * (workPhase?.DefaultContributionPercent ?? 100) / 100m);
 
         var entry = new TimeEntry
         {
             EnhancementId = enhancementId,
             ResourceId = resourceId,
             WorkPhaseId = workPhaseId,
-            StartDate = startDate.Date,
-            EndDate = endDate.Date,
+            StartDate = startDate,
+            EndDate = endDate,
             Hours = hours,
             ContributedHours = actualContributedHours,
             Notes = notes,
-            // NOTE: Don't set CreatedById - it has FK to Users table which is deprecated
-            // The ResourceId already identifies who created it
+            //CreatedById = createdByResourceId,
             CreatedAt = DateTime.UtcNow
         };
 
         _db.TimeEntries.Add(entry);
         await _db.SaveChangesAsync();
 
-        _logger.LogInformation("Time entry created: {Id} for enhancement {Enhancement} by resource {Resource}", 
-            entry.Id, enhancementId, resourceId);
+        _logger.LogInformation(
+            "Created time entry {Id} for enhancement {Enhancement} by resource {Resource}: {Hours}h on {Date}",
+            entry.Id, enhancementId, resourceId, hours, startDate);
 
-        // Reload with navigation properties
-        return (await GetEntryByIdAsync(entry.Id))!;
+        return entry;
     }
 
     public async Task<TimeEntry?> UpdateEntryAsync(
         string id,
         string workPhaseId,
-        DateTime startDate,
-        DateTime endDate,
+        DateOnly startDate,
+        DateOnly endDate,
         decimal hours,
         decimal contributedHours,
         string? notes,
         string modifiedByResourceId)
     {
-        var entry = await _db.TimeEntries
-            .Include(te => te.ConsolidationSources)
-            .FirstOrDefaultAsync(te => te.Id == id);
+        var entry = await _db.TimeEntries.FindAsync(id);
+        if (entry == null) return null;
 
-        if (entry == null)
-            return null;
-
-        // Check if entry has been consolidated
-        if (entry.ConsolidationSources.Any())
+        // Check if entry is consolidated
+        var isConsolidated = await _db.ConsolidationSources
+            .AnyAsync(cs => cs.TimeEntryId == id);
+        
+        if (isConsolidated)
         {
-            // Only allow notes update if consolidated
+            // Only allow notes update for consolidated entries
             entry.Notes = notes;
-            // NOTE: Don't set ModifiedById - it has FK to Users table which is deprecated
+            //entry.ModifiedById = modifiedByResourceId;
             entry.ModifiedAt = DateTime.UtcNow;
-            _logger.LogInformation("Time entry {Id} (consolidated) notes updated by resource {Resource}", id, modifiedByResourceId);
         }
         else
         {
             entry.WorkPhaseId = workPhaseId;
-            entry.StartDate = startDate.Date;
-            entry.EndDate = endDate.Date;
+            entry.StartDate = startDate;
+            entry.EndDate = endDate;
             entry.Hours = hours;
             entry.ContributedHours = contributedHours;
             entry.Notes = notes;
-            // NOTE: Don't set ModifiedById - it has FK to Users table which is deprecated
+            //entry.ModifiedById = modifiedByResourceId;
             entry.ModifiedAt = DateTime.UtcNow;
-            _logger.LogInformation("Time entry {Id} updated by resource {Resource}", id, modifiedByResourceId);
         }
 
         await _db.SaveChangesAsync();
 
-        return await GetEntryByIdAsync(id);
+        _logger.LogInformation("Updated time entry {Id}", id);
+
+        return entry;
     }
 
     public async Task<(bool success, string? error)> DeleteEntryAsync(string id)
@@ -196,41 +194,45 @@ public class TimesheetService : ITimesheetService
         if (entry == null)
             return (false, "Time entry not found.");
 
-        if (entry.ConsolidationSources.Any())
-            return (false, "Cannot delete time entry that has been used in a consolidation.");
+        // Check if entry has been consolidated
+        if (entry.ConsolidationSources?.Any() == true)
+            return (false, "Cannot delete a time entry that has been consolidated.");
 
         _db.TimeEntries.Remove(entry);
         await _db.SaveChangesAsync();
 
-        _logger.LogInformation("Time entry {Id} deleted", id);
+        _logger.LogInformation("Deleted time entry {Id}", id);
 
         return (true, null);
     }
 
-    public Task<(bool isValid, string? error)> ValidateEntryAsync(
+    public async Task<(bool isValid, string? error)> ValidateEntryAsync(
         string enhancementId,
-        DateTime startDate,
-        DateTime endDate,
+        DateOnly startDate,
+        DateOnly endDate,
         decimal hours,
         decimal contributedHours)
     {
-        // End date must be >= start date
+        // Check enhancement exists
+        var enhancement = await _db.Enhancements.FindAsync(enhancementId);
+        if (enhancement == null)
+            return (false, "Enhancement not found.");
+
+        // Validate dates
         if (endDate < startDate)
-            return Task.FromResult<(bool, string?)>((false, "End date must be on or after start date."));
+            return (false, "End date cannot be before start date.");
 
-        // Hours must be positive
+        // Validate hours
         if (hours <= 0)
-            return Task.FromResult<(bool, string?)>((false, "Hours must be greater than zero."));
+            return (false, "Hours must be greater than zero.");
 
-        // Contributed hours cannot exceed hours
-        if (contributedHours > hours)
-            return Task.FromResult<(bool, string?)>((false, "Contributed hours cannot exceed total hours."));
-
-        // Contributed hours cannot be negative
         if (contributedHours < 0)
-            return Task.FromResult<(bool, string?)>((false, "Contributed hours cannot be negative."));
+            return (false, "Contributed hours cannot be negative.");
 
-        return Task.FromResult<(bool, string?)>((true, null));
+        if (contributedHours > hours)
+            return (false, "Contributed hours cannot exceed total hours.");
+
+        return (true, null);
     }
 
     #endregion
@@ -239,184 +241,133 @@ public class TimesheetService : ITimesheetService
 
     public async Task<List<ServiceArea>> GetServiceAreasWithTimesheetPermissionAsync(string resourceId)
     {
-        // Get service areas where the resource has LogTimesheet permission
-        var serviceAreaIds = await _db.ResourceServiceAreas
-            .Where(rsa => rsa.ResourceId == resourceId && rsa.Permissions.HasFlag(Permissions.LogTimesheet))
-            .Select(rsa => rsa.ServiceAreaId)
+        // Get service areas where user has LogTimesheet permission
+        // Permissions is a flags enum, so we need to use HasFlag in memory after fetching
+        var memberships = await _db.ResourceServiceAreas
+            .Where(rsa => rsa.ResourceId == resourceId)
             .ToListAsync();
+        
+        var serviceAreaIds = memberships
+            .Where(rsa => rsa.Permissions.HasFlag(Permissions.LogTimesheet))
+            .Select(rsa => rsa.ServiceAreaId)
+            .ToList();
 
         return await _db.ServiceAreas
             .Where(sa => serviceAreaIds.Contains(sa.Id) && sa.IsActive)
-            .OrderBy(sa => sa.DisplayOrder)
-            .ThenBy(sa => sa.Code)
+            .OrderBy(sa => sa.Code)
             .ToListAsync();
     }
 
     public async Task<List<Enhancement>> GetEnhancementsForTimesheetAsync(
         string resourceId,
         string? serviceAreaId = null,
-        string? status = null,
-        string? workIdSearch = null,
-        string? descriptionSearch = null,
-        string? tagSearch = null,
-        DateTime? startDateFrom = null,
-        DateTime? startDateTo = null)
+        string? search = null)
     {
-        // Get permitted service area IDs
-        var permittedServiceAreaIds = await _db.ResourceServiceAreas
-            .Where(rsa => rsa.ResourceId == resourceId && rsa.Permissions.HasFlag(Permissions.LogTimesheet))
-            .Select(rsa => rsa.ServiceAreaId)
+        // First get permitted service areas (need to evaluate HasFlag in memory)
+        var memberships = await _db.ResourceServiceAreas
+            .Where(rsa => rsa.ResourceId == resourceId)
             .ToListAsync();
+            
+        var permittedServiceAreaIds = memberships
+            .Where(rsa => rsa.Permissions.HasFlag(Permissions.LogTimesheet))
+            .Select(rsa => rsa.ServiceAreaId)
+            .ToList();
 
         if (!permittedServiceAreaIds.Any())
             return new List<Enhancement>();
 
         var query = _db.Enhancements
             .Include(e => e.ServiceArea)
-            .Where(e => permittedServiceAreaIds.Contains(e.ServiceAreaId))
-            .AsQueryable();
+            .Where(e => permittedServiceAreaIds.Contains(e.ServiceAreaId));
 
-        // Apply filters
+        // Filter by specific service area if provided
         if (!string.IsNullOrEmpty(serviceAreaId))
+        {
+            if (!permittedServiceAreaIds.Contains(serviceAreaId))
+                return new List<Enhancement>();
+            
             query = query.Where(e => e.ServiceAreaId == serviceAreaId);
+        }
 
-        if (!string.IsNullOrEmpty(status))
-            query = query.Where(e => e.Status == status || e.InfStatus == status);
+        // Search filter
+        if (!string.IsNullOrEmpty(search))
+        {
+            var searchLower = search.ToLower();
+            query = query.Where(e => 
+                e.WorkId.ToLower().Contains(searchLower) ||
+                e.Description.ToLower().Contains(searchLower));
+        }
 
-        if (!string.IsNullOrEmpty(workIdSearch))
-            query = query.Where(e => e.WorkId.Contains(workIdSearch));
-
-        if (!string.IsNullOrEmpty(descriptionSearch))
-            query = query.Where(e => e.Description != null && e.Description.Contains(descriptionSearch));
-
-        if (!string.IsNullOrEmpty(tagSearch))
-            query = query.Where(e => e.Tags != null && e.Tags.Contains(tagSearch));
-
-        if (startDateFrom.HasValue)
-            query = query.Where(e => e.StartDate >= startDateFrom.Value);
-
-        if (startDateTo.HasValue)
-            query = query.Where(e => e.StartDate <= startDateTo.Value);
+        // Only show active enhancements (not Cancelled)
+        query = query.Where(e => e.Status != "Cancelled");
 
         return await query
-            .OrderBy(e => e.WorkId)
-            .Take(50) // Limit for performance
+            .OrderBy(e => e.ServiceArea.Code)
+            .ThenBy(e => e.WorkId)
+            .Take(100) // Limit results
             .ToListAsync();
     }
 
     public async Task<bool> CanLogTimeForEnhancementAsync(string resourceId, string enhancementId)
     {
         var enhancement = await _db.Enhancements.FindAsync(enhancementId);
-        if (enhancement == null)
-            return false;
+        if (enhancement == null) return false;
 
-        var resource = await _db.Resources
-            .Include(r => r.ServiceAreas)
-            .FirstOrDefaultAsync(r => r.Id == resourceId);
-
-        if (resource == null)
-            return false;
-
-        // SuperAdmin can log time for any enhancement
-        if (resource.IsAdmin)
-            return true;
-
-        // Check if resource has LogTimesheet permission for the enhancement's service area
-        return resource.ServiceAreas
-            .Any(rsa => rsa.ServiceAreaId == enhancement.ServiceAreaId && 
-                        rsa.HasPermission(Permissions.LogTimesheet));
-    }
-
-    public async Task<TimesheetSummary> GetTimesheetSummaryAsync(string resourceId, DateTime startDate, DateTime endDate)
-    {
-        var resource = await _db.Resources.FindAsync(resourceId);
-        var entries = await GetEntriesForResourceAsync(resourceId, startDate, endDate);
-
-        var summary = new TimesheetSummary
-        {
-            ResourceId = resourceId,
-            ResourceName = resource?.Name ?? "Unknown",
-            StartDate = startDate,
-            EndDate = endDate,
-            Entries = entries,
-            TotalHours = entries.Sum(e => e.Hours),
-            TotalContributedHours = entries.Sum(e => e.ContributedHours)
-        };
-
-        // Hours by phase
-        summary.HoursByPhase = entries
-            .GroupBy(e => e.WorkPhase?.Name ?? "Unknown")
-            .ToDictionary(g => g.Key, g => g.Sum(e => e.Hours));
-
-        // Hours by enhancement
-        summary.HoursByEnhancement = entries
-            .GroupBy(e => e.Enhancement?.WorkId ?? "Unknown")
-            .ToDictionary(g => g.Key, g => g.Sum(e => e.Hours));
-
-        return summary;
-    }
-
-    public async Task<List<string>> GetDistinctEnhancementStatusesAsync(string resourceId)
-    {
-        var permittedServiceAreas = await GetServiceAreasWithTimesheetPermissionAsync(resourceId);
-        var permittedServiceAreaIds = permittedServiceAreas.Select(sa => sa.Id).ToList();
-
-        var statuses = await _db.Enhancements
-            .Where(e => permittedServiceAreaIds.Contains(e.ServiceAreaId))
-            .Select(e => e.Status)
-            .Where(s => s != null)
-            .Distinct()
-            .ToListAsync();
-
-        var infStatuses = await _db.Enhancements
-            .Where(e => permittedServiceAreaIds.Contains(e.ServiceAreaId))
-            .Select(e => e.InfStatus)
-            .Where(s => s != null)
-            .Distinct()
-            .ToListAsync();
-
-        return statuses.Union(infStatuses!)
-            .Where(s => !string.IsNullOrEmpty(s))
-            .OrderBy(s => s)
-            .ToList()!;
-    }
-
-    public async Task<List<string>> GetDistinctEnhancementTagsAsync(string resourceId)
-    {
-        var permittedServiceAreas = await GetServiceAreasWithTimesheetPermissionAsync(resourceId);
-        var permittedServiceAreaIds = permittedServiceAreas.Select(sa => sa.Id).ToList();
-
-        var allTags = await _db.Enhancements
-            .Where(e => permittedServiceAreaIds.Contains(e.ServiceAreaId) && e.Tags != null)
-            .Select(e => e.Tags)
-            .ToListAsync();
-
-        return allTags
-            .Where(t => !string.IsNullOrEmpty(t))
-            .SelectMany(t => t!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            .Distinct()
-            .OrderBy(t => t)
-            .ToList();
+        // Get the resource's memberships and check in memory (for HasFlag)
+        var membership = await _db.ResourceServiceAreas
+            .FirstOrDefaultAsync(rsa => 
+                rsa.ResourceId == resourceId && 
+                rsa.ServiceAreaId == enhancement.ServiceAreaId);
+        
+        if (membership == null) return false;
+        
+        return membership.Permissions.HasFlag(Permissions.LogTimesheet);
     }
 
     #endregion
 
-    #region Reporting
+    #region Consolidation Support
 
-    public async Task<Dictionary<string, decimal>> GetHoursByPhaseForEnhancementAsync(string enhancementId)
+    public async Task<List<TimeEntry>> GetUnconsolidatedEntriesAsync(
+        string enhancementId,
+        DateOnly startDate,
+        DateOnly endDate)
     {
-        var entries = await GetEntriesForEnhancementAsync(enhancementId);
-        return entries
-            .GroupBy(e => e.WorkPhase?.Name ?? "Unknown")
-            .ToDictionary(g => g.Key, g => g.Sum(e => e.Hours));
+        return await _db.TimeEntries
+            .Include(te => te.Resource)
+            .Include(te => te.WorkPhase)
+            .Include(te => te.ConsolidationSources)
+            .Where(te => te.EnhancementId == enhancementId)
+            .Where(te => te.StartDate >= startDate && te.EndDate <= endDate)
+            .Where(te => te.ContributedHours > te.ConsolidationSources.Sum(cs => cs.PulledHours))
+            .OrderBy(te => te.StartDate)
+            .ThenBy(te => te.Resource.Name)
+            .ToListAsync();
     }
 
-    public async Task<Dictionary<string, decimal>> GetHoursByResourceForEnhancementAsync(string enhancementId)
+    public async Task<List<TimeEntry>> GetConsolidatedEntriesAsync(
+        string enhancementId,
+        DateOnly? startDate = null,
+        DateOnly? endDate = null)
     {
-        var entries = await GetEntriesForEnhancementAsync(enhancementId);
-        return entries
-            .GroupBy(e => e.Resource?.Name ?? "Unknown")
-            .ToDictionary(g => g.Key, g => g.Sum(e => e.Hours));
+        var query = _db.TimeEntries
+            .Include(te => te.Resource)
+            .Include(te => te.WorkPhase)
+            .Include(te => te.ConsolidationSources)
+                .ThenInclude(cs => cs.Consolidation)
+            .Where(te => te.EnhancementId == enhancementId)
+            .Where(te => te.ConsolidationSources.Any());
+
+        if (startDate.HasValue)
+            query = query.Where(te => te.EndDate >= startDate.Value);
+
+        if (endDate.HasValue)
+            query = query.Where(te => te.StartDate <= endDate.Value);
+
+        return await query
+            .OrderBy(te => te.StartDate)
+            .ThenBy(te => te.Resource.Name)
+            .ToListAsync();
     }
 
     #endregion

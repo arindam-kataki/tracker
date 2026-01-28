@@ -272,8 +272,8 @@ public class TimeEntryForConsolidationViewModel
     public string TimeEntryId { get; set; } = string.Empty;
     public string ResourceId { get; set; } = string.Empty;
     public string ResourceName { get; set; } = string.Empty;
-    public DateTime StartDate { get; set; }
-    public DateTime EndDate { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly EndDate { get; set; }
     public string WorkPhaseName { get; set; } = string.Empty;
     public decimal Hours { get; set; }
     public decimal ContributedHours { get; set; }
@@ -362,8 +362,8 @@ public class ConsolidationSourceViewModel
 {
     public string TimeEntryId { get; set; } = string.Empty;
     public string ResourceName { get; set; } = string.Empty;
-    public DateTime StartDate { get; set; }
-    public DateTime EndDate { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly EndDate { get; set; }
     public string WorkPhaseName { get; set; } = string.Empty;
     public decimal OriginalHours { get; set; }
     public decimal OriginalContributedHours { get; set; }

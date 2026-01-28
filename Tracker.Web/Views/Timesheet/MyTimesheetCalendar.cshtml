@@ -156,7 +156,7 @@
                     <option value="">-- All Service Areas --</option>
                     @foreach (var sa in Model.AvailableServiceAreas)
                     {
-                        <option value="@sa.Id" data-code="@sa.Code">@sa.Code - @sa.Name</option>
+                        <option value="@sa.Id" data-code="@sa.Code" data-name="@sa.Name">@sa.Code - @sa.Name</option>
                     }
                 </select>
             </div>
@@ -185,29 +185,13 @@
         </div>
     </div>
 
-    @* ============================================
-       TOTALS DISPLAY - Shows based on filter selection
-       ============================================ *@
-    <div class="card mb-3" id="totalsCard">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-bar-chart me-2"></i><span id="totalsTitle">Monthly Totals</span></span>
-            <span class="badge bg-primary totals-display" id="monthTotalBadge">0.0 hrs</span>
-        </div>
-        <div class="card-body py-2">
-            <div class="row text-center" id="totalsBreakdown">
-                <div class="col">
-                    <div class="text-muted small">Loading...</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="row">
         @* ============================================
-           LEFT: CALENDAR
+           LEFT COLUMN: CALENDAR + MONTHLY SUMMARY
            ============================================ *@
         <div class="col-lg-7">
-            <div class="card">
+            @* Calendar Card *@
+            <div class="card mb-3">
                 @* Calendar Header with Navigation *@
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
                     <button class="btn btn-sm btn-outline-secondary" onclick="changeMonth(-1)">
@@ -256,10 +240,17 @@
                     </div>
                 </div>
             </div>
+            
+            @* ============================================
+               MONTHLY SUMMARY - Shows all work items with hours
+               ============================================ *@
+            <div id="monthlySummaryContainer">
+                @await Html.PartialAsync("_MonthlySummary")
+            </div>
         </div>
 
         @* ============================================
-           RIGHT: DAY PANEL (Single Day or Bulk Entry)
+           RIGHT COLUMN: DAY PANEL (Single Day or Bulk Entry)
            ============================================ *@
         <div class="col-lg-5">
             @* No Work Item Selected Panel *@
@@ -452,15 +443,37 @@
 <script>
 (function() {
     // ============================================
+    // UTILITY: Format date as YYYY-MM-DD without timezone issues
+    // This is the KEY FIX for the UTC/local date bug
+    // ============================================
+    function formatLocalDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    
+    function parseLocalDate(dateStr) {
+        // Parse YYYY-MM-DD as local date (not UTC)
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    }
+    
+    function getTodayString() {
+        return formatLocalDate(new Date());
+    }
+    
+    // ============================================
     // STATE VARIABLES
     // ============================================
     let selectedServiceAreaId = null;
+    let selectedServiceAreaName = null;
     let selectedWorkItem = null;  // { id, workId, description }
     let selectedDate = null;
     let selectedDateRange = [];
     let lastClickedDate = null;
     let currentMonth = new Date(@Model.StartDate.Year, @(Model.StartDate.Month - 1), 1);
-    let calendarData = {};  // { 'YYYY-MM-DD': { hours, contributed, entries[] } }
+    let calendarData = {};  // { 'YYYY-MM-DD': { hours, contributed } }
     let bulkRowCounter = 0;
     
     // Work phases data (with camelCase for JS)
@@ -476,7 +489,7 @@
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
         loadCalendarGrid();
-        loadTotals();
+        loadMonthlySummary();
         updateFilterStatus();
     });
     
@@ -485,7 +498,10 @@
     // ============================================
     window.onServiceAreaChange = function() {
         const select = document.getElementById('serviceAreaFilter');
+        const selectedOption = select.options[select.selectedIndex];
+        
         selectedServiceAreaId = select.value || null;
+        selectedServiceAreaName = selectedOption?.dataset?.name || null;
         
         // Reset work item
         selectedWorkItem = null;
@@ -503,7 +519,8 @@
                     data.forEach(item => {
                         // Format: WorkId - Description
                         const desc = item.description ? item.description.substring(0, 50) : '';
-                        options += `<option value="${item.id}" data-workid="${item.workId}" data-desc="${item.description || ''}">${item.workId} - ${desc}${item.description && item.description.length > 50 ? '...' : ''}</option>`;
+                        const suffix = item.description && item.description.length > 50 ? '...' : '';
+                        options += `<option value="${item.id}" data-workid="${item.workId}" data-desc="${item.description || ''}">${item.workId} - ${desc}${suffix}</option>`;
                     });
                     workItemSelect.innerHTML = options;
                     workItemSelect.disabled = false;
@@ -521,7 +538,7 @@
         resetDayPanels();
         updateFilterStatus();
         loadCalendarGrid();
-        loadTotals();
+        loadMonthlySummary();
     };
     
     window.onWorkItemChange = function() {
@@ -542,11 +559,12 @@
         resetDayPanels();
         updateFilterStatus();
         loadCalendarGrid();
-        loadTotals();
+        loadMonthlySummary();
     };
     
     window.clearFilters = function() {
         selectedServiceAreaId = null;
+        selectedServiceAreaName = null;
         selectedWorkItem = null;
         
         document.getElementById('serviceAreaFilter').value = '';
@@ -557,7 +575,54 @@
         resetDayPanels();
         updateFilterStatus();
         loadCalendarGrid();
-        loadTotals();
+        loadMonthlySummary();
+    };
+    
+    // Allow selection from monthly summary
+    window.selectWorkItemFromSummary = function(serviceAreaId, workItemId, workId) {
+        // Set service area first
+        const saSelect = document.getElementById('serviceAreaFilter');
+        saSelect.value = serviceAreaId;
+        
+        // Trigger service area change and then select work item
+        selectedServiceAreaId = serviceAreaId;
+        const selectedOption = saSelect.options[saSelect.selectedIndex];
+        selectedServiceAreaName = selectedOption?.dataset?.name || null;
+        
+        const workItemSelect = document.getElementById('workItemFilter');
+        workItemSelect.disabled = true;
+        workItemSelect.innerHTML = '<option value="">Loading...</option>';
+        
+        fetch('/timesheet/enhancements?serviceAreaId=' + encodeURIComponent(serviceAreaId))
+            .then(r => r.json())
+            .then(data => {
+                let options = '<option value="">-- Select Work Item --</option>';
+                data.forEach(item => {
+                    const desc = item.description ? item.description.substring(0, 50) : '';
+                    const suffix = item.description && item.description.length > 50 ? '...' : '';
+                    const selected = item.id === workItemId ? ' selected' : '';
+                    options += `<option value="${item.id}" data-workid="${item.workId}" data-desc="${item.description || ''}"${selected}>${item.workId} - ${desc}${suffix}</option>`;
+                });
+                workItemSelect.innerHTML = options;
+                workItemSelect.disabled = false;
+                
+                // Set selected work item
+                if (workItemId) {
+                    const opt = workItemSelect.querySelector(`option[value="${workItemId}"]`);
+                    if (opt) {
+                        selectedWorkItem = {
+                            id: workItemId,
+                            workId: opt.dataset.workid,
+                            description: opt.dataset.desc
+                        };
+                    }
+                }
+                
+                resetDayPanels();
+                updateFilterStatus();
+                loadCalendarGrid();
+                loadMonthlySummary();
+            });
     };
     
     function resetDayPanels() {
@@ -580,24 +645,18 @@
     
     function updateFilterStatus() {
         const statusEl = document.getElementById('filterStatus');
-        const titleEl = document.getElementById('totalsTitle');
         
         if (selectedWorkItem) {
             statusEl.innerHTML = `<i class="bi bi-check-circle text-success me-1"></i>Showing hours for: <strong>${selectedWorkItem.workId}</strong>. You can add hours.`;
-            titleEl.textContent = `Hours for ${selectedWorkItem.workId}`;
         } else if (selectedServiceAreaId) {
-            const saSelect = document.getElementById('serviceAreaFilter');
-            const saName = saSelect.options[saSelect.selectedIndex].text;
-            statusEl.innerHTML = `<i class="bi bi-funnel me-1"></i>Showing totals for: <strong>${saName}</strong>. Select a work item to add hours.`;
-            titleEl.textContent = `Totals for ${saName}`;
+            statusEl.innerHTML = `<i class="bi bi-funnel me-1"></i>Showing totals for: <strong>${selectedServiceAreaName || 'Selected Service Area'}</strong>. Select a work item to add hours.`;
         } else {
             statusEl.innerHTML = `<i class="bi bi-info-circle me-1"></i>Showing totals for <strong>all work items</strong>. Select a work item to add hours.`;
-            titleEl.textContent = 'Monthly Totals (All Items)';
         }
     }
     
     // ============================================
-    // CALENDAR GRID
+    // CALENDAR GRID - Using local dates (FIX for UTC bug)
     // ============================================
     function loadCalendarGrid() {
         const year = currentMonth.getFullYear();
@@ -612,15 +671,17 @@
         document.getElementById('calendarMonthTitle').textContent = 
             firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         
+        const todayStr = getTodayString();
         let html = '';
         let current = new Date(calendarStart);
         
         for (let week = 0; week < 6; week++) {
             html += '<tr>';
             for (let day = 0; day < 7; day++) {
-                const dateStr = current.toISOString().split('T')[0];
+                // FIX: Use local date formatting instead of toISOString()
+                const dateStr = formatLocalDate(current);
                 const isCurrentMonth = current.getMonth() === month;
-                const isToday = dateStr === new Date().toISOString().split('T')[0];
+                const isToday = dateStr === todayStr;
                 
                 let classes = 'calendar-day text-center p-2';
                 if (!isCurrentMonth) classes += ' other-month';
@@ -690,13 +751,13 @@
     }
     
     // ============================================
-    // TOTALS LOADING
+    // MONTHLY SUMMARY
     // ============================================
-    function loadTotals() {
+    function loadMonthlySummary() {
         const year = currentMonth.getFullYear();
         const month = currentMonth.getMonth() + 1;
         
-        let url = `/timesheet/monthly-totals?year=${year}&month=${month}`;
+        let url = `/timesheet/monthly-summary?year=${year}&month=${month}`;
         
         if (selectedWorkItem) {
             url += `&enhancementId=${encodeURIComponent(selectedWorkItem.id)}`;
@@ -707,26 +768,29 @@
         fetch(url)
             .then(r => r.json())
             .then(data => {
-                // Update total badge
-                document.getElementById('monthTotalBadge').textContent = 
-                    (data.totalHours || 0).toFixed(1) + ' hrs';
-                
-                // Update breakdown
-                let breakdownHtml = '';
-                if (data.byWorkPhase && Object.keys(data.byWorkPhase).length > 0) {
-                    breakdownHtml = '<div class="row">';
-                    for (const [phase, hours] of Object.entries(data.byWorkPhase)) {
-                        breakdownHtml += `<div class="col-auto"><span class="badge bg-secondary me-1">${phase}</span>${hours.toFixed(1)}h</div>`;
-                    }
-                    breakdownHtml += '</div>';
+                // Add filter context to data
+                if (selectedWorkItem) {
+                    data.filterType = 'workItem';
+                    data.workItemId = selectedWorkItem.workId;
+                } else if (selectedServiceAreaId) {
+                    data.filterType = 'serviceArea';
+                    data.serviceAreaName = selectedServiceAreaName;
+                    data.groupByServiceArea = false;
                 } else {
-                    breakdownHtml = '<span class="text-muted">No hours recorded this month</span>';
+                    data.filterType = 'all';
+                    data.groupByServiceArea = true;
                 }
-                document.getElementById('totalsBreakdown').innerHTML = breakdownHtml;
+                
+                // Call the render function from the partial
+                if (window.renderMonthlySummary) {
+                    window.renderMonthlySummary(data);
+                }
             })
             .catch(err => {
-                console.error('Error loading totals:', err);
-                document.getElementById('totalsBreakdown').innerHTML = '<span class="text-danger">Error loading totals</span>';
+                console.error('Error loading monthly summary:', err);
+                if (window.renderMonthlySummary) {
+                    window.renderMonthlySummary(null);
+                }
             });
     }
     
@@ -766,8 +830,8 @@
         document.getElementById('singleDayPanel').style.display = 'block';
         document.getElementById('rangeDayPanel').style.display = 'none';
         
-        // Update title
-        const date = new Date(dateStr);
+        // Update title - use parseLocalDate to avoid timezone issues
+        const date = parseLocalDate(dateStr);
         document.getElementById('singleDayTitle').textContent = 
             date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
         
@@ -782,8 +846,8 @@
     }
     
     function selectDateRange(startStr, endStr) {
-        let start = new Date(startStr);
-        let end = new Date(endStr);
+        let start = parseLocalDate(startStr);
+        let end = parseLocalDate(endStr);
         
         if (start > end) {
             [start, end] = [end, start];
@@ -793,10 +857,10 @@
         selectedDate = null;
         selectedDateRange = [];
         
-        // Build range
+        // Build range using local dates
         let current = new Date(start);
         while (current <= end) {
-            selectedDateRange.push(current.toISOString().split('T')[0]);
+            selectedDateRange.push(formatLocalDate(current));
             current.setDate(current.getDate() + 1);
         }
         
@@ -814,8 +878,8 @@
         document.getElementById('rangeDayPanel').style.display = 'block';
         
         // Update title
-        const startDate = new Date(selectedDateRange[0]);
-        const endDate = new Date(selectedDateRange[selectedDateRange.length - 1]);
+        const startDate = parseLocalDate(selectedDateRange[0]);
+        const endDate = parseLocalDate(selectedDateRange[selectedDateRange.length - 1]);
         document.getElementById('rangeDayTitle').textContent = 
             `Bulk Entry: ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
         document.getElementById('rangeDayCount').textContent = selectedDateRange.length + ' days';
@@ -841,17 +905,20 @@
                 
                 let html = '<div class="list-group list-group-flush">';
                 entries.forEach(e => {
+                    const notesHtml = e.notes 
+                        ? `<small class="text-muted d-block mt-1"><i class="bi bi-chat-left-text me-1"></i>${escapeHtml(e.notes)}</small>` 
+                        : '';
                     html += `
                         <div class="list-group-item d-flex justify-content-between align-items-start px-0">
                             <div class="flex-grow-1">
                                 <div class="d-flex justify-content-between">
-                                    <strong>${e.workPhaseName || 'Unknown'}</strong>
+                                    <strong>${escapeHtml(e.workPhaseName || 'Unknown')}</strong>
                                     <span class="badge bg-primary">${e.hours.toFixed(2)}h</span>
                                 </div>
-                                ${e.notes ? `<small class="text-muted d-block mt-1"><i class="bi bi-chat-left-text me-1"></i>${e.notes}</small>` : ''}
+                                ${notesHtml}
                             </div>
                             <div class="btn-group btn-group-sm ms-2">
-                                <button class="btn btn-outline-primary" onclick="editEntry('${e.id}', '${e.workPhaseId}', ${e.hours}, ${e.contributedHours}, '${(e.notes || '').replace(/'/g, "\\'")}')">
+                                <button class="btn btn-outline-primary" onclick="editEntry('${e.id}', '${e.workPhaseId}', ${e.hours}, ${e.contributedHours}, '${escapeHtml(e.notes || '').replace(/'/g, "\\'")}')">
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <button class="btn btn-outline-danger" onclick="deleteEntry('${e.id}')">
@@ -868,6 +935,11 @@
                 console.error('Error loading entries:', err);
                 listEl.innerHTML = '<p class="text-danger">Error loading entries</p>';
             });
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
     
     window.updateNewEntryContributed = function() {
@@ -898,7 +970,7 @@
         const formData = new URLSearchParams();
         formData.append('EnhancementId', selectedWorkItem.id);
         formData.append('WorkPhaseId', workPhaseId);
-        formData.append('StartDate', selectedDate);
+        formData.append('StartDate', selectedDate);  // Already in YYYY-MM-DD format
         formData.append('Hours', hours);
         formData.append('ContributedHours', contributed || hours);
         formData.append('Notes', notes);
@@ -921,7 +993,7 @@
                 // Reload
                 loadDayEntries(selectedDate);
                 loadCalendarData();
-                loadTotals();
+                loadMonthlySummary();
             } else {
                 alert(result.message || 'Error saving entry');
             }
@@ -969,6 +1041,7 @@
         const formData = new URLSearchParams();
         formData.append('Id', id);
         formData.append('WorkPhaseId', workPhaseId);
+        formData.append('StartDate', selectedDate); 
         formData.append('Hours', hours);
         formData.append('ContributedHours', contributed);
         formData.append('Notes', notes);
@@ -985,7 +1058,7 @@
                 bootstrap.Modal.getInstance(document.getElementById('editEntryModal')).hide();
                 loadDayEntries(selectedDate);
                 loadCalendarData();
-                loadTotals();
+                loadMonthlySummary();
             } else {
                 alert(result.message || 'Error updating entry');
             }
@@ -1011,7 +1084,7 @@
             if (result.success) {
                 loadDayEntries(selectedDate);
                 loadCalendarData();
-                loadTotals();
+                loadMonthlySummary();
             } else {
                 alert(result.message || 'Error deleting entry');
             }
@@ -1126,7 +1199,7 @@
                 const formData = new URLSearchParams();
                 formData.append('EnhancementId', selectedWorkItem.id);
                 formData.append('WorkPhaseId', entry.workPhaseId);
-                formData.append('StartDate', dateStr);
+                formData.append('StartDate', dateStr);  // Already in YYYY-MM-DD format
                 formData.append('Hours', entry.hours);
                 formData.append('ContributedHours', entry.contributed);
                 formData.append('Notes', entry.notes);
@@ -1158,7 +1231,7 @@
         // Reset and reload
         cancelBulkEntry();
         loadCalendarData();
-        loadTotals();
+        loadMonthlySummary();
     };
     
     // ============================================
@@ -1168,7 +1241,7 @@
         currentMonth.setMonth(currentMonth.getMonth() + delta);
         resetDayPanels();
         loadCalendarGrid();
-        loadTotals();
+        loadMonthlySummary();
     };
     
     window.goToToday = function() {
@@ -1176,7 +1249,7 @@
         currentMonth.setDate(1);
         resetDayPanels();
         loadCalendarGrid();
-        loadTotals();
+        loadMonthlySummary();
     };
     
 })();

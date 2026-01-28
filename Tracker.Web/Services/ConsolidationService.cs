@@ -269,7 +269,8 @@ public class ConsolidationService : IConsolidationService
             .Include(te => te.WorkPhase)
             .Include(te => te.ConsolidationSources)
             .Where(te => te.EnhancementId == enhancementId)
-            .Where(te => te.StartDate <= endDate && te.EndDate >= startDate)
+            .Where(te => te.StartDate <= DateOnly.FromDateTime(endDate) && 
+             te.EndDate >= DateOnly.FromDateTime(startDate))
             .Where(te => te.WorkPhase.ForConsolidation)
             .OrderBy(te => te.Resource.Name)
             .ThenBy(te => te.StartDate)
@@ -300,7 +301,8 @@ public class ConsolidationService : IConsolidationService
             .Include(te => te.Enhancement)
                 .ThenInclude(e => e.ServiceArea)
             .Include(te => te.WorkPhase)
-            .Where(te => te.StartDate <= endDate && te.EndDate >= startDate)
+            .Where(te => te.StartDate <= DateOnly.FromDateTime(endDate) && 
+             te.EndDate >= DateOnly.FromDateTime(startDate))
             .Where(te => te.WorkPhase.ForConsolidation)
             .AsQueryable();
 
