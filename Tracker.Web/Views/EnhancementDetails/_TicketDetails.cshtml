@@ -156,33 +156,33 @@
 
         <div class="col-md-3">
             <label class="form-label">Sizing Status</label>
-            <select name="Status" class="form-select">
+            <select name="EstimatedStatus" class="form-select">
                 <option value="">-- Select --</option>
                 @foreach (var s in Model.AvailableSizingStatuses)
                 {
-                    <option value="@s" selected="@(Model.Status == s)">@s</option>
+                    <option value="@s" selected="@(Model.EstimatedStatus == s)">@s</option>
                 }
             </select>
         </div>
 
         <div class="col-md-4">
             <label class="form-label">Labor Type</label>
-            <select name="LaborType" class="form-select">
+            <select name="EstimatedLaborType" class="form-select">
                 <option value="">-- Select --</option>
                 @foreach (var lt in Model.AvailableLaborTypes)
                 {
-                    <option value="@lt" selected="@(Model.LaborType == lt)">@lt</option>
+                    <option value="@lt" selected="@(Model.EstimatedLaborType == lt)">@lt</option>
                 }
             </select>
         </div>
 
         <div class="col-md-4">
             <label class="form-label">Priority</label>
-            <select name="Priority" class="form-select">
+            <select name="EstimatedPriority" class="form-select">
                 <option value="">-- Select --</option>
                 @foreach (var p in Model.AvailablePriorities)
                 {
-                    <option value="@p" selected="@(Model.Priority == p)">@p</option>
+                    <option value="@p" selected="@(Model.EstimatedPriority == p)">@p</option>
                 }
             </select>
         </div>
@@ -722,22 +722,27 @@
 
             var formData = new FormData(form);
             var data = {
-                id: formData.get('Id') || null,
+                id: formData.get('Id'),
                 workId: formData.get('WorkId'),
                 description: formData.get('Description'),
                 notes: formData.get('Notes'),
+                status: formData.get('Status'),
                 serviceAreaId: formData.get('ServiceAreaId'),
+                serviceLine: formData.get('ServiceLine'),
                 estimatedHours: parseFloat(formData.get('EstimatedHours')) || null,
                 estimatedStartDate: formData.get('EstimatedStartDate') || null,
                 estimatedEndDate: formData.get('EstimatedEndDate') || null,
                 estimationNotes: formData.get('EstimationNotes'),
-                status: formData.get('Status'),
-                serviceLine: formData.get('ServiceLine'),
+                estimatedStatus: formData.get('EstimatedStatus'),
+                estimatedPriority: formData.get('EstimatedPriority'),                // ADD THIS
+                estimatedLaborType: formData.get('EstimatedLaborType'),             // ADD THIS
                 returnedHours: parseFloat(formData.get('ReturnedHours')) || null,
                 startDate: formData.get('StartDate') || null,
                 endDate: formData.get('EndDate') || null,
                 infStatus: formData.get('InfStatus'),
                 infServiceLine: formData.get('InfServiceLine'),
+                infLaborType: formData.get('InfLaborType'),       // ADD THIS
+                infPriority: formData.get('InfPriority'),         // ADD THIS
                 timeW1: parseFloat(formData.get('TimeW1')) || null,
                 timeW2: parseFloat(formData.get('TimeW2')) || null,
                 timeW3: parseFloat(formData.get('TimeW3')) || null,

@@ -13,17 +13,28 @@ public class EnhancementHistory
     public string Description { get; set; } = string.Empty;
     public string? Notes { get; set; }
     public string ServiceAreaId { get; set; } = string.Empty;
+    
+    // Sizing - L3H fields
     public decimal? EstimatedHours { get; set; }
     public DateTime? EstimatedStartDate { get; set; }
     public DateTime? EstimatedEndDate { get; set; }
     public string? EstimationNotes { get; set; }
     public string? Status { get; set; }
     public string? ServiceLine { get; set; }
+    public string? EstimatedLaborType { get; set; }      // ADD THIS
+    public string? EstimatedPriority { get; set; }       // ADD THIS
+    public string? EstimatedStatus { get; set; }        // ADD THIS
+    
+    // Actual/Core Info - Inf* fields
     public decimal? ReturnedHours { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public string? InfStatus { get; set; }
     public string? InfServiceLine { get; set; }
+    public string? InfLaborType { get; set; }   // ADD THIS
+    public string? InfPriority { get; set; }    // ADD THIS
+    
+    // Legacy time allocations
     public decimal? TimeW1 { get; set; }
     public decimal? TimeW2 { get; set; }
     public decimal? TimeW3 { get; set; }
@@ -33,6 +44,8 @@ public class EnhancementHistory
     public decimal? TimeW7 { get; set; }
     public decimal? TimeW8 { get; set; }
     public decimal? TimeW9 { get; set; }
+    
+    // Original audit info
     public string? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public string? ModifiedBy { get; set; }

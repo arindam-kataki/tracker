@@ -131,16 +131,17 @@ public class EnhancementDetailsController : BaseController
             Description = enhancement?.Description ?? string.Empty,
             Notes = enhancement?.Notes,
             ServiceAreaId = serviceArea.Id,
+            Status = enhancement?.Status ?? "New",
 
             // Sizing - L3H fields
             EstimatedHours = enhancement?.EstimatedHours,
             EstimatedStartDate = enhancement?.EstimatedStartDate,
             EstimatedEndDate = enhancement?.EstimatedEndDate,
             EstimationNotes = enhancement?.EstimationNotes,
-            Status = enhancement?.Status ?? "New",
+            EstimatedStatus = enhancement?.EstimatedStatus,
+            EstimatedLaborType = enhancement?.EstimatedLaborType,           // ADD THIS
+            EstimatedPriority = enhancement?.EstimatedPriority,              // ADD THIS
             ServiceLine = enhancement?.ServiceLine,
-            LaborType = enhancement?.LaborType,           // ADD THIS
-            Priority = enhancement?.Priority,              // ADD THIS
 
             // Actual/Core Info - Inf* fields
             ReturnedHours = enhancement?.ReturnedHours,
@@ -363,16 +364,17 @@ public class EnhancementDetailsController : BaseController
                 Description = request.Description,
                 Notes = request.Notes,
                 ServiceAreaId = request.ServiceAreaId,
+                Status = request.Status,
 
                 // Sizing - L3H fields
                 EstimatedHours = request.EstimatedHours,
                 EstimatedStartDate = request.EstimatedStartDate,
                 EstimatedEndDate = request.EstimatedEndDate,
                 EstimationNotes = request.EstimationNotes,
-                Status = request.Status,
+                EstimatedStatus = request.EstimatedStatus,
                 ServiceLine = request.ServiceLine,
-                LaborType = request.LaborType,           // ADD THIS
-                Priority = request.Priority,              // ADD THIS
+                EstimatedLaborType = request.EstimatedLaborType,           // ADD THIS
+                EstimatedPriority = request.EstimatedPriority,              // ADD THIS
 
                 // Actual/Core Info - Inf* fields
                 ReturnedHours = request.ReturnedHours,

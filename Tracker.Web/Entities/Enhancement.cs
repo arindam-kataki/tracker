@@ -15,15 +15,9 @@ public class Enhancement
     public string WorkId { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string? Notes { get; set; }
-    
-    /// <summary>
-    /// Comma-separated tags for categorization and filtering
-    /// Example: "urgent,backend,api-change"
-    /// </summary>
+    public string? Status { get; set; }
     [MaxLength(500)]
     public string? Tags { get; set; }
-
-    // Service Area
     public string ServiceAreaId { get; set; } = string.Empty;
 
     // ---------------------------------------------------------------
@@ -35,11 +29,11 @@ public class Enhancement
     [Description("Request Raised Date")]
     public DateTime? RequestRaisedDate { get; set; }
     [Description("L3H Labor Type")]
-    public string? LaborType { get; set; }
+    public string? EstimatedLaborType { get; set; }
     [Description("L3H Activity Type")]
-    public string? ActivityType { get; set; }
+    public string? EstimatedActivityType { get; set; }
     [Description("L3H Priority")]
-    public string? Priority { get; set; }
+    public string? EstimatedPriority { get; set; }
     [Description("L3H Estimated Hours")]
     public decimal? EstimatedHours { get; set; }
     [Description("L3H Estimated Start Date")]
@@ -48,8 +42,8 @@ public class Enhancement
     public DateTime? EstimatedEndDate { get; set; }
     [Description("L3H Estimation Notes")]
     public string? EstimationNotes { get; set; }
-    [Description("L3H Status")]
-    public string? Status { get; set; }
+    [Description("L3H Estimated Status")]
+    public string? EstimatedStatus { get; set; }
     [Description("L3H Service Line")]
     public string? ServiceLine { get; set; }
     [Description("L3H SignIT Reference")]

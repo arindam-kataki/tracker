@@ -209,17 +209,29 @@ public class EnhancementService : IEnhancementService
         existing.Description = enhancement.Description;
         existing.Notes = enhancement.Notes;
         existing.ServiceAreaId = enhancement.ServiceAreaId;
+        existing.Status = enhancement.Status;
+
+        // Sizing - L3H fields
         existing.EstimatedHours = enhancement.EstimatedHours;
         existing.EstimatedStartDate = enhancement.EstimatedStartDate;
         existing.EstimatedEndDate = enhancement.EstimatedEndDate;
         existing.EstimationNotes = enhancement.EstimationNotes;
-        existing.Status = enhancement.Status;
+        existing.EstimatedStatus = enhancement.EstimatedStatus;
+
         existing.ServiceLine = enhancement.ServiceLine;
+        existing.EstimatedLaborType = enhancement.EstimatedLaborType;         // ADD THIS
+        existing.EstimatedPriority = enhancement.EstimatedPriority;            // ADD THIS
+
+        // Actual/Core Info - Inf* fields
         existing.ReturnedHours = enhancement.ReturnedHours;
         existing.StartDate = enhancement.StartDate;
         existing.EndDate = enhancement.EndDate;
         existing.InfStatus = enhancement.InfStatus;
         existing.InfServiceLine = enhancement.InfServiceLine;
+        existing.InfLaborType = enhancement.InfLaborType;   // ADD THIS
+        existing.InfPriority = enhancement.InfPriority;     // ADD THIS
+
+        // Legacy time allocations
         existing.TimeW1 = enhancement.TimeW1;
         existing.TimeW2 = enhancement.TimeW2;
         existing.TimeW3 = enhancement.TimeW3;
@@ -229,6 +241,8 @@ public class EnhancementService : IEnhancementService
         existing.TimeW7 = enhancement.TimeW7;
         existing.TimeW8 = enhancement.TimeW8;
         existing.TimeW9 = enhancement.TimeW9;
+
+        // Audit
         existing.ModifiedBy = userId;
         existing.ModifiedAt = DateTime.UtcNow;
 
@@ -467,17 +481,28 @@ public class EnhancementService : IEnhancementService
             Description = enhancement.Description,
             Notes = enhancement.Notes,
             ServiceAreaId = enhancement.ServiceAreaId,
+
+            // Sizing - L3H fields
             EstimatedHours = enhancement.EstimatedHours,
             EstimatedStartDate = enhancement.EstimatedStartDate,
             EstimatedEndDate = enhancement.EstimatedEndDate,
             EstimationNotes = enhancement.EstimationNotes,
             Status = enhancement.Status,
             ServiceLine = enhancement.ServiceLine,
+            EstimatedLaborType = enhancement.EstimatedLaborType,         // ADD THIS
+            EstimatedPriority = enhancement.EstimatedPriority,            // ADD THIS
+            EstimatedStatus = enhancement.EstimatedStatus,            // ADD THIS
+
+            // Actual/Core Info - Inf* fields
             ReturnedHours = enhancement.ReturnedHours,
             StartDate = enhancement.StartDate,
             EndDate = enhancement.EndDate,
             InfStatus = enhancement.InfStatus,
             InfServiceLine = enhancement.InfServiceLine,
+            InfLaborType = enhancement.InfLaborType,   // ADD THIS
+            InfPriority = enhancement.InfPriority,     // ADD THIS
+
+            // Legacy time allocations
             TimeW1 = enhancement.TimeW1,
             TimeW2 = enhancement.TimeW2,
             TimeW3 = enhancement.TimeW3,
@@ -487,12 +512,14 @@ public class EnhancementService : IEnhancementService
             TimeW7 = enhancement.TimeW7,
             TimeW8 = enhancement.TimeW8,
             TimeW9 = enhancement.TimeW9,
+
+            // Audit
             CreatedBy = enhancement.CreatedBy,
             CreatedAt = enhancement.CreatedAt,
             ModifiedBy = enhancement.ModifiedBy,
             ModifiedAt = enhancement.ModifiedAt
         };
-
+        
         _db.EnhancementHistory.Add(history);
         await _db.SaveChangesAsync();
     }

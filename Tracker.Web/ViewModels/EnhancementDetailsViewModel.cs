@@ -53,6 +53,7 @@ public class TicketDetailsViewModel
     
     public string? Notes { get; set; }
     
+    public string? Status { get; set; }  
     public string ServiceAreaId { get; set; } = string.Empty;
     
     // ---------------------------------------------------------------
@@ -62,10 +63,10 @@ public class TicketDetailsViewModel
     public DateTime? EstimatedStartDate { get; set; }
     public DateTime? EstimatedEndDate { get; set; }
     public string? EstimationNotes { get; set; }
-    public string? Status { get; set; }              // L3H Status (Sizing Status)
+    public string? EstimatedStatus { get; set; }              // L3H Status (Sizing Status)
     public string? ServiceLine { get; set; }
-    public string? LaborType { get; set; }           // ADD THIS - L3H Labor Type
-    public string? Priority { get; set; }            // ADD THIS - L3H Priority
+    public string? EstimatedLaborType { get; set; }           // ADD THIS - L3H Labor Type
+    public string? EstimatedPriority { get; set; }            // ADD THIS - L3H Priority
     
     // ---------------------------------------------------------------
     // Core Information / Actual Section - Inf* fields
@@ -287,6 +288,7 @@ public class SaveTicketDetailsRequest
     public string WorkId { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string? Notes { get; set; }
+    public string? Status { get; set; }
     public string ServiceAreaId { get; set; } = string.Empty;
     
     // Sizing - L3H fields
@@ -294,10 +296,10 @@ public class SaveTicketDetailsRequest
     public DateTime? EstimatedStartDate { get; set; }
     public DateTime? EstimatedEndDate { get; set; }
     public string? EstimationNotes { get; set; }
-    public string? Status { get; set; }
+    public string? EstimatedStatus { get; set; }
     public string? ServiceLine { get; set; }
-    public string? LaborType { get; set; }       // ADD THIS
-    public string? Priority { get; set; }         // ADD THIS
+    public string? EstimatedLaborType { get; set; }       // ADD THIS
+    public string? EstimatedPriority { get; set; }         // ADD THIS
     
     // Actual/Core Info - Inf* fields
     public decimal? ReturnedHours { get; set; }
