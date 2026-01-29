@@ -113,6 +113,7 @@
                 }
             </select>
         </div>
+        
         <div class="col-12">
             <label class="form-label">Description</label>
             <input type="text" name="Description" value="@Model.Description" class="form-control" />
@@ -204,13 +205,13 @@
                     style="width: 28px; height: 28px;">
                     <i class="bi bi-check2-circle"></i>
                 </div>
-                <h5 class="mb-0 text-info fw-bold">Actual / Returned</h5>
+                <h5 class="mb-0 text-info fw-bold">Approved</h5>
             </div>
             <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-info); opacity: 0.5;" />
         </div>
 
         <div class="col-md-3">
-            <label class="form-label">Returned Hours</label>
+            <label class="form-label">Hours</label>
             <input type="number" name="ReturnedHours" value="@Model.ReturnedHours" class="form-control" step="0.5" />
         </div>
 
@@ -224,7 +225,7 @@
             <input type="date" name="EndDate" value="@Model.EndDate?.ToString("yyyy-MM-dd")" class="form-control" />
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-3" style="display:none">
             <label class="form-label">Inf Status</label>
             <input type="text" name="InfStatus" value="@Model.InfStatus" class="form-control" list="infStatusList" />
             <datalist id="infStatusList">
