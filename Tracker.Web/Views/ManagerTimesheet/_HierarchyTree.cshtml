@@ -1,0 +1,11 @@
+@model List<HierarchyNodeViewModel>
+@{
+    var selectedNodeId = ViewData["SelectedNodeId"] as string;
+}
+
+<ul>
+    @foreach (var node in Model)
+    {
+        @await Html.PartialAsync("_HierarchyNode", node, ViewData)
+    }
+</ul>

@@ -1,0 +1,39 @@
+@{
+    ViewData["Title"] = "Manager Timesheet - No Permission";
+    var message = ViewBag.Message as string ?? "You do not have permission to access this page.";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Access Restricted</strong>
+                </div>
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-shield-lock display-1 text-muted d-block mb-4"></i>
+                    <h4 class="mb-3">Manager Timesheet</h4>
+                    <p class="text-muted mb-4">@message</p>
+                    
+                    <div class="alert alert-info text-start">
+                        <strong><i class="bi bi-info-circle me-1"></i>Requirements:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li><strong>ViewAllTimesheets</strong> permission in at least one service area</li>
+                            <li>At least one team member reporting to you in those service areas</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <a href="@Url.Action("Index", "Home")" class="btn btn-primary me-2">
+                            <i class="bi bi-house me-1"></i>Go Home
+                        </a>
+                        <a href="@Url.Action("MyTimesheetCalendar", "Timesheet")" class="btn btn-outline-secondary">
+                            <i class="bi bi-calendar me-1"></i>My Timesheet
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

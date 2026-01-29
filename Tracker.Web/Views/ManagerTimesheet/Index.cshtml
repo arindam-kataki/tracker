@@ -1,0 +1,560 @@
+@model ManagerTimesheetViewModel
+@{
+    ViewData["Title"] = "Manager Timesheet";
+    
+    // Calculate calendar grid
+    var firstDayOfMonth = new DateTime(Model.Year, Model.Month, 1);
+    var daysInMonth = DateTime.DaysInMonth(Model.Year, Model.Month);
+    var startDayOfWeek = (int)firstDayOfMonth.DayOfWeek;
+    var today = DateTime.Today;
+}
+
+<style>
+    /* ============================================
+       GENERAL STYLES - Match My Timesheet
+       ============================================ */
+    .manager-timesheet {
+        font-size: 1.05rem;
+    }
+    
+    .manager-timesheet .card-header {
+        font-size: 1.1rem;
+    }
+    
+    .manager-timesheet .form-select,
+    .manager-timesheet .form-control {
+        font-size: 1rem;
+    }
+    
+    .manager-timesheet .btn {
+        font-size: 1rem;
+    }
+    
+    /* ============================================
+       FILTER SECTION
+       ============================================ */
+    .filter-section {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+    }
+    
+    .filter-section label {
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    /* ============================================
+       CALENDAR GRID - Match My Timesheet exactly
+       ============================================ */
+    .calendar-grid {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+    }
+    
+    .calendar-grid table {
+        margin-bottom: 0;
+    }
+    
+    .calendar-header th {
+        font-size: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background-color: #f8f9fa;
+        text-align: center;
+        padding: 0.5rem;
+    }
+    
+    .calendar-day {
+        min-height: 90px;
+        font-size: 1.1rem;
+        vertical-align: top;
+        padding: 0.5rem !important;
+        transition: background-color 0.15s;
+        border: 1px solid #dee2e6;
+    }
+    
+    .calendar-day.today {
+        background-color: #fff3cd;
+        font-weight: bold;
+    }
+    
+    .calendar-day.has-hours {
+        background-color: #d1e7dd;
+    }
+    
+    .calendar-day.other-month {
+        opacity: 0.4;
+        background-color: #f8f9fa;
+    }
+    
+    .calendar-day.weekend {
+        background-color: #fafafa;
+    }
+    
+    .calendar-day.weekend.has-hours {
+        background-color: #d1e7dd;
+    }
+    
+    .calendar-day .day-number {
+        font-weight: 600;
+        font-size: 1.15rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.25rem;
+    }
+    
+    .calendar-day .hours-badge {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    .calendar-day .hours-badge.no-hours {
+        color: #adb5bd;
+    }
+    
+    /* Work phase badges in calendar */
+    .phase-badges-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.2rem;
+        margin-top: 0.25rem;
+    }
+    
+    .phase-badge-small {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.35rem;
+        border-radius: 0.25rem;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        color: white;
+    }
+    
+    .phase-badge-small .phase-code {
+        font-weight: 600;
+    }
+    
+    .phase-badge-small .phase-hours {
+        font-weight: 500;
+    }
+    
+    /* Work phase badge colors - explicit definitions */
+    .phase-badge-small.bg-info {
+        background-color: #0dcaf0 !important;
+        color: #000 !important;
+    }
+    .phase-badge-small.bg-primary {
+        background-color: #0d6efd !important;
+        color: #fff !important;
+    }
+    .phase-badge-small.bg-success {
+        background-color: #198754 !important;
+        color: #fff !important;
+    }
+    .phase-badge-small.bg-warning {
+        background-color: #ffc107 !important;
+        color: #000 !important;
+    }
+    .phase-badge-small.bg-danger {
+        background-color: #dc3545 !important;
+        color: #fff !important;
+    }
+    .phase-badge-small.bg-secondary {
+        background-color: #6c757d !important;
+        color: #fff !important;
+    }
+    .phase-badge-small.bg-light {
+        background-color: #f8f9fa !important;
+        color: #000 !important;
+    }
+    .phase-badge-small.bg-purple {
+        background-color: #6f42c1 !important;
+        color: #fff !important;
+    }
+    
+    /* ============================================
+       WORK ITEMS SECTION
+       ============================================ */
+    .service-area-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .service-area-header {
+        background-color: #e9ecef;
+        padding: 0.75rem 1rem;
+        border-radius: 0.375rem 0.375rem 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+    }
+    
+    .service-area-header .sa-code {
+        color: #0d6efd;
+    }
+    
+    .work-items-table {
+        font-size: 0.95rem;
+        margin-bottom: 0;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 0.375rem 0.375rem;
+    }
+    
+    .work-items-table th {
+        background-color: #f8f9fa;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        color: #6c757d;
+    }
+    
+    .work-items-table td {
+        vertical-align: middle;
+    }
+    
+    .work-items-table .work-id {
+        font-weight: 600;
+        color: #0d6efd;
+    }
+    
+    .work-items-table .description {
+        color: #6c757d;
+        font-size: 0.9rem;
+        max-width: 250px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .work-items-table .resources-cell {
+        font-size: 0.85rem;
+        color: #495057;
+    }
+    
+    .work-items-table .resources-cell .resource-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .work-items-table .resources-cell .resource-name {
+        display: inline-block;
+        background-color: #6c757d;
+        color: white;
+        padding: 0.15rem 0.4rem;
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .work-items-table .hours-cell {
+        text-align: right;
+        font-weight: 600;
+    }
+    
+    /* Service Area Total Row */
+    .service-area-total-row {
+        background-color: #e9ecef;
+        font-weight: 600;
+    }
+    
+    .service-area-total-row td {
+        border-top: 2px solid #dee2e6;
+    }
+    
+    /* ============================================
+       EMPTY STATE
+       ============================================ */
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+
+<div class="container-fluid manager-timesheet py-3">
+    @* ============================================
+       PAGE HEADER
+       ============================================ *@
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">
+            <i class="bi bi-people me-2"></i>Manager Timesheet
+        </h4>
+        <div>
+            <span class="text-muted me-3" style="font-size: 1.1rem;">@Model.ManagerName</span>
+            <a href="/timesheet/calendar" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-calendar3 me-1"></i>My Timesheet
+            </a>
+        </div>
+    </div>
+    
+    @* ============================================
+       FILTER SECTION - Team Selector + Summary Badges
+       ============================================ *@
+    <div class="filter-section mb-3">
+        <div class="row g-3 align-items-end">
+            @* Team/Resource Selector Dropdown *@
+            <div class="col-md-6">
+                <label for="teamSelector" class="form-label">
+                    <i class="bi bi-diagram-2 me-1"></i>View Team/Resource
+                </label>
+                <select id="teamSelector" class="form-select" onchange="onTeamSelectionChange()">
+                    @await Html.PartialAsync("_HierarchyDropdownOptions", Model.HierarchyTree, new ViewDataDictionary(ViewData) { { "SelectedNodeId", Model.SelectedNodeId } })
+                </select>
+            </div>
+            
+            @* Summary Badges - Same style as Team Timesheet *@
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-3 h-100">
+                    <span class="text-muted">
+                        <strong>@Model.SelectedNodeName</strong>
+                        <span class="ms-1">(@Model.SelectedResourceCount resource@(Model.SelectedResourceCount != 1 ? "s" : ""))</span>
+                    </span>
+                    <span class="badge bg-primary fs-6">@Model.TotalHours.ToString("N1") hours</span>
+                    <span class="badge bg-success fs-6">@Model.TotalContributedHours.ToString("N1") contributed</span>
+                </div>
+            </div>
+        </div>
+        
+        @* Service Areas Info *@
+        <div class="mt-2 text-muted small">
+            <i class="bi bi-info-circle me-1"></i>
+            Service Areas: @string.Join(", ", Model.ViewableServiceAreas.Select(sa => sa.Code))
+            <span class="ms-3 text-secondary">(Read-only view)</span>
+        </div>
+    </div>
+    
+    @* ============================================
+       CALENDAR GRID
+       ============================================ *@
+    <div class="card mb-3">
+        @* Calendar Header with Navigation - Match My Timesheet *@
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+            <a href="@Url.Action("Index", new { year = Model.Month == 1 ? Model.Year - 1 : Model.Year, month = Model.Month == 1 ? 12 : Model.Month - 1, selectedNode = Model.SelectedNodeId })" 
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <h5 class="mb-0 d-inline" style="font-size: 1.25rem;">
+                @Model.MonthYearDisplay
+            </h5>
+            <a href="@Url.Action("Index", new { year = Model.Month == 12 ? Model.Year + 1 : Model.Year, month = Model.Month == 12 ? 1 : Model.Month + 1, selectedNode = Model.SelectedNodeId })" 
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+        <div class="card-body p-0">
+            <div class="calendar-grid">
+                <table class="table table-bordered mb-0">
+                    <thead class="calendar-header">
+                        <tr>
+                            <th>Sun</th>
+                            <th>Mon</th>
+                            <th>Tue</th>
+                            <th>Wed</th>
+                            <th>Thu</th>
+                            <th>Fri</th>
+                            <th>Sat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            var calendarDict = Model.CalendarDays.ToDictionary(d => d.Date.Day);
+                            var weeksNeeded = (int)Math.Ceiling((startDayOfWeek + daysInMonth) / 7.0);
+                        }
+                        @for (var week = 0; week < weeksNeeded; week++)
+                        {
+                            <tr>
+                                @for (var dow = 0; dow < 7; dow++)
+                                {
+                                    var cellIndex = week * 7 + dow;
+                                    var dayNum = cellIndex - startDayOfWeek + 1;
+                                    
+                                    if (dayNum < 1 || dayNum > daysInMonth)
+                                    {
+                                        <td class="calendar-day other-month"></td>
+                                    }
+                                    else
+                                    {
+                                        var dayData = calendarDict.GetValueOrDefault(dayNum);
+                                        var hours = dayData?.Hours ?? 0;
+                                        var isWeekend = dow == 0 || dow == 6;
+                                        var currentDate = new DateTime(Model.Year, Model.Month, dayNum);
+                                        var isToday = currentDate.Date == today;
+                                        var phases = dayData?.WorkPhaseBreakdown ?? new List<WorkPhaseHoursViewModel>();
+                                        
+                                        var cellClasses = new List<string> { "calendar-day" };
+                                        if (isToday) cellClasses.Add("today");
+                                        if (isWeekend) cellClasses.Add("weekend");
+                                        if (hours > 0) cellClasses.Add("has-hours");
+                                        
+                                        <td class="@string.Join(" ", cellClasses)">
+                                            <div class="day-number">
+                                                <span>@dayNum</span>
+                                                <span class="hours-badge @(hours == 0 ? "no-hours" : "")">
+                                                    @if (hours > 0)
+                                                    {
+                                                        @hours.ToString("N1")<text>h</text>
+                                                    }
+                                                    else
+                                                    {
+                                                        <text>-</text>
+                                                    }
+                                                </span>
+                                            </div>
+                                            @if (phases.Any())
+                                            {
+                                                <div class="phase-badges-container">
+                                                    @foreach (var phase in phases)
+                                                    {
+                                                        <span class="phase-badge-small @phase.BadgeClass" title="@phase.WorkPhaseName: @phase.Hours.ToString("N1") hours">
+                                                            <span class="phase-code">@phase.WorkPhaseCode</span>
+                                                            <span class="phase-hours">@phase.Hours.ToString("N1")</span>
+                                                        </span>
+                                                    }
+                                                </div>
+                                            }
+                                        </td>
+                                    }
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    @* ============================================
+       WORK ITEMS SECTION - Grouped by Service Area
+       ============================================ *@
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <i class="bi bi-list-check me-1"></i>
+                <strong>Work Items</strong>
+            </span>
+            <span class="badge bg-primary">
+                @Model.TotalHours.ToString("N1") hours total
+            </span>
+        </div>
+        <div class="card-body p-3">
+            @if (Model.ServiceAreaGroups.Any())
+            {
+                @foreach (var saGroup in Model.ServiceAreaGroups)
+                {
+                    <div class="service-area-group">
+                        <div class="service-area-header">
+                            <span>
+                                <span class="sa-code">@saGroup.ServiceAreaCode</span>
+                                <span class="text-muted ms-1">- @saGroup.ServiceAreaName</span>
+                            </span>
+                            <span class="badge bg-secondary">
+                                @saGroup.TotalHours.ToString("N1") hrs
+                            </span>
+                        </div>
+                        <table class="table work-items-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 120px;">Work ID</th>
+                                    <th style="width: 200px;">Description</th>
+                                    <th>Resources</th>
+                                    <th style="width: 90px;" class="text-end">Hours</th>
+                                    <th style="width: 90px;" class="text-end">Contributed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var workItem in saGroup.WorkItems)
+                                {
+                                    <tr>
+                                        <td class="work-id">@workItem.WorkId</td>
+                                        <td class="description" title="@workItem.Description">@workItem.Description</td>
+                                        <td class="resources-cell">
+                                            @foreach (var resource in workItem.ResourceBreakdown)
+                                            {
+                                                <div class="resource-row mb-1">
+                                                    <span class="resource-name">@resource.ResourceName</span>
+                                                    @foreach (var phase in resource.WorkPhaseBreakdown)
+                                                    {
+                                                        <span class="phase-badge-small @phase.BadgeClass" title="@phase.WorkPhaseName: @phase.Hours.ToString("N1") hours">
+                                                            <span class="phase-code">@phase.WorkPhaseCode</span>
+                                                            <span class="phase-hours">@phase.Hours.ToString("N1")</span>
+                                                        </span>
+                                                    }
+                                                </div>
+                                            }
+                                        </td>
+                                        <td class="hours-cell">@workItem.TotalHours.ToString("N1")</td>
+                                        <td class="hours-cell">@workItem.TotalContributedHours.ToString("N1")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="service-area-total-row">
+                                    <td colspan="3"><strong>@saGroup.ServiceAreaCode Total</strong></td>
+                                    <td class="hours-cell">@saGroup.TotalHours.ToString("N1")</td>
+                                    <td class="hours-cell">@saGroup.TotalContributedHours.ToString("N1")</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                }
+                
+                @* Grand Total *@
+                <div class="card bg-light mt-3">
+                    <div class="card-body py-2">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <strong><i class="bi bi-calculator me-2"></i>Grand Total</strong>
+                                <span class="text-muted ms-2">(@Model.SelectedResourceCount resource@(Model.SelectedResourceCount != 1 ? "s" : ""), @Model.ServiceAreaGroups.Sum(g => g.WorkItems.Count) work items)</span>
+                            </div>
+                            <div class="col-auto text-end">
+                                <span class="badge bg-primary fs-6 me-2">@Model.TotalHours.ToString("N1") hours</span>
+                                <span class="badge bg-success fs-6">@Model.TotalContributedHours.ToString("N1") contributed</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <i class="bi bi-calendar-x d-block"></i>
+                    <h5>No Time Entries</h5>
+                    <p class="mb-0">No time entries found for the selected team/resource in @Model.MonthYearDisplay.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Handle team/resource selection change
+    function onTeamSelectionChange() {
+        const select = document.getElementById('teamSelector');
+        const nodeId = select.value;
+        
+        if (nodeId) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('selectedNode', nodeId);
+            window.location.href = url.toString();
+        }
+    }
+</script>
+}

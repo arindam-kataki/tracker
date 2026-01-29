@@ -1,0 +1,43 @@
+@model HierarchyNodeViewModel
+@{
+    var selectedNodeId = ViewData["SelectedNodeId"] as string;
+    var isSelected = Model.NodeId == selectedNodeId;
+    var nodeClasses = new List<string> { "hierarchy-node" };
+    
+    if (isSelected) nodeClasses.Add("selected");
+    if (Model.IsRollup) nodeClasses.Add("is-rollup");
+    if (Model.IsSelf) nodeClasses.Add("is-self");
+}
+
+<li>
+    <div class="@string.Join(" ", nodeClasses)" data-node-id="@Model.NodeId">
+        <span class="node-name">
+            @if (Model.IsRollup)
+            {
+                <i class="bi bi-people-fill node-icon"></i>
+            }
+            else
+            {
+                <i class="bi bi-person node-icon"></i>
+            }
+            <span>@Model.Name</span>
+            @if (Model.IsRollup && Model.ResourceCount > 1)
+            {
+                <span class="badge bg-light text-dark ms-1">@Model.ResourceCount</span>
+            }
+        </span>
+        <span class="node-hours @(isSelected ? "" : "text-muted")">
+            @Model.TotalHours.ToString("N1")h
+        </span>
+    </div>
+    
+    @if (Model.Children.Any())
+    {
+        <ul>
+            @foreach (var child in Model.Children)
+            {
+                @await Html.PartialAsync("_HierarchyNode", child, ViewData)
+            }
+        </ul>
+    }
+</li>

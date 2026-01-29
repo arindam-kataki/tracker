@@ -1,0 +1,42 @@
+@model List<HierarchyNodeViewModel>
+@{
+    var selectedNodeId = ViewData["SelectedNodeId"] as string;
+    
+    // Flatten the hierarchy into a list with indent levels for the dropdown
+    var flatList = new List<(HierarchyNodeViewModel Node, int Indent)>();
+    
+    void Flatten(List<HierarchyNodeViewModel> nodes, int indent)
+    {
+        foreach (var node in nodes)
+        {
+            flatList.Add((node, indent));
+            if (node.Children.Any())
+            {
+                Flatten(node.Children, indent + 1);
+            }
+        }
+    }
+    
+    Flatten(Model, 0);
+}
+
+@foreach (var item in flatList)
+{
+    var node = item.Node;
+    var indent = item.Indent;
+    var prefix = new string('\u00A0', indent * 4);
+    var icon = node.IsRollup ? "👥 " : "👤 ";
+    var suffix = node.ResourceCount > 1 ? $" ({node.ResourceCount})" : "";
+    var hoursDisplay = $" - {node.TotalHours:N1}h";
+    var displayText = $"{prefix}{icon}{node.Name}{suffix}{hoursDisplay}";
+    var isSelected = node.NodeId == selectedNodeId;
+    
+    if (isSelected)
+    {
+        <option value="@node.NodeId" selected>@displayText</option>
+    }
+    else
+    {
+        <option value="@node.NodeId">@displayText</option>
+    }
+}

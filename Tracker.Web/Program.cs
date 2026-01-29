@@ -59,6 +59,7 @@ builder.Services.AddScoped<ITimesheetService, TimesheetService>();
 builder.Services.AddScoped<IConsolidationService, ConsolidationService>();
 builder.Services.AddScoped<IEstimationService, EstimationService>();
 builder.Services.AddScoped<IResourceService, ResourceService>();
+builder.Services.AddScoped<IManagerTimesheetService, ManagerTimesheetService>();
 
 // Add MVC
 builder.Services.AddControllersWithViews();
