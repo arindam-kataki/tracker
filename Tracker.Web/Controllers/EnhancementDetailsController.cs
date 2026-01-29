@@ -25,7 +25,7 @@ public class EnhancementDetailsController : BaseController
     private readonly IAttachmentService _attachmentService;
     private readonly ITimeRecordingService _timeRecordingService;
     private readonly IEnhancementSharingService _sharingService;
-    private readonly IUserService _userService;
+    //private readonly IUserService _userService;
     private readonly TrackerDbContext _context;
 
     public EnhancementDetailsController(
@@ -38,7 +38,7 @@ public class EnhancementDetailsController : BaseController
         IAttachmentService attachmentService,
         ITimeRecordingService timeRecordingService,
         IEnhancementSharingService sharingService,
-        IUserService userService,
+       // IUserService userService,
         TrackerDbContext context) : base(authService)
     {
         _enhancementService = enhancementService;
@@ -49,7 +49,7 @@ public class EnhancementDetailsController : BaseController
         _attachmentService = attachmentService;
         _timeRecordingService = timeRecordingService;
         _sharingService = sharingService;
-        _userService = userService;
+       // _userService = userService;
         _context = context;
     }
 

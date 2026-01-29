@@ -10,18 +10,18 @@ public class EnhancementSharingService : IEnhancementSharingService
     private readonly TrackerDbContext _db;
     private readonly IEnhancementService _enhancementService;
     private readonly IEnhancementNoteService _noteService;
-    private readonly IUserService _userService;
+    private readonly IResourceService _resourceService;
 
     public EnhancementSharingService(
         TrackerDbContext db, 
         IEnhancementService enhancementService,
         IEnhancementNoteService noteService,
-        IUserService userService)
+        IResourceService userService)
     {
         _db = db;
         _enhancementService = enhancementService;
         _noteService = noteService;
-        _userService = userService;
+        _resourceService = userService;
     }
 
     public async Task<bool> ExistsInServiceAreaAsync(string workId, string serviceAreaId)
@@ -71,7 +71,7 @@ public class EnhancementSharingService : IEnhancementSharingService
             throw new InvalidOperationException("Target service area not found.");
 
         // Get user info for the sharing note
-        var user = await _userService.GetByIdAsync(userId);
+        var user = await _resourceService.GetByIdAsync(userId);
         var userName = user?.DisplayName ?? "Unknown User";
 
         // Create the copy

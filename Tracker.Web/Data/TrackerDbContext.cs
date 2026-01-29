@@ -265,6 +265,7 @@ public class TrackerDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
             entity.Property(e => e.FilterJson).IsRequired();
+            entity.Property(e => e.ResourceId).HasColumnName("UserId");
 
             entity.HasIndex(e => new { e.ResourceId, e.ServiceAreaId });
 
@@ -284,9 +285,10 @@ public class TrackerDbContext : DbContext
         // ============================================
         modelBuilder.Entity<ResourceColumnPreference>(entity =>
         {
+            entity.ToTable("UserColumnPreferences");  // 
             entity.HasKey(e => e.Id);
             entity.Property(e => e.ColumnsJson).IsRequired().HasDefaultValue("[]");
-
+            entity.Property(e => e.ResourceId).HasColumnName("UserId");
             entity.HasIndex(e => new { e.ResourceId, e.ServiceAreaId }).IsUnique();
 
             entity.HasOne(e => e.Resource)
@@ -306,6 +308,7 @@ public class TrackerDbContext : DbContext
         modelBuilder.Entity<NamedReport>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.ResourceId).HasColumnName("UserId");
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.ServiceAreaIdsJson).IsRequired().HasDefaultValue("[]");
             entity.Property(e => e.FilterJson).IsRequired().HasDefaultValue("{}");

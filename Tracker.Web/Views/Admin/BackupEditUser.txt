@@ -53,19 +53,8 @@
             </div>
             
             <div class="col-md-6">
-                <label class="form-label">Role</label>
-                <div class="mt-2">
-                    <div class="form-check form-check-inline">
-                        <input type="radio" class="form-check-input" name="IsAdmin" id="roleUser" 
-                               value="false" checked="@(!Model.IsAdmin)" />
-                        <label class="form-check-label" for="roleUser">User</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input type="radio" class="form-check-input" name="IsAdmin" id="roleSuperAdmin" 
-                               value="true" checked="@Model.IsAdmin" />
-                        <label class="form-check-label" for="roleSuperAdmin">SuperAdmin</label>
-                    </div>
-                </div>
+                <label asp-for="Role" class="form-label">Role</label>
+                <select asp-for="Role" asp-items="Html.GetEnumSelectList<UserRole>()" class="form-select"></select>
             </div>
             
             @if (isEdit)
@@ -77,13 +66,6 @@
                     </div>
                 </div>
             }
-            
-            <div class="col-md-6">
-                <div class="form-check @(isEdit ? "" : "mt-4")">
-                    <input asp-for="CanConsolidate" class="form-check-input" />
-                    <label asp-for="CanConsolidate" class="form-check-label">Can Access Consolidation</label>
-                </div>
-            </div>
             
             <div class="col-12">
                 <label class="form-label">Service Areas</label>

@@ -19,9 +19,11 @@ public class LoginViewModel
 // ===== Users =====
 public class UsersViewModel
 {
-    public List<User> Users { get; set; } = new();
+   // public List<Resource> Resources { get; set; } = new();
     public string? SearchTerm { get; set; }
     public string? RoleFilter { get; set; }
+    public List<ResourceListItem> Resources { get; internal set; } = new();
+
 }
 
 public class EditUserViewModel
@@ -36,12 +38,15 @@ public class EditUserViewModel
 
     public string? Password { get; set; }
 
-    public UserRole Role { get; set; } = UserRole.User;
+    public bool IsAdmin { get; set; } = false;  // New - simple boolean
+    public bool CanConsolidate { get; set; } = false;  // New - added this too
+    public string RoleDisplay => IsAdmin ? "SuperAdmin" : "User";  // Helper property
 
     public bool IsActive { get; set; } = true;
 
     public List<string> SelectedServiceAreaIds { get; set; } = new();
     public List<ServiceArea> AvailableServiceAreas { get; set; } = new();
+
 }
 
 

@@ -9,44 +9,39 @@ namespace Tracker.Web.Controllers;
 [Authorize(Policy = "SuperAdmin")]
 public class AdminController : BaseController
 {
-    private readonly IUserService _userService;
+    private readonly IResourceService _resourceService;
     private readonly IServiceAreaService _serviceAreaService;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
         IAuthService authService,
-        IUserService userService,
+        IResourceService resourceService,
         IServiceAreaService serviceAreaService,
         ILogger<AdminController> logger) : base(authService)
     {
-        _userService = userService;
+        _resourceService = resourceService;
         _serviceAreaService = serviceAreaService;
         _logger = logger;
     }
 
-    #region Users
+    #region Users (Login-enabled Resources)
 
     public async Task<IActionResult> Users(string? search, string? role)
     {
-        var users = await _userService.GetAllUsersAsync();
+        var allResources = await _resourceService.GetAllWithFiltersAsync(search, null, null);
+        var loginResources = allResources.Where(r => r.HasLoginAccess).ToList();
 
-        if (!string.IsNullOrEmpty(search))
+        if (!string.IsNullOrEmpty(role))
         {
-            var term = search.ToLower();
-            users = users
-                .Where(u => u.DisplayName.ToLower().Contains(term) || 
-                           u.Email.ToLower().Contains(term))
-                .ToList();
-        }
-
-        if (!string.IsNullOrEmpty(role) && Enum.TryParse<UserRole>(role, out var roleEnum))
-        {
-            users = users.Where(u => u.Role == roleEnum).ToList();
+            if (role == "SuperAdmin")
+                loginResources = loginResources.Where(r => r.IsAdmin).ToList();
+            else if (role == "User")
+                loginResources = loginResources.Where(r => !r.IsAdmin).ToList();
         }
 
         var model = new UsersViewModel
         {
-            Users = users,
+            Resources = loginResources,
             SearchTerm = search,
             RoleFilter = role
         };
@@ -65,16 +60,17 @@ public class AdminController : BaseController
 
         if (!string.IsNullOrEmpty(id))
         {
-            var user = await _userService.GetByIdAsync(id);
-            if (user == null)
+            var resource = await _resourceService.GetByIdAsync(id);
+            if (resource == null)
                 return NotFound();
 
-            model.Id = user.Id;
-            model.Email = user.Email;
-            model.DisplayName = user.DisplayName;
-            model.Role = user.Role;
-            model.IsActive = user.IsActive;
-            model.SelectedServiceAreaIds = user.ServiceAreas.Select(usa => usa.ServiceAreaId).ToList();
+            model.Id = resource.Id;
+            model.Email = resource.Email ?? string.Empty;
+            model.DisplayName = resource.Name;
+            model.IsAdmin = resource.IsAdmin;
+            model.IsActive = resource.IsActive;
+            model.CanConsolidate = resource.CanConsolidate;
+            model.SelectedServiceAreaIds = resource.ServiceAreas.Select(rsa => rsa.ServiceAreaId).ToList();
         }
 
         return PartialView(model);
@@ -100,20 +96,98 @@ public class AdminController : BaseController
                 return PartialView("EditUser", model);
             }
 
-            var user = await _userService.CreateUserAsync(model.Email, model.DisplayName, model.Password, model.Role);
-            await _userService.UpdateUserServiceAreasAsync(user.Id, model.SelectedServiceAreaIds);
+            var createModel = new EditResourceViewModel
+            {
+                Name = model.DisplayName,
+                Email = model.Email,
+                OrganizationType = OrganizationType.Implementor,
+                IsActive = true,
+                HasLoginAccess = true,
+                NewPassword = model.Password,  // Use NewPassword, not Password
+                IsAdmin = model.IsAdmin,
+                CanConsolidate = model.CanConsolidate,
+                ServiceAreaMemberships = model.SelectedServiceAreaIds
+                    .Select(saId => new EditResourceServiceAreaViewModel
+                    {
+                        ServiceAreaId = saId,
+                        IsPrimary = false,
+                        // Set individual permission booleans instead of Permissions property
+                        ViewEnhancements = true,
+                        LogTimesheet = true
+                    }).ToList()
+            };
+
+            var result = await _resourceService.CreateResourceAsync(createModel);
+            if (!result.Success)
+            {
+                foreach (var error in result.Errors)
+                    ModelState.AddModelError("", error);
+                model.AvailableServiceAreas = await _serviceAreaService.GetAllAsync();
+                return PartialView("EditUser", model);
+            }
+
             _logger.LogInformation("User {Email} created by {Admin}", model.Email, CurrentUserEmail);
         }
         else
         {
             // Update existing user
-            await _userService.UpdateUserAsync(model.Id, model.DisplayName, model.Role, model.IsActive);
-            await _userService.UpdateUserServiceAreasAsync(model.Id, model.SelectedServiceAreaIds);
+            var existingResource = await _resourceService.GetByIdAsync(model.Id);
+            if (existingResource == null)
+                return NotFound();
 
+            var updateModel = new EditResourceViewModel
+            {
+                Id = model.Id,
+                Name = model.DisplayName,
+                Email = model.Email,
+                OrganizationType = existingResource.OrganizationType,
+                IsActive = model.IsActive,
+                HasLoginAccess = true,
+                IsAdmin = model.IsAdmin,
+                CanConsolidate = model.CanConsolidate,
+                ServiceAreaMemberships = model.SelectedServiceAreaIds
+                    .Select(saId => {
+                        var existingMembership = existingResource.ServiceAreas
+                            .FirstOrDefault(sa => sa.ServiceAreaId == saId);
+                        
+                        var vm = new EditResourceServiceAreaViewModel
+                        {
+                            ServiceAreaId = saId,
+                            IsPrimary = existingMembership?.IsPrimary ?? false
+                        };
+                        
+                        // Preserve existing permissions or set defaults
+                        if (existingMembership != null)
+                        {
+                            vm.FromPermissions(existingMembership.Permissions);
+                        }
+                        else
+                        {
+                            vm.ViewEnhancements = true;
+                            vm.LogTimesheet = true;
+                        }
+                        
+                        return vm;
+                    }).ToList()
+            };
+
+            var result = await _resourceService.UpdateResourceAsync(updateModel);
+            if (!result.Success)
+            {
+                foreach (var error in result.Errors)
+                    ModelState.AddModelError("", error);
+                model.AvailableServiceAreas = await _serviceAreaService.GetAllAsync();
+                return PartialView("EditUser", model);
+            }
+
+            // Handle password reset if provided
             if (!string.IsNullOrEmpty(model.Password))
             {
-                await _userService.ResetPasswordAsync(model.Id, model.Password);
-                _logger.LogInformation("Password reset for {Email} by {Admin}", model.Email, CurrentUserEmail);
+                var passwordResult = await _resourceService.ResetPasswordAsync(model.Id, model.Password);
+                if (passwordResult.Success)
+                {
+                    _logger.LogInformation("Password reset for {Email} by {Admin}", model.Email, CurrentUserEmail);
+                }
             }
 
             _logger.LogInformation("User {Email} updated by {Admin}", model.Email, CurrentUserEmail);
@@ -127,17 +201,17 @@ public class AdminController : BaseController
     public async Task<IActionResult> DeleteUser(string id)
     {
         if (id == CurrentUserId)
-        {
             return BadRequest("Cannot delete your own account.");
-        }
 
-        var user = await _userService.GetByIdAsync(id);
-        if (user == null)
+        var resource = await _resourceService.GetByIdAsync(id);
+        if (resource == null)
             return NotFound();
 
-        await _userService.DeleteUserAsync(id);
-        _logger.LogInformation("User {Email} deleted by {Admin}", user.Email, CurrentUserEmail);
+        var result = await _resourceService.DeleteResourceAsync(id);
+        if (!result.Success)
+            return BadRequest(string.Join(", ", result.Errors));
 
+        _logger.LogInformation("User {Email} deleted by {Admin}", resource.Email, CurrentUserEmail);
         return Json(new { success = true });
     }
 
@@ -148,12 +222,7 @@ public class AdminController : BaseController
     public async Task<IActionResult> ServiceAreas()
     {
         var serviceAreas = await _serviceAreaService.GetAllAsync(activeOnly: false);
-
-        var model = new ServiceAreasViewModel
-        {
-            ServiceAreas = serviceAreas
-        };
-
+        var model = new ServiceAreasViewModel { ServiceAreas = serviceAreas };
         ViewBag.Sidebar = await GetSidebarViewModelAsync(currentPage: "serviceareas");
         return View(model);
     }
@@ -184,9 +253,7 @@ public class AdminController : BaseController
     public async Task<IActionResult> SaveServiceArea(EditServiceAreaViewModel model)
     {
         if (!ModelState.IsValid)
-        {
             return PartialView("EditServiceArea", model);
-        }
 
         if (string.IsNullOrEmpty(model.Id))
         {
@@ -212,12 +279,9 @@ public class AdminController : BaseController
 
         var deleted = await _serviceAreaService.DeleteAsync(id);
         if (!deleted)
-        {
             return BadRequest("Cannot delete service area with existing enhancements.");
-        }
 
         _logger.LogInformation("Service area {Name} deleted by {Admin}", serviceArea.Name, CurrentUserEmail);
-
         return Json(new { success = true });
     }
 

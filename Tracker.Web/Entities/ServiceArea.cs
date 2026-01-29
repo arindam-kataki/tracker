@@ -10,6 +10,6 @@ public class ServiceArea
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    public virtual ICollection<UserServiceArea> UserServiceAreas { get; set; } = new List<UserServiceArea>();
+    //public virtual ICollection<ResourceServiceArea> ResourceServiceAreas { get; set; } = new List<ResourceServiceArea>();
     public virtual ICollection<Enhancement> Enhancements { get; set; } = new List<Enhancement>();
 }
