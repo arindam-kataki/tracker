@@ -55,18 +55,28 @@ public class TicketDetailsViewModel
     
     public string ServiceAreaId { get; set; } = string.Empty;
     
+    // ---------------------------------------------------------------
+    // Sizing Section - L3H fields
+    // ---------------------------------------------------------------
     public decimal? EstimatedHours { get; set; }
     public DateTime? EstimatedStartDate { get; set; }
     public DateTime? EstimatedEndDate { get; set; }
     public string? EstimationNotes { get; set; }
-    public string? Status { get; set; }
+    public string? Status { get; set; }              // L3H Status (Sizing Status)
     public string? ServiceLine { get; set; }
+    public string? LaborType { get; set; }           // ADD THIS - L3H Labor Type
+    public string? Priority { get; set; }            // ADD THIS - L3H Priority
     
+    // ---------------------------------------------------------------
+    // Core Information / Actual Section - Inf* fields
+    // ---------------------------------------------------------------
     public decimal? ReturnedHours { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public string? InfStatus { get; set; }
     public string? InfServiceLine { get; set; }
+    public string? InfLaborType { get; set; }        // ADD THIS - Infosys Labor Type
+    public string? InfPriority { get; set; }         // ADD THIS - Infosys Priority
     
     // Legacy time allocations
     public decimal? TimeW1 { get; set; }
@@ -85,7 +95,9 @@ public class TicketDetailsViewModel
     public string? ModifiedBy { get; set; }
     public DateTime? ModifiedAt { get; set; }
     
+    // ---------------------------------------------------------------
     // Available options for dropdowns
+    // ---------------------------------------------------------------
     public List<ServiceArea> AvailableServiceAreas { get; set; } = new();
     public List<Resource> AvailableSponsors { get; set; } = new();
     public List<Resource> AvailableSpocs { get; set; } = new();
@@ -94,6 +106,18 @@ public class TicketDetailsViewModel
     public List<TimeRecordingCategory> AvailableTimeCategories { get; set; } = new();
     public List<string> AvailableServiceLines { get; set; } = new();
     public List<string> AvailableInfStatuses { get; set; } = new();
+    
+    // ADD THESE 3 - New dropdown option lists
+    public List<string> AvailableLaborTypes { get; set; } = new() { "O&M", "Enhancement", "Project" };
+    public List<string> AvailablePriorities { get; set; } = new() { "High", "Medium", "Low" };
+    public List<string> AvailableSizingStatuses { get; set; } = new() 
+    { 
+        "Not Started", 
+        "In Progress", 
+        "Pending Review", 
+        "Approved", 
+        "Rejected" 
+    };
     
     // Selected IDs
     public List<string> SelectedSponsorIds { get; set; } = new();
@@ -264,17 +288,27 @@ public class SaveTicketDetailsRequest
     public string Description { get; set; } = string.Empty;
     public string? Notes { get; set; }
     public string ServiceAreaId { get; set; } = string.Empty;
+    
+    // Sizing - L3H fields
     public decimal? EstimatedHours { get; set; }
     public DateTime? EstimatedStartDate { get; set; }
     public DateTime? EstimatedEndDate { get; set; }
     public string? EstimationNotes { get; set; }
     public string? Status { get; set; }
     public string? ServiceLine { get; set; }
+    public string? LaborType { get; set; }       // ADD THIS
+    public string? Priority { get; set; }         // ADD THIS
+    
+    // Actual/Core Info - Inf* fields
     public decimal? ReturnedHours { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public string? InfStatus { get; set; }
     public string? InfServiceLine { get; set; }
+    public string? InfLaborType { get; set; }    // ADD THIS
+    public string? InfPriority { get; set; }     // ADD THIS
+    
+    // Legacy time allocations
     public decimal? TimeW1 { get; set; }
     public decimal? TimeW2 { get; set; }
     public decimal? TimeW3 { get; set; }
@@ -284,13 +318,14 @@ public class SaveTicketDetailsRequest
     public decimal? TimeW7 { get; set; }
     public decimal? TimeW8 { get; set; }
     public decimal? TimeW9 { get; set; }
+    
+    // Resource selections
     public List<string> SponsorIds { get; set; } = new();
     public List<string> SpocIds { get; set; } = new();
     public List<string> ResourceIds { get; set; } = new();
     public List<string> SkillIds { get; set; } = new();
     public List<string> TimeCategoryIds { get; set; } = new();
 }
-
 /// <summary>
 /// Request model for creating/updating a note
 /// </summary>

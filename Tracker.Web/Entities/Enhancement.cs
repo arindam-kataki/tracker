@@ -35,9 +35,9 @@ public class Enhancement
     [Description("Request Raised Date")]
     public DateTime? RequestRaisedDate { get; set; }
     [Description("L3H Labor Type")]
-    public decimal? LaborType { get; set; }
+    public string? LaborType { get; set; }
     [Description("L3H Activity Type")]
-    public decimal? ActivityType { get; set; }
+    public string? ActivityType { get; set; }
     [Description("L3H Priority")]
     public string? Priority { get; set; }
     [Description("L3H Estimated Hours")]
@@ -69,8 +69,12 @@ public class Enhancement
     public DateTime? EndDate { get; set; }
     [Description("Infosys Status")]
     public string? InfStatus { get; set; }
+    [Description("Infosys Activity Type")]
+    public string? InfActivityType { get; set; }
     [Description("Infosys Service Line")]
     public string? InfServiceLine { get; set; }
+    [Description("Infosys Labor Type")]
+    public string? InfLaborType { get; set; }
     [Description("Infosys Priority")]
     public string? InfPriority { get; set; }
     [Description("Dependencies")]

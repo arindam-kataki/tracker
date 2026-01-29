@@ -1,33 +1,70 @@
 @model TicketDetailsViewModel
 @{
     var isNew = string.IsNullOrEmpty(Model.Id);
+    Model.AvailableTimeCategories = new List<TimeRecordingCategory>();
 }
+
+@* Custom styles for better readability *@
+<style>
+    /* Larger, bolder form labels */
+    .form-label {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.4rem;
+    }
+
+    /* Darker control borders */
+    .form-control,
+    .form-select {
+        border-color: #6b7280;
+        border-width: 1.5px;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+    }
+
+    /* Slightly larger input text */
+    .form-control,
+    .form-select {
+        font-size: 0.95rem;
+    }
+
+    /* Section header styling */
+    .section-header {
+        font-size: 1.1rem;
+    }
+</style>
 
 <form id="ticketDetailsForm">
     @Html.AntiForgeryToken()
     <input type="hidden" name="Id" value="@Model.Id" />
     <input type="hidden" name="ServiceAreaId" value="@Model.ServiceAreaId" />
-    
+
     <div class="row g-3">
-        
+
         <!-- ============================================ -->
         <!-- SECTION: Core Information -->
         <!-- ============================================ -->
         <div class="col-12">
             <div class="d-flex align-items-center mb-2">
-                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                    style="width: 28px; height: 28px;">
                     <i class="bi bi-info-circle"></i>
                 </div>
                 <h5 class="mb-0 text-primary fw-bold">Core Information</h5>
             </div>
             <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-primary); opacity: 0.5;" />
         </div>
-        
+
         <div class="col-md-4">
             <label class="form-label">Work ID <span class="text-danger">*</span></label>
             <input type="text" name="WorkId" value="@Model.WorkId" class="form-control" required />
         </div>
-        
+
         <div class="col-md-4">
             <label class="form-label">Status</label>
             <select name="Status" class="form-select">
@@ -38,10 +75,11 @@
                 }
             </select>
         </div>
-        
+
         <div class="col-md-4">
             <label class="form-label">Service Line</label>
-            <input type="text" name="ServiceLine" value="@Model.ServiceLine" class="form-control" list="serviceLineList" />
+            <input type="text" name="ServiceLine" value="@Model.ServiceLine" class="form-control"
+                list="serviceLineList" />
             <datalist id="serviceLineList">
                 @foreach (var sl in Model.AvailableServiceLines)
                 {
@@ -49,12 +87,37 @@
                 }
             </datalist>
         </div>
-        
+        <div class="col-md-3">
+            <label class="form-label">Inf Service Line</label>
+            <input type="text" name="InfServiceLine" value="@Model.InfServiceLine" class="form-control" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Labor Type</label>
+            <select name="InfLaborType" class="form-select">
+                <option value="">-- Select --</option>
+                @foreach (var lt in Model.AvailableLaborTypes)
+                {
+                    <option value="@lt" selected="@(Model.InfLaborType == lt)">@lt</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Priority</label>
+            <select name="InfPriority" class="form-select">
+                <option value="">-- Select --</option>
+                @foreach (var p in Model.AvailablePriorities)
+                {
+                    <option value="@p" selected="@(Model.InfPriority == p)">@p</option>
+                }
+            </select>
+        </div>
         <div class="col-12">
             <label class="form-label">Description</label>
             <input type="text" name="Description" value="@Model.Description" class="form-control" />
         </div>
-        
+
         <div class="col-12">
             <label class="form-label">Notes</label>
             <textarea name="Notes" class="form-control" rows="2">@Model.Notes</textarea>
@@ -65,67 +128,102 @@
         <!-- ============================================ -->
         <div class="col-12 mt-4">
             <div class="d-flex align-items-center mb-2">
-                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                    style="width: 28px; height: 28px;">
                     <i class="bi bi-calculator"></i>
                 </div>
-                <h5 class="mb-0 text-success fw-bold">Estimation</h5>
+                <h5 class="mb-0 text-success fw-bold">Sizing</h5>
             </div>
             <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-success); opacity: 0.5;" />
         </div>
-        
+
         <div class="col-md-3">
             <label class="form-label">Est. Hours</label>
             <input type="number" name="EstimatedHours" value="@Model.EstimatedHours" class="form-control" step="0.5" />
         </div>
-        
+
         <div class="col-md-3">
             <label class="form-label">Est. Start Date</label>
-            <input type="date" name="EstimatedStartDate" value="@Model.EstimatedStartDate?.ToString("yyyy-MM-dd")" class="form-control" />
-        </div>
-        
-        <div class="col-md-3">
-            <label class="form-label">Est. End Date</label>
-            <input type="date" name="EstimatedEndDate" value="@Model.EstimatedEndDate?.ToString("yyyy-MM-dd")" class="form-control" />
-        </div>
-        
-        <div class="col-md-3">
-            <label class="form-label">Inf Service Line</label>
-            <input type="text" name="InfServiceLine" value="@Model.InfServiceLine" class="form-control" />
-        </div>
-        
-        <div class="col-12">
-            <label class="form-label">Estimation Notes</label>
-            <textarea name="EstimationNotes" class="form-control" rows="2">@Model.EstimationNotes</textarea>
+            <input type="date" name="EstimatedStartDate" value="@Model.EstimatedStartDate?.ToString("yyyy-MM-dd")"
+                class="form-control" />
         </div>
 
+        <div class="col-md-3">
+            <label class="form-label">Est. End Date</label>
+            <input type="date" name="EstimatedEndDate" value="@Model.EstimatedEndDate?.ToString("yyyy-MM-dd")"
+                class="form-control" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Sizing Status</label>
+            <select name="Status" class="form-select">
+                <option value="">-- Select --</option>
+                @foreach (var s in Model.AvailableSizingStatuses)
+                {
+                    <option value="@s" selected="@(Model.Status == s)">@s</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Labor Type</label>
+            <select name="LaborType" class="form-select">
+                <option value="">-- Select --</option>
+                @foreach (var lt in Model.AvailableLaborTypes)
+                {
+                    <option value="@lt" selected="@(Model.LaborType == lt)">@lt</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Priority</label>
+            <select name="Priority" class="form-select">
+                <option value="">-- Select --</option>
+                @foreach (var p in Model.AvailablePriorities)
+                {
+                    <option value="@p" selected="@(Model.Priority == p)">@p</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            @* Spacer for alignment *@
+        </div>
+
+        <div class="col-12">
+            <label class="form-label">Sizing Notes</label>
+            <textarea name="EstimationNotes" class="form-control" rows="2">@Model.EstimationNotes</textarea>
+        </div>
         <!-- ============================================ -->
         <!-- SECTION: Actual/Returned -->
         <!-- ============================================ -->
         <div class="col-12 mt-4">
             <div class="d-flex align-items-center mb-2">
-                <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                    style="width: 28px; height: 28px;">
                     <i class="bi bi-check2-circle"></i>
                 </div>
                 <h5 class="mb-0 text-info fw-bold">Actual / Returned</h5>
             </div>
             <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-info); opacity: 0.5;" />
         </div>
-        
+
         <div class="col-md-3">
             <label class="form-label">Returned Hours</label>
             <input type="number" name="ReturnedHours" value="@Model.ReturnedHours" class="form-control" step="0.5" />
         </div>
-        
+
         <div class="col-md-3">
             <label class="form-label">Start Date</label>
             <input type="date" name="StartDate" value="@Model.StartDate?.ToString("yyyy-MM-dd")" class="form-control" />
         </div>
-        
+
         <div class="col-md-3">
             <label class="form-label">End Date</label>
             <input type="date" name="EndDate" value="@Model.EndDate?.ToString("yyyy-MM-dd")" class="form-control" />
         </div>
-        
+
         <div class="col-md-3">
             <label class="form-label">Inf Status</label>
             <input type="text" name="InfStatus" value="@Model.InfStatus" class="form-control" list="infStatusList" />
@@ -142,35 +240,40 @@
         <!-- ============================================ -->
         <div class="col-12 mt-4">
             <div class="d-flex align-items-center mb-2">
-                <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center me-2"
+                    style="width: 28px; height: 28px;">
                     <i class="bi bi-people-fill"></i>
                 </div>
                 <h5 class="mb-0 text-warning fw-bold">Resources</h5>
             </div>
             <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-warning); opacity: 0.5;" />
         </div>
-        
+
         <!-- Sponsors -->
         <div class="col-md-4">
             <label class="form-label d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-star-fill text-warning me-1"></i> Sponsors</span>
             </label>
-            <div class="border rounded p-2" style="min-height: 120px; max-height: 180px; overflow-y: auto;" id="sponsorsContainer">
+            <div class="border rounded p-2" style="min-height: 120px; max-height: 180px; overflow-y: auto;"
+                id="sponsorsContainer">
                 @foreach (var r in Model.AvailableSponsors)
                 {
                     var isSelected = Model.SelectedSponsorIds.Contains(r.Id);
-                    <div class="resource-item d-flex align-items-center justify-content-between py-1 @(isSelected ? "" : "d-none available-item")" data-id="@r.Id" data-type="sponsor">
+                    <div class="resource-item d-flex align-items-center justify-content-between py-1 @(isSelected ? "" : "d-none available-item")"
+                        data-id="@r.Id" data-type="sponsor">
                         <span class="small">@r.Name</span>
                         @if (isSelected)
                         {
-                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-resource-btn" data-type="sponsor" data-id="@r.Id" title="Remove">
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-resource-btn"
+                                data-type="sponsor" data-id="@r.Id" title="Remove">
                                 <i class="bi bi-x"></i>
                             </button>
                             <input type="hidden" name="SponsorIds" value="@r.Id" class="resource-input" />
                         }
                         else
                         {
-                            <button type="button" class="btn btn-sm btn-outline-success py-0 px-1 add-resource-btn" data-type="sponsor" data-id="@r.Id" data-name="@r.Name" title="Add">
+                            <button type="button" class="btn btn-sm btn-outline-success py-0 px-1 add-resource-btn"
+                                data-type="sponsor" data-id="@r.Id" data-name="@r.Name" title="Add">
                                 <i class="bi bi-plus"></i>
                             </button>
                         }
@@ -182,33 +285,38 @@
                 }
             </div>
             <div class="mt-1">
-                <button type="button" class="btn btn-sm btn-outline-primary show-available-btn" data-type="sponsor" data-container="sponsorsContainer">
+                <button type="button" class="btn btn-sm btn-outline-primary show-available-btn" data-type="sponsor"
+                    data-container="sponsorsContainer">
                     <i class="bi bi-plus-circle me-1"></i> Add Sponsor
                 </button>
             </div>
         </div>
-        
+
         <!-- SPOCs -->
         <div class="col-md-4">
             <label class="form-label d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-person-badge text-primary me-1"></i> SPOCs</span>
             </label>
-            <div class="border rounded p-2" style="min-height: 120px; max-height: 180px; overflow-y: auto;" id="spocsContainer">
+            <div class="border rounded p-2" style="min-height: 120px; max-height: 180px; overflow-y: auto;"
+                id="spocsContainer">
                 @foreach (var r in Model.AvailableSpocs)
                 {
                     var isSelected = Model.SelectedSpocIds.Contains(r.Id);
-                    <div class="resource-item d-flex align-items-center justify-content-between py-1 @(isSelected ? "" : "d-none available-item")" data-id="@r.Id" data-type="spoc">
+                    <div class="resource-item d-flex align-items-center justify-content-between py-1 @(isSelected ? "" : "d-none available-item")"
+                        data-id="@r.Id" data-type="spoc">
                         <span class="small">@r.Name</span>
                         @if (isSelected)
                         {
-                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-resource-btn" data-type="spoc" data-id="@r.Id" title="Remove">
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-resource-btn"
+                                data-type="spoc" data-id="@r.Id" title="Remove">
                                 <i class="bi bi-x"></i>
                             </button>
                             <input type="hidden" name="SpocIds" value="@r.Id" class="resource-input" />
                         }
                         else
                         {
-                            <button type="button" class="btn btn-sm btn-outline-success py-0 px-1 add-resource-btn" data-type="spoc" data-id="@r.Id" data-name="@r.Name" title="Add">
+                            <button type="button" class="btn btn-sm btn-outline-success py-0 px-1 add-resource-btn"
+                                data-type="spoc" data-id="@r.Id" data-name="@r.Name" title="Add">
                                 <i class="bi bi-plus"></i>
                             </button>
                         }
@@ -220,33 +328,38 @@
                 }
             </div>
             <div class="mt-1">
-                <button type="button" class="btn btn-sm btn-outline-primary show-available-btn" data-type="spoc" data-container="spocsContainer">
+                <button type="button" class="btn btn-sm btn-outline-primary show-available-btn" data-type="spoc"
+                    data-container="spocsContainer">
                     <i class="bi bi-plus-circle me-1"></i> Add SPOC
                 </button>
             </div>
         </div>
-        
+
         <!-- Assigned Resources -->
         <div class="col-md-4">
             <label class="form-label d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-person-fill-gear text-success me-1"></i> Assigned Resources</span>
             </label>
-            <div class="border rounded p-2" style="min-height: 120px; max-height: 180px; overflow-y: auto;" id="resourcesContainer">
+            <div class="border rounded p-2" style="min-height: 120px; max-height: 180px; overflow-y: auto;"
+                id="resourcesContainer">
                 @foreach (var r in Model.AvailableResources)
                 {
                     var isSelected = Model.SelectedResourceIds.Contains(r.Id);
-                    <div class="resource-item d-flex align-items-center justify-content-between py-1 @(isSelected ? "" : "d-none available-item")" data-id="@r.Id" data-type="resource">
+                    <div class="resource-item d-flex align-items-center justify-content-between py-1 @(isSelected ? "" : "d-none available-item")"
+                        data-id="@r.Id" data-type="resource">
                         <span class="small">@r.Name</span>
                         @if (isSelected)
                         {
-                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-resource-btn" data-type="resource" data-id="@r.Id" title="Remove">
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-resource-btn"
+                                data-type="resource" data-id="@r.Id" title="Remove">
                                 <i class="bi bi-x"></i>
                             </button>
                             <input type="hidden" name="ResourceIds" value="@r.Id" class="resource-input" />
                         }
                         else
                         {
-                            <button type="button" class="btn btn-sm btn-outline-success py-0 px-1 add-resource-btn" data-type="resource" data-id="@r.Id" data-name="@r.Name" title="Add">
+                            <button type="button" class="btn btn-sm btn-outline-success py-0 px-1 add-resource-btn"
+                                data-type="resource" data-id="@r.Id" data-name="@r.Name" title="Add">
                                 <i class="bi bi-plus"></i>
                             </button>
                         }
@@ -258,7 +371,8 @@
                 }
             </div>
             <div class="mt-1">
-                <button type="button" class="btn btn-sm btn-outline-primary show-available-btn" data-type="resource" data-container="resourcesContainer">
+                <button type="button" class="btn btn-sm btn-outline-primary show-available-btn" data-type="resource"
+                    data-container="resourcesContainer">
                     <i class="bi bi-plus-circle me-1"></i> Add Resource
                 </button>
             </div>
@@ -271,14 +385,15 @@
         {
             <div class="col-12 mt-4">
                 <div class="d-flex align-items-center mb-2">
-                    <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                    <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                        style="width: 28px; height: 28px;">
                         <i class="bi bi-tools"></i>
                     </div>
                     <h5 class="mb-0 text-secondary fw-bold">Required Skills</h5>
                 </div>
                 <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-secondary); opacity: 0.5;" />
             </div>
-            
+
             <div class="col-12">
                 <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;" id="skillsContainer">
                     <div class="row">
@@ -286,18 +401,21 @@
                         {
                             var isSelected = Model.SelectedSkillIds.Contains(skill.Id);
                             <div class="col-md-4 col-lg-3">
-                                <div class="resource-item d-flex align-items-center justify-content-between py-1 @(isSelected ? "" : "d-none available-item")" data-id="@skill.Id" data-type="skill">
+                                <div class="resource-item d-flex align-items-center justify-content-between py-1 @(isSelected ? "" : "d-none available-item")"
+                                    data-id="@skill.Id" data-type="skill">
                                     <span class="small">@skill.Name</span>
                                     @if (isSelected)
                                     {
-                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-resource-btn" data-type="skill" data-id="@skill.Id" title="Remove">
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-resource-btn"
+                                            data-type="skill" data-id="@skill.Id" title="Remove">
                                             <i class="bi bi-x"></i>
                                         </button>
                                         <input type="hidden" name="SkillIds" value="@skill.Id" class="resource-input" />
                                     }
                                     else
                                     {
-                                        <button type="button" class="btn btn-sm btn-outline-success py-0 px-1 add-resource-btn" data-type="skill" data-id="@skill.Id" data-name="@skill.Name" title="Add">
+                                        <button type="button" class="btn btn-sm btn-outline-success py-0 px-1 add-resource-btn"
+                                            data-type="skill" data-id="@skill.Id" data-name="@skill.Name" title="Add">
                                             <i class="bi bi-plus"></i>
                                         </button>
                                     }
@@ -311,7 +429,8 @@
                     }
                 </div>
                 <div class="mt-1">
-                    <button type="button" class="btn btn-sm btn-outline-primary show-available-btn" data-type="skill" data-container="skillsContainer">
+                    <button type="button" class="btn btn-sm btn-outline-primary show-available-btn" data-type="skill"
+                        data-container="skillsContainer">
                         <i class="bi bi-plus-circle me-1"></i> Add Skill
                     </button>
                 </div>
@@ -325,24 +444,26 @@
         {
             <div class="col-12 mt-4">
                 <div class="d-flex align-items-center mb-2">
-                    <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                    <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                        style="width: 28px; height: 28px;">
                         <i class="bi bi-grid-3x3"></i>
                     </div>
                     <h5 class="mb-0 text-dark fw-bold">Time Recording Categories</h5>
                 </div>
                 <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-dark); opacity: 0.5;" />
             </div>
-            
+
             <div class="col-12">
-                <small class="text-muted d-block mb-2">Select business areas that apply to this enhancement. These categories will be available for time recording.</small>
+                <small class="text-muted d-block mb-2">Select business areas that apply to this enhancement. These
+                    categories will be available for time recording.</small>
                 <div class="row">
                     @foreach (var cat in Model.AvailableTimeCategories)
                     {
                         var isChecked = Model.SelectedTimeCategoryIds.Contains(cat.Id);
                         <div class="col-md-4 col-lg-3">
                             <div class="form-check">
-                                <input type="checkbox" class="form-check-input" name="TimeCategoryIds" value="@cat.Id" 
-                                       id="cat_@cat.Id" @(isChecked ? "checked" : "") />
+                                <input type="checkbox" class="form-check-input" name="TimeCategoryIds" value="@cat.Id"
+                                    id="cat_@cat.Id" @(isChecked ? "checked" : "") />
                                 <label class="form-check-label small" for="cat_@cat.Id">@cat.Name</label>
                             </div>
                         </div>
@@ -354,17 +475,18 @@
         <!-- ============================================ -->
         <!-- SECTION: Weekly Time Allocation (Legacy) -->
         <!-- ============================================ -->
-        <div class="col-12 mt-4">
+        <div class="col-12 mt-4" style="display:none;">
             <div class="d-flex align-items-center mb-2">
-                <div class="bg-purple text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px; background-color: #6f42c1;">
+                <div class="bg-purple text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                    style="width: 28px; height: 28px; background-color: #6f42c1;">
                     <i class="bi bi-calendar-week"></i>
                 </div>
                 <h5 class="mb-0 fw-bold" style="color: #6f42c1;">Weekly Time Allocation</h5>
             </div>
             <hr class="mt-0 mb-3" style="border-top: 2px solid #6f42c1; opacity: 0.5;" />
         </div>
-        
-        <div class="col-12">
+
+        <div class="col-12" style="display:none;">
             <div class="table-responsive">
                 <table class="table table-sm table-bordered mb-0">
                     <thead class="table-light">
@@ -377,15 +499,24 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td><input type="number" name="TimeW1" value="@Model.TimeW1" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW2" value="@Model.TimeW2" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW3" value="@Model.TimeW3" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW4" value="@Model.TimeW4" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW5" value="@Model.TimeW5" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW6" value="@Model.TimeW6" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW7" value="@Model.TimeW7" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW8" value="@Model.TimeW8" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW9" value="@Model.TimeW9" class="form-control form-control-sm text-center" step="0.5" /></td>
+                            <td><input type="number" name="TimeW1" value="@Model.TimeW1"
+                                    class="form-control form-control-sm text-center" step="0.5" /></td>
+                            <td><input type="number" name="TimeW2" value="@Model.TimeW2"
+                                    class="form-control form-control-sm text-center" step="0.5" /></td>
+                            <td><input type="number" name="TimeW3" value="@Model.TimeW3"
+                                    class="form-control form-control-sm text-center" step="0.5" /></td>
+                            <td><input type="number" name="TimeW4" value="@Model.TimeW4"
+                                    class="form-control form-control-sm text-center" step="0.5" /></td>
+                            <td><input type="number" name="TimeW5" value="@Model.TimeW5"
+                                    class="form-control form-control-sm text-center" step="0.5" /></td>
+                            <td><input type="number" name="TimeW6" value="@Model.TimeW6"
+                                    class="form-control form-control-sm text-center" step="0.5" /></td>
+                            <td><input type="number" name="TimeW7" value="@Model.TimeW7"
+                                    class="form-control form-control-sm text-center" step="0.5" /></td>
+                            <td><input type="number" name="TimeW8" value="@Model.TimeW8"
+                                    class="form-control form-control-sm text-center" step="0.5" /></td>
+                            <td><input type="number" name="TimeW9" value="@Model.TimeW9"
+                                    class="form-control form-control-sm text-center" step="0.5" /></td>
                         </tr>
                     </tbody>
                 </table>
@@ -426,234 +557,234 @@
 </form>
 
 <script>
-(function() {
-    // Track which "add" panels are currently visible
-    var visiblePanels = {};
-    
-    // Toggle available items visibility
-    document.querySelectorAll('.show-available-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var type = this.dataset.type;
-            var containerId = this.dataset.container;
-            var container = document.getElementById(containerId);
-            
-            if (visiblePanels[type]) {
-                // Hide available items
-                container.querySelectorAll('.available-item').forEach(function(item) {
-                    item.classList.add('d-none');
-                });
-                this.innerHTML = '<i class="bi bi-plus-circle me-1"></i> Add ' + capitalizeFirst(type);
-                visiblePanels[type] = false;
-            } else {
-                // Show available items
-                container.querySelectorAll('.available-item').forEach(function(item) {
-                    item.classList.remove('d-none');
-                });
-                this.innerHTML = '<i class="bi bi-dash-circle me-1"></i> Hide Available';
-                visiblePanels[type] = true;
-            }
+    (function () {
+        // Track which "add" panels are currently visible
+        var visiblePanels = {};
+
+        // Toggle available items visibility
+        document.querySelectorAll('.show-available-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var type = this.dataset.type;
+                var containerId = this.dataset.container;
+                var container = document.getElementById(containerId);
+
+                if (visiblePanels[type]) {
+                    // Hide available items
+                    container.querySelectorAll('.available-item').forEach(function (item) {
+                        item.classList.add('d-none');
+                    });
+                    this.innerHTML = '<i class="bi bi-plus-circle me-1"></i> Add ' + capitalizeFirst(type);
+                    visiblePanels[type] = false;
+                } else {
+                    // Show available items
+                    container.querySelectorAll('.available-item').forEach(function (item) {
+                        item.classList.remove('d-none');
+                    });
+                    this.innerHTML = '<i class="bi bi-dash-circle me-1"></i> Hide Available';
+                    visiblePanels[type] = true;
+                }
+            });
         });
-    });
-    
-    // Add resource
-    document.querySelectorAll('.add-resource-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var type = this.dataset.type;
-            var id = this.dataset.id;
-            var name = this.dataset.name;
-            var item = this.closest('.resource-item');
-            var inputName = getInputName(type);
-            
-            // Change button to remove
-            this.outerHTML = '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-resource-btn" data-type="' + type + '" data-id="' + id + '" title="Remove"><i class="bi bi-x"></i></button>';
-            
-            // Add hidden input
-            var input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = inputName;
-            input.value = id;
-            input.className = 'resource-input';
-            item.appendChild(input);
-            
-            // Remove from available list class
-            item.classList.remove('available-item');
-            
-            // Hide no selection message
-            var container = item.closest('[id$="Container"]');
-            var noMsg = container.querySelector('.no-selection-msg');
-            if (noMsg) noMsg.style.display = 'none';
-            
-            // Re-attach event listener
-            attachRemoveListener(item.querySelector('.remove-resource-btn'));
-        });
-    });
-    
-    // Remove resource
-    function attachRemoveListener(btn) {
-        btn.addEventListener('click', function() {
-            var type = this.dataset.type;
-            var id = this.dataset.id;
-            var item = this.closest('.resource-item');
-            var inputName = getInputName(type);
-            
-            // Remove hidden input
-            var input = item.querySelector('input[name="' + inputName + '"]');
-            if (input) input.remove();
-            
-            // Change button to add
-            var name = item.querySelector('span').textContent;
-            this.outerHTML = '<button type="button" class="btn btn-sm btn-outline-success py-0 px-1 add-resource-btn" data-type="' + type + '" data-id="' + id + '" data-name="' + name + '" title="Add"><i class="bi bi-plus"></i></button>';
-            
-            // Add to available list class
-            item.classList.add('available-item');
-            
-            // Hide if panel is not showing available
-            if (!visiblePanels[type]) {
-                item.classList.add('d-none');
-            }
-            
-            // Show no selection message if nothing left
-            var container = item.closest('[id$="Container"]');
-            var hasSelected = container.querySelector('.resource-input');
-            if (!hasSelected) {
+
+        // Add resource
+        document.querySelectorAll('.add-resource-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var type = this.dataset.type;
+                var id = this.dataset.id;
+                var name = this.dataset.name;
+                var item = this.closest('.resource-item');
+                var inputName = getInputName(type);
+
+                // Change button to remove
+                this.outerHTML = '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-resource-btn" data-type="' + type + '" data-id="' + id + '" title="Remove"><i class="bi bi-x"></i></button>';
+
+                // Add hidden input
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = inputName;
+                input.value = id;
+                input.className = 'resource-input';
+                item.appendChild(input);
+
+                // Remove from available list class
+                item.classList.remove('available-item');
+
+                // Hide no selection message
+                var container = item.closest('[id$="Container"]');
                 var noMsg = container.querySelector('.no-selection-msg');
-                if (noMsg) noMsg.style.display = '';
-            }
-            
-            // Re-attach add listener
-            attachAddListener(item.querySelector('.add-resource-btn'));
+                if (noMsg) noMsg.style.display = 'none';
+
+                // Re-attach event listener
+                attachRemoveListener(item.querySelector('.remove-resource-btn'));
+            });
         });
-    }
-    
-    function attachAddListener(btn) {
-        btn.addEventListener('click', function() {
-            var type = this.dataset.type;
-            var id = this.dataset.id;
-            var name = this.dataset.name;
-            var item = this.closest('.resource-item');
-            var inputName = getInputName(type);
-            
-            this.outerHTML = '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-resource-btn" data-type="' + type + '" data-id="' + id + '" title="Remove"><i class="bi bi-x"></i></button>';
-            
-            var input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = inputName;
-            input.value = id;
-            input.className = 'resource-input';
-            item.appendChild(input);
-            
-            item.classList.remove('available-item');
-            
-            var container = item.closest('[id$="Container"]');
-            var noMsg = container.querySelector('.no-selection-msg');
-            if (noMsg) noMsg.style.display = 'none';
-            
-            attachRemoveListener(item.querySelector('.remove-resource-btn'));
-        });
-    }
-    
-    // Attach initial remove listeners
-    document.querySelectorAll('.remove-resource-btn').forEach(attachRemoveListener);
-    
-    function getInputName(type) {
-        switch(type) {
-            case 'sponsor': return 'SponsorIds';
-            case 'spoc': return 'SpocIds';
-            case 'resource': return 'ResourceIds';
-            case 'skill': return 'SkillIds';
-            default: return type + 'Ids';
+
+        // Remove resource
+        function attachRemoveListener(btn) {
+            btn.addEventListener('click', function () {
+                var type = this.dataset.type;
+                var id = this.dataset.id;
+                var item = this.closest('.resource-item');
+                var inputName = getInputName(type);
+
+                // Remove hidden input
+                var input = item.querySelector('input[name="' + inputName + '"]');
+                if (input) input.remove();
+
+                // Change button to add
+                var name = item.querySelector('span').textContent;
+                this.outerHTML = '<button type="button" class="btn btn-sm btn-outline-success py-0 px-1 add-resource-btn" data-type="' + type + '" data-id="' + id + '" data-name="' + name + '" title="Add"><i class="bi bi-plus"></i></button>';
+
+                // Add to available list class
+                item.classList.add('available-item');
+
+                // Hide if panel is not showing available
+                if (!visiblePanels[type]) {
+                    item.classList.add('d-none');
+                }
+
+                // Show no selection message if nothing left
+                var container = item.closest('[id$="Container"]');
+                var hasSelected = container.querySelector('.resource-input');
+                if (!hasSelected) {
+                    var noMsg = container.querySelector('.no-selection-msg');
+                    if (noMsg) noMsg.style.display = '';
+                }
+
+                // Re-attach add listener
+                attachAddListener(item.querySelector('.add-resource-btn'));
+            });
         }
-    }
-    
-    function capitalizeFirst(str) {
-        return str.charAt(0).toUpperCase() + str.slice(1);
-    }
-})();
+
+        function attachAddListener(btn) {
+            btn.addEventListener('click', function () {
+                var type = this.dataset.type;
+                var id = this.dataset.id;
+                var name = this.dataset.name;
+                var item = this.closest('.resource-item');
+                var inputName = getInputName(type);
+
+                this.outerHTML = '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-resource-btn" data-type="' + type + '" data-id="' + id + '" title="Remove"><i class="bi bi-x"></i></button>';
+
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = inputName;
+                input.value = id;
+                input.className = 'resource-input';
+                item.appendChild(input);
+
+                item.classList.remove('available-item');
+
+                var container = item.closest('[id$="Container"]');
+                var noMsg = container.querySelector('.no-selection-msg');
+                if (noMsg) noMsg.style.display = 'none';
+
+                attachRemoveListener(item.querySelector('.remove-resource-btn'));
+            });
+        }
+
+        // Attach initial remove listeners
+        document.querySelectorAll('.remove-resource-btn').forEach(attachRemoveListener);
+
+        function getInputName(type) {
+            switch (type) {
+                case 'sponsor': return 'SponsorIds';
+                case 'spoc': return 'SpocIds';
+                case 'resource': return 'ResourceIds';
+                case 'skill': return 'SkillIds';
+                default: return type + 'Ids';
+            }
+        }
+
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+    })();
 </script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var form = document.getElementById('ticketDetailsForm');
-    if (!form) {
-        console.error('Form not found');
-        return;
-    }
-    
-    var tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-    if (!tokenInput) {
-        console.error('Anti-forgery token not found');
-        return;
-    }
-    var antiForgeryToken = tokenInput.value;
-    
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        var formData = new FormData(form);
-        var data = {
-            id: formData.get('Id') || null,
-            workId: formData.get('WorkId'),
-            description: formData.get('Description'),
-            notes: formData.get('Notes'),
-            serviceAreaId: formData.get('ServiceAreaId'),
-            estimatedHours: parseFloat(formData.get('EstimatedHours')) || null,
-            estimatedStartDate: formData.get('EstimatedStartDate') || null,
-            estimatedEndDate: formData.get('EstimatedEndDate') || null,
-            estimationNotes: formData.get('EstimationNotes'),
-            status: formData.get('Status'),
-            serviceLine: formData.get('ServiceLine'),
-            returnedHours: parseFloat(formData.get('ReturnedHours')) || null,
-            startDate: formData.get('StartDate') || null,
-            endDate: formData.get('EndDate') || null,
-            infStatus: formData.get('InfStatus'),
-            infServiceLine: formData.get('InfServiceLine'),
-            timeW1: parseFloat(formData.get('TimeW1')) || null,
-            timeW2: parseFloat(formData.get('TimeW2')) || null,
-            timeW3: parseFloat(formData.get('TimeW3')) || null,
-            timeW4: parseFloat(formData.get('TimeW4')) || null,
-            timeW5: parseFloat(formData.get('TimeW5')) || null,
-            timeW6: parseFloat(formData.get('TimeW6')) || null,
-            timeW7: parseFloat(formData.get('TimeW7')) || null,
-            timeW8: parseFloat(formData.get('TimeW8')) || null,
-            timeW9: parseFloat(formData.get('TimeW9')) || null,
-            sponsorIds: formData.getAll('SponsorIds'),
-            spocIds: formData.getAll('SpocIds'),
-            resourceIds: formData.getAll('ResourceIds'),
-            skillIds: formData.getAll('SkillIds'),
-            timeCategoryIds: formData.getAll('TimeCategoryIds')
-        };
-        
-        var btn = form.querySelector('button[type="submit"]');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
-        
-        fetch('/Enhancements/SaveDetails', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': antiForgeryToken 
-            },
-            body: JSON.stringify(data)
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(result) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save Changes';
-            
-            if (result.success) {
-                alert('Saved successfully!');
-                if (!data.id && result.id) {
-                    window.location.href = '/EnhancementDetails/Details/' + result.id + '?serviceAreaId=' + data.serviceAreaId;
-                }
-            } else {
-                alert(result.message || 'Save failed');
-            }
-        })
-        .catch(function(err) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save Changes';
-            alert('Error saving: ' + err.message);
+    document.addEventListener('DOMContentLoaded', function () {
+        var form = document.getElementById('ticketDetailsForm');
+        if (!form) {
+            console.error('Form not found');
+            return;
+        }
+
+        var tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (!tokenInput) {
+            console.error('Anti-forgery token not found');
+            return;
+        }
+        var antiForgeryToken = tokenInput.value;
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            var formData = new FormData(form);
+            var data = {
+                id: formData.get('Id') || null,
+                workId: formData.get('WorkId'),
+                description: formData.get('Description'),
+                notes: formData.get('Notes'),
+                serviceAreaId: formData.get('ServiceAreaId'),
+                estimatedHours: parseFloat(formData.get('EstimatedHours')) || null,
+                estimatedStartDate: formData.get('EstimatedStartDate') || null,
+                estimatedEndDate: formData.get('EstimatedEndDate') || null,
+                estimationNotes: formData.get('EstimationNotes'),
+                status: formData.get('Status'),
+                serviceLine: formData.get('ServiceLine'),
+                returnedHours: parseFloat(formData.get('ReturnedHours')) || null,
+                startDate: formData.get('StartDate') || null,
+                endDate: formData.get('EndDate') || null,
+                infStatus: formData.get('InfStatus'),
+                infServiceLine: formData.get('InfServiceLine'),
+                timeW1: parseFloat(formData.get('TimeW1')) || null,
+                timeW2: parseFloat(formData.get('TimeW2')) || null,
+                timeW3: parseFloat(formData.get('TimeW3')) || null,
+                timeW4: parseFloat(formData.get('TimeW4')) || null,
+                timeW5: parseFloat(formData.get('TimeW5')) || null,
+                timeW6: parseFloat(formData.get('TimeW6')) || null,
+                timeW7: parseFloat(formData.get('TimeW7')) || null,
+                timeW8: parseFloat(formData.get('TimeW8')) || null,
+                timeW9: parseFloat(formData.get('TimeW9')) || null,
+                sponsorIds: formData.getAll('SponsorIds'),
+                spocIds: formData.getAll('SpocIds'),
+                resourceIds: formData.getAll('ResourceIds'),
+                skillIds: formData.getAll('SkillIds'),
+                timeCategoryIds: formData.getAll('TimeCategoryIds')
+            };
+
+            var btn = form.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+            fetch('/Enhancements/SaveDetails', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': antiForgeryToken
+                },
+                body: JSON.stringify(data)
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save Changes';
+
+                    if (result.success) {
+                        alert('Saved successfully!');
+                        if (!data.id && result.id) {
+                            window.location.href = '/EnhancementDetails/Details/' + result.id + '?serviceAreaId=' + data.serviceAreaId;
+                        }
+                    } else {
+                        alert(result.message || 'Save failed');
+                    }
+                })
+                .catch(function (err) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save Changes';
+                    alert('Error saving: ' + err.message);
+                });
         });
     });
-});
 </script>

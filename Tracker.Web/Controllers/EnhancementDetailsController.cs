@@ -38,7 +38,7 @@ public class EnhancementDetailsController : BaseController
         IAttachmentService attachmentService,
         ITimeRecordingService timeRecordingService,
         IEnhancementSharingService sharingService,
-       // IUserService userService,
+        // IUserService userService,
         TrackerDbContext context) : base(authService)
     {
         _enhancementService = enhancementService;
@@ -49,7 +49,7 @@ public class EnhancementDetailsController : BaseController
         _attachmentService = attachmentService;
         _timeRecordingService = timeRecordingService;
         _sharingService = sharingService;
-       // _userService = userService;
+        // _userService = userService;
         _context = context;
     }
 
@@ -131,17 +131,27 @@ public class EnhancementDetailsController : BaseController
             Description = enhancement?.Description ?? string.Empty,
             Notes = enhancement?.Notes,
             ServiceAreaId = serviceArea.Id,
+
+            // Sizing - L3H fields
             EstimatedHours = enhancement?.EstimatedHours,
             EstimatedStartDate = enhancement?.EstimatedStartDate,
             EstimatedEndDate = enhancement?.EstimatedEndDate,
             EstimationNotes = enhancement?.EstimationNotes,
             Status = enhancement?.Status ?? "New",
             ServiceLine = enhancement?.ServiceLine,
+            LaborType = enhancement?.LaborType,           // ADD THIS
+            Priority = enhancement?.Priority,              // ADD THIS
+
+            // Actual/Core Info - Inf* fields
             ReturnedHours = enhancement?.ReturnedHours,
             StartDate = enhancement?.StartDate,
             EndDate = enhancement?.EndDate,
             InfStatus = enhancement?.InfStatus,
             InfServiceLine = enhancement?.InfServiceLine,
+            InfLaborType = enhancement?.InfLaborType,     // ADD THIS
+            InfPriority = enhancement?.InfPriority,       // ADD THIS
+
+            // Legacy time allocations
             TimeW1 = enhancement?.TimeW1,
             TimeW2 = enhancement?.TimeW2,
             TimeW3 = enhancement?.TimeW3,
@@ -151,10 +161,14 @@ public class EnhancementDetailsController : BaseController
             TimeW7 = enhancement?.TimeW7,
             TimeW8 = enhancement?.TimeW8,
             TimeW9 = enhancement?.TimeW9,
+
+            // Audit
             CreatedBy = enhancement?.CreatedBy,
             CreatedAt = enhancement?.CreatedAt,
             ModifiedBy = enhancement?.ModifiedBy,
             ModifiedAt = enhancement?.ModifiedAt,
+
+            // Dropdown options
             AvailableServiceAreas = serviceAreas.ToList(),
             AvailableSponsors = sponsors.ToList(),
             AvailableSpocs = spocs.ToList(),
@@ -163,6 +177,10 @@ public class EnhancementDetailsController : BaseController
             AvailableTimeCategories = timeCategories,
             AvailableServiceLines = serviceLines!,
             AvailableInfStatuses = infStatuses!,
+            // AvailableLaborTypes, AvailablePriorities, AvailableSizingStatuses 
+            // use default values from ViewModel - no need to set here
+
+            // Selected IDs
             SelectedSponsorIds = enhancement?.Sponsors?.Select(s => s.ResourceId).ToList() ?? new(),
             SelectedSpocIds = enhancement?.Spocs?.Select(s => s.ResourceId).ToList() ?? new(),
             SelectedResourceIds = enhancement?.Resources?.Select(r => r.ResourceId).ToList() ?? new(),
@@ -345,17 +363,27 @@ public class EnhancementDetailsController : BaseController
                 Description = request.Description,
                 Notes = request.Notes,
                 ServiceAreaId = request.ServiceAreaId,
+
+                // Sizing - L3H fields
                 EstimatedHours = request.EstimatedHours,
                 EstimatedStartDate = request.EstimatedStartDate,
                 EstimatedEndDate = request.EstimatedEndDate,
                 EstimationNotes = request.EstimationNotes,
                 Status = request.Status,
                 ServiceLine = request.ServiceLine,
+                LaborType = request.LaborType,           // ADD THIS
+                Priority = request.Priority,              // ADD THIS
+
+                // Actual/Core Info - Inf* fields
                 ReturnedHours = request.ReturnedHours,
                 StartDate = request.StartDate,
                 EndDate = request.EndDate,
                 InfStatus = request.InfStatus,
                 InfServiceLine = request.InfServiceLine,
+                InfLaborType = request.InfLaborType,     // ADD THIS
+                InfPriority = request.InfPriority,       // ADD THIS
+
+                // Legacy time allocations
                 TimeW1 = request.TimeW1,
                 TimeW2 = request.TimeW2,
                 TimeW3 = request.TimeW3,
