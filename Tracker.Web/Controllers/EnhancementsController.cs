@@ -16,7 +16,7 @@ public class EnhancementsController : BaseController
 
     public EnhancementsController(
         IAuthService authService,
-        IEnhancementService enhancementService, 
+        IEnhancementService enhancementService,
         IServiceAreaService serviceAreaService,
         IResourceService resourceService,
         ISavedFilterService savedFilterService) : base(authService)
@@ -28,8 +28,8 @@ public class EnhancementsController : BaseController
     }
 
     public async Task<IActionResult> Index(
-        string serviceAreaId, 
-        string? filterId = null, 
+        string serviceAreaId,
+        string? filterId = null,
         [FromQuery] EnhancementFilterViewModel? filter = null)
     {
         if (string.IsNullOrEmpty(serviceAreaId))
@@ -103,16 +103,16 @@ public class EnhancementsController : BaseController
             ServiceAreaId = serviceAreaId,
             ServiceAreaName = serviceArea.Name,
             Enhancements = pagedResult.Items,
-            
+
             // Paging
             PageNumber = pagedResult.Page,
             PageSize = pagedResult.PageSize,
             TotalItems = pagedResult.TotalCount,
-            
+
             // Sorting
             SortColumn = activeFilter.SortColumn ?? "workIdDescription",
             SortOrder = activeFilter.SortOrder ?? "asc",
-            
+
             Filter = activeFilter,
             AvailableStatuses = statuses.Any() ? statuses : new List<string> { "New", "In Progress", "On Hold", "Completed", "Cancelled" },
             AvailableInfStatuses = infStatuses,
@@ -378,5 +378,45 @@ public class EnhancementsController : BaseController
     }
 
 
-    
+    #region Notifications
+
+    /// <summary>
+    /// Bulk update notification recipients - replaces all current recipients with selected ones
+    /// </summary>
+    [HttpPost("UpdateNotificationRecipients")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateNotificationRecipients([FromBody] UpdateNotificationRecipientsRequest request)
+    {
+        if (string.IsNullOrEmpty(request.EnhancementId))
+            return Json(new { success = false, message = "Invalid enhancement ID" });
+
+        try
+        {
+            var count = await _enhancementService.UpdateNotificationRecipientsAsync(
+                request.EnhancementId,
+                request.RecipientIds ?? new List<string>(),
+                CurrentUserId!);
+
+            return Json(new { success = true, count });
+        }
+        catch (Exception ex)
+        {
+            //_logger.LogError(ex, "Error updating notification recipients for enhancement {EnhancementId}", request.EnhancementId);
+            return Json(new { success = false, message = "Error saving recipients" });
+        }
+    }
+
+    #endregion
+
+    // ============================================================
+    // Request model - add to ViewModels or at the end of controller
+    // ============================================================
+
+    public class UpdateNotificationRecipientsRequest
+    {
+        public string EnhancementId { get; set; } = string.Empty;
+        public List<string> RecipientIds { get; set; } = new();
+    }
+
+
 }

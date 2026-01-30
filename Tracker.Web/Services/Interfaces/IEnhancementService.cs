@@ -21,4 +21,6 @@ public interface IEnhancementService
     Task UpdateSponsorsAsync(string enhancementId, List<string>? sponsorIds, string userId);
     Task UpdateSpocsAsync(string enhancementId, List<string>? spocIds, string userId);
     Task UpdateResourcesAsync(string enhancementId, List<string>? resourceIds, string userId);
+    Task<int> UpdateNotificationRecipientsAsync(string enhancementId, List<string> recipientIds, string userId);
+
 }

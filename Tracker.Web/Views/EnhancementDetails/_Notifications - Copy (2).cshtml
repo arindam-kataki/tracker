@@ -85,119 +85,105 @@
     </div>
 </div>
 
+@section Scripts {
 <script>
 (function() {
-    var enhancementId = '@Model.Id';
-    var searchInput = document.getElementById('searchResources');
-    var selectedCountBadge = document.getElementById('selectedCount');
-    var saveBtn = document.getElementById('saveRecipientsBtn');
-    var selectAllBtn = document.getElementById('selectAllBtn');
-    var clearAllBtn = document.getElementById('clearAllBtn');
+    const enhancementId = '@Model.Id';
+    const searchInput = document.getElementById('searchResources');
+    const resourceList = document.getElementById('resourceList');
+    const checkboxes = document.querySelectorAll('.recipient-checkbox');
+    const selectedCountBadge = document.getElementById('selectedCount');
+    const saveBtn = document.getElementById('saveRecipientsBtn');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const clearAllBtn = document.getElementById('clearAllBtn');
 
     // Update selected count
     function updateCount() {
-        var count = document.querySelectorAll('.recipient-checkbox:checked').length;
-        if (selectedCountBadge) {
-            selectedCountBadge.textContent = count;
-        }
+        const count = document.querySelectorAll('.recipient-checkbox:checked').length;
+        selectedCountBadge.textContent = count;
     }
 
     // Search filter
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            var query = this.value.toLowerCase();
-            document.querySelectorAll('.resource-item').forEach(function(item) {
-                var name = item.getAttribute('data-name') || '';
-                var email = item.getAttribute('data-email') || '';
-                var matches = name.indexOf(query) >= 0 || email.indexOf(query) >= 0;
-                item.style.display = matches ? '' : 'none';
-            });
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        document.querySelectorAll('.resource-item').forEach(item => {
+            const name = item.dataset.name;
+            const email = item.dataset.email;
+            const matches = name.includes(query) || email.includes(query);
+            item.style.display = matches ? '' : 'none';
         });
-    }
+    });
 
     // Checkbox change
-    document.querySelectorAll('.recipient-checkbox').forEach(function(cb) {
+    checkboxes.forEach(cb => {
         cb.addEventListener('change', updateCount);
     });
 
     // Select all (visible items)
-    if (selectAllBtn) {
-        selectAllBtn.addEventListener('click', function() {
-            document.querySelectorAll('.resource-item').forEach(function(item) {
-                if (item.style.display !== 'none') {
-                    var checkbox = item.querySelector('.recipient-checkbox');
-                    if (checkbox) checkbox.checked = true;
-                }
-            });
-            updateCount();
+    selectAllBtn.addEventListener('click', function() {
+        document.querySelectorAll('.resource-item').forEach(item => {
+            if (item.style.display !== 'none') {
+                item.querySelector('.recipient-checkbox').checked = true;
+            }
         });
-    }
+        updateCount();
+    });
 
     // Clear all
-    if (clearAllBtn) {
-        clearAllBtn.addEventListener('click', function() {
-            document.querySelectorAll('.recipient-checkbox').forEach(function(cb) {
-                cb.checked = false;
-            });
-            updateCount();
-        });
-    }
+    clearAllBtn.addEventListener('click', function() {
+        checkboxes.forEach(cb => cb.checked = false);
+        updateCount();
+    });
 
     // Save recipients
-    if (saveBtn) {
-        saveBtn.addEventListener('click', function() {
-            var selectedIds = [];
-            document.querySelectorAll('.recipient-checkbox:checked').forEach(function(cb) {
-                selectedIds.push(cb.value);
-            });
+    saveBtn.addEventListener('click', async function() {
+        const selectedIds = Array.from(document.querySelectorAll('.recipient-checkbox:checked'))
+            .map(cb => cb.value);
 
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
 
-            var token = document.querySelector('input[name="__RequestVerificationToken"]');
-            
-            fetch('/Enhancements/UpdateNotificationRecipients', {
+        try {
+            const response = await fetch('@Url.Action("UpdateNotificationRecipients", "Enhancements")', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'RequestVerificationToken': token ? token.value : ''
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
                 },
                 body: JSON.stringify({
                     enhancementId: enhancementId,
                     recipientIds: selectedIds
                 })
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(result) {
-                if (result.success) {
-                    saveBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Saved!';
-                    saveBtn.classList.remove('btn-primary');
-                    saveBtn.classList.add('btn-success');
-                    
-                    setTimeout(function() {
-                        saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Recipients';
-                        saveBtn.classList.remove('btn-success');
-                        saveBtn.classList.add('btn-primary');
-                        saveBtn.disabled = false;
-                    }, 2000);
-                } else {
-                    alert('Error: ' + (result.message || 'Failed to save'));
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                // Show success feedback
+                saveBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Saved!';
+                saveBtn.classList.remove('btn-primary');
+                saveBtn.classList.add('btn-success');
+                
+                setTimeout(() => {
                     saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Recipients';
+                    saveBtn.classList.remove('btn-success');
+                    saveBtn.classList.add('btn-primary');
                     saveBtn.disabled = false;
-                }
-            })
-            .catch(function(error) {
-                console.error('Error saving recipients:', error);
-                alert('Error saving recipients');
+                }, 2000);
+            } else {
+                alert('Error: ' + (result.message || 'Failed to save'));
                 saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Recipients';
                 saveBtn.disabled = false;
-            });
-        });
-    }
+            }
+        } catch (error) {
+            console.error('Error saving recipients:', error);
+            alert('Error saving recipients');
+            saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Recipients';
+            saveBtn.disabled = false;
+        }
+    });
 
     // Initial count
     updateCount();
 })();
 </script>
+}

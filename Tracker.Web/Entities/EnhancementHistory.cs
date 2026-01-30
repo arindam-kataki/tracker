@@ -34,6 +34,8 @@ public class EnhancementHistory
     public string? InfLaborType { get; set; }   // ADD THIS
     public string? InfPriority { get; set; }    // ADD THIS
     
+    public string? ApprovalNotes { get; set; }
+    
     // Legacy time allocations
     public decimal? TimeW1 { get; set; }
     public decimal? TimeW2 { get; set; }

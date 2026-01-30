@@ -1,0 +1,412 @@
+@model TicketDetailsViewModel
+@{
+    var canEdit = ViewBag.CanEdit ?? false;
+}
+
+<style>
+    /* View mode styling */
+    .detail-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .detail-value {
+        font-size: 1rem;
+        color: #1f2937;
+        padding: 0.5rem 0;
+        min-height: 2.5rem;
+    }
+
+    .detail-value.empty {
+        color: #9ca3af;
+        font-style: italic;
+    }
+
+    .detail-value.multiline {
+        white-space: pre-wrap;
+        background-color: #f9fafb;
+        padding: 0.75rem;
+        border-radius: 0.375rem;
+        border: 1px solid #e5e7eb;
+    }
+
+    /* Section header styling */
+    .section-icon {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+    /* Status badges */
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .status-badge.new { background-color: #dbeafe; color: #1e40af; }
+    .status-badge.in-progress { background-color: #fef3c7; color: #92400e; }
+    .status-badge.completed { background-color: #d1fae5; color: #065f46; }
+    .status-badge.on-hold { background-color: #f3f4f6; color: #374151; }
+    .status-badge.cancelled { background-color: #fee2e2; color: #991b1b; }
+
+    /* Resource chips */
+    .resource-chip {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        margin: 0.125rem;
+        background-color: #e5e7eb;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    .skill-chip {
+        display: inline-block;
+        padding: 0.125rem 0.5rem;
+        margin: 0.125rem;
+        background-color: #ede9fe;
+        color: #5b21b6;
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+    }
+</style>
+
+<div class="row g-3">
+
+    <!-- ============================================ -->
+    <!-- Page Header with Edit Button -->
+    <!-- ============================================ -->
+    <div class="col-12 d-flex justify-content-between align-items-center mb-2">
+        <h4 class="mb-0">
+            <span class="text-muted">@Model.WorkId</span>
+        </h4>
+        @if (canEdit)
+        {
+            <a href="/EnhancementDetails/Edit/@Model.Id?serviceAreaId=@Model.ServiceAreaId" class="btn btn-primary">
+                <i class="bi bi-pencil me-1"></i> Edit
+            </a>
+        }
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION: Core Information -->
+    <!-- ============================================ -->
+    <div class="col-12">
+        <div class="d-flex align-items-center mb-2">
+            <div class="section-icon bg-primary text-white me-2">
+                <i class="bi bi-info-circle"></i>
+            </div>
+            <h5 class="mb-0 text-primary fw-bold">Core Information</h5>
+        </div>
+        <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-primary); opacity: 0.5;" />
+    </div>
+
+    <div class="col-md-6">
+        <div class="detail-label">Work ID</div>
+        <div class="detail-value">@Model.WorkId</div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="detail-label">Status</div>
+        <div class="detail-value">
+            @if (!string.IsNullOrEmpty(Model.Status))
+            {
+                var statusClass = Model.Status?.ToLower().Replace(" ", "-") ?? "";
+                <span class="status-badge @statusClass">@Model.Status</span>
+            }
+            else
+            {
+                <span class="empty">Not set</span>
+            }
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="detail-label">Description</div>
+        <div class="detail-value @(string.IsNullOrEmpty(Model.Description) ? "empty" : "")">
+            @(string.IsNullOrEmpty(Model.Description) ? "No description" : Model.Description)
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="detail-label">Notes</div>
+        <div class="detail-value multiline @(string.IsNullOrEmpty(Model.Notes) ? "empty" : "")">
+            @(string.IsNullOrEmpty(Model.Notes) ? "No notes" : Model.Notes)
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION: Sizing -->
+    <!-- ============================================ -->
+    <div class="col-12 mt-4">
+        <div class="d-flex align-items-center mb-2">
+            <div class="section-icon bg-success text-white me-2">
+                <i class="bi bi-calculator"></i>
+            </div>
+            <h5 class="mb-0 text-success fw-bold">Sizing</h5>
+        </div>
+        <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-success); opacity: 0.5;" />
+    </div>
+
+    <div class="col-md-4">
+        <div class="detail-label">Est. Hours</div>
+        <div class="detail-value @(Model.EstimatedHours == null ? "empty" : "")">
+            @(Model.EstimatedHours?.ToString("N1") ?? "—")
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="detail-label">Est. Start Date</div>
+        <div class="detail-value @(Model.EstimatedStartDate == null ? "empty" : "")">
+            @(Model.EstimatedStartDate?.ToString("MMM d, yyyy") ?? "—")
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="detail-label">Est. End Date</div>
+        <div class="detail-value @(Model.EstimatedEndDate == null ? "empty" : "")">
+            @(Model.EstimatedEndDate?.ToString("MMM d, yyyy") ?? "—")
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="detail-label">Sizing Status</div>
+        <div class="detail-value @(string.IsNullOrEmpty(Model.EstimatedStatus) ? "empty" : "")">
+            @(string.IsNullOrEmpty(Model.EstimatedStatus) ? "—" : Model.EstimatedStatus)
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="detail-label">Labor Type</div>
+        <div class="detail-value @(string.IsNullOrEmpty(Model.EstimatedLaborType) ? "empty" : "")">
+            @(string.IsNullOrEmpty(Model.EstimatedLaborType) ? "—" : Model.EstimatedLaborType)
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="detail-label">Priority</div>
+        <div class="detail-value @(string.IsNullOrEmpty(Model.EstimatedPriority) ? "empty" : "")">
+            @(string.IsNullOrEmpty(Model.EstimatedPriority) ? "—" : Model.EstimatedPriority)
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="detail-label">Sizing Notes</div>
+        <div class="detail-value multiline @(string.IsNullOrEmpty(Model.EstimationNotes) ? "empty" : "")">
+            @(string.IsNullOrEmpty(Model.EstimationNotes) ? "No sizing notes" : Model.EstimationNotes)
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION: Approved -->
+    <!-- ============================================ -->
+    <div class="col-12 mt-4">
+        <div class="d-flex align-items-center mb-2">
+            <div class="section-icon bg-info text-white me-2">
+                <i class="bi bi-check2-circle"></i>
+            </div>
+            <h5 class="mb-0 text-info fw-bold">Approved</h5>
+        </div>
+        <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-info); opacity: 0.5;" />
+    </div>
+
+    <div class="col-md-4">
+        <div class="detail-label">Hours</div>
+        <div class="detail-value @(Model.ReturnedHours == null ? "empty" : "")">
+            @(Model.ReturnedHours?.ToString("N1") ?? "—")
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="detail-label">Start Date</div>
+        <div class="detail-value @(Model.StartDate == null ? "empty" : "")">
+            @(Model.StartDate?.ToString("MMM d, yyyy") ?? "—")
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="detail-label">End Date</div>
+        <div class="detail-value @(Model.EndDate == null ? "empty" : "")">
+            @(Model.EndDate?.ToString("MMM d, yyyy") ?? "—")
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="detail-label">Labor Type</div>
+        <div class="detail-value @(string.IsNullOrEmpty(Model.InfLaborType) ? "empty" : "")">
+            @(string.IsNullOrEmpty(Model.InfLaborType) ? "—" : Model.InfLaborType)
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="detail-label">Priority</div>
+        <div class="detail-value @(string.IsNullOrEmpty(Model.InfPriority) ? "empty" : "")">
+            @(string.IsNullOrEmpty(Model.InfPriority) ? "—" : Model.InfPriority)
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="detail-label">Approval Notes</div>
+        <div class="detail-value multiline @(string.IsNullOrEmpty(Model.ApprovalNotes) ? "empty" : "")">
+            @(string.IsNullOrEmpty(Model.ApprovalNotes) ? "No approval notes" : Model.ApprovalNotes)
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION: Resources -->
+    <!-- ============================================ -->
+    <div class="col-12 mt-4">
+        <div class="d-flex align-items-center mb-2">
+            <div class="section-icon bg-warning text-dark me-2">
+                <i class="bi bi-people"></i>
+            </div>
+            <h5 class="mb-0 text-warning fw-bold">Resources</h5>
+        </div>
+        <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-warning); opacity: 0.5;" />
+    </div>
+
+    <div class="col-md-4">
+        <div class="detail-label">Sponsors</div>
+        <div class="detail-value">
+            @if (Model.SelectedSponsorIds?.Any() == true)
+            {
+                foreach (var sponsor in Model.AvailableSponsors.Where(s => Model.SelectedSponsorIds.Contains(s.Id)))
+                {
+                    <span class="resource-chip">@sponsor.Name</span>
+                }
+            }
+            else
+            {
+                <span class="empty">None assigned</span>
+            }
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="detail-label">SPOCs</div>
+        <div class="detail-value">
+            @if (Model.SelectedSpocIds?.Any() == true)
+            {
+                foreach (var spoc in Model.AvailableSpocs.Where(s => Model.SelectedSpocIds.Contains(s.Id)))
+                {
+                    <span class="resource-chip">@spoc.Name</span>
+                }
+            }
+            else
+            {
+                <span class="empty">None assigned</span>
+            }
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="detail-label">Assigned Resources</div>
+        <div class="detail-value">
+            @if (Model.SelectedResourceIds?.Any() == true)
+            {
+                foreach (var resource in Model.AvailableResources.Where(r => Model.SelectedResourceIds.Contains(r.Id)))
+                {
+                    <span class="resource-chip">@resource.Name</span>
+                }
+            }
+            else
+            {
+                <span class="empty">None assigned</span>
+            }
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION: Skills -->
+    <!-- ============================================ -->
+    @if (Model.AvailableSkills?.Any() == true)
+    {
+        <div class="col-12 mt-4">
+            <div class="d-flex align-items-center mb-2">
+                <div class="section-icon text-white me-2" style="background-color: #6f42c1;">
+                    <i class="bi bi-lightbulb"></i>
+                </div>
+                <h5 class="mb-0 fw-bold" style="color: #6f42c1;">Skills</h5>
+            </div>
+            <hr class="mt-0 mb-3" style="border-top: 2px solid #6f42c1; opacity: 0.5;" />
+        </div>
+
+        <div class="col-12">
+            <div class="detail-value">
+                @if (Model.SelectedSkillIds?.Any() == true)
+                {
+                    foreach (var skill in Model.AvailableSkills.Where(s => Model.SelectedSkillIds.Contains(s.Id)))
+                    {
+                        <span class="skill-chip">@skill.Name</span>
+                    }
+                }
+                else
+                {
+                    <span class="empty">No skills tagged</span>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- ============================================ -->
+    <!-- SECTION: Audit Information -->
+    <!-- ============================================ -->
+    @if (Model.CreatedAt.HasValue || Model.ModifiedAt.HasValue)
+    {
+        <div class="col-12 mt-4">
+            <div class="d-flex align-items-center mb-2">
+                <div class="section-icon bg-secondary text-white me-2">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <h5 class="mb-0 text-secondary fw-bold">Audit Information</h5>
+            </div>
+            <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-secondary); opacity: 0.5;" />
+        </div>
+
+        <div class="col-md-6">
+            <div class="detail-label">Created</div>
+            <div class="detail-value">
+                @if (Model.CreatedAt.HasValue)
+                {
+                    <span>@Model.CreatedAt.Value.ToString("MMM d, yyyy h:mm tt")</span>
+                    @if (!string.IsNullOrEmpty(Model.CreatedBy))
+                    {
+                        <span class="text-muted"> by @Model.CreatedBy</span>
+                    }
+                }
+                else
+                {
+                    <span class="empty">—</span>
+                }
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="detail-label">Last Modified</div>
+            <div class="detail-value">
+                @if (Model.ModifiedAt.HasValue)
+                {
+                    <span>@Model.ModifiedAt.Value.ToString("MMM d, yyyy h:mm tt")</span>
+                    @if (!string.IsNullOrEmpty(Model.ModifiedBy))
+                    {
+                        <span class="text-muted"> by @Model.ModifiedBy</span>
+                    }
+                }
+                else
+                {
+                    <span class="empty">—</span>
+                }
+            </div>
+        </div>
+    }
+
+</div>

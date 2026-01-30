@@ -230,6 +230,7 @@ public class EnhancementService : IEnhancementService
         existing.InfServiceLine = enhancement.InfServiceLine;
         existing.InfLaborType = enhancement.InfLaborType;   // ADD THIS
         existing.InfPriority = enhancement.InfPriority;     // ADD THIS
+        existing.ApprovalNotes = enhancement.ApprovalNotes;
 
         // Legacy time allocations
         existing.TimeW1 = enhancement.TimeW1;
@@ -501,6 +502,7 @@ public class EnhancementService : IEnhancementService
             InfServiceLine = enhancement.InfServiceLine,
             InfLaborType = enhancement.InfLaborType,   // ADD THIS
             InfPriority = enhancement.InfPriority,     // ADD THIS
+            ApprovalNotes = enhancement.ApprovalNotes,
 
             // Legacy time allocations
             TimeW1 = enhancement.TimeW1,
@@ -519,7 +521,7 @@ public class EnhancementService : IEnhancementService
             ModifiedBy = enhancement.ModifiedBy,
             ModifiedAt = enhancement.ModifiedAt
         };
-        
+
         _db.EnhancementHistory.Add(history);
         await _db.SaveChangesAsync();
     }
@@ -601,4 +603,33 @@ public class EnhancementService : IEnhancementService
         enhancement.ModifiedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
     }
+
+    public async Task<int> UpdateNotificationRecipientsAsync(string enhancementId, List<string> recipientIds, string userId)
+    {
+        // Remove all existing recipients for this enhancement
+        var existingRecipients = await _db.EnhancementNotificationRecipients
+            .Where(r => r.EnhancementId == enhancementId)
+            .ToListAsync();
+
+        _db.EnhancementNotificationRecipients.RemoveRange(existingRecipients);
+
+        // Add new recipients
+        if (recipientIds.Any())
+        {
+            var newRecipients = recipientIds.Select(resourceId => new EnhancementNotificationRecipient
+            {
+                EnhancementId = enhancementId,
+                ResourceId = resourceId,
+                CreatedBy = userId,
+                CreatedAt = DateTime.UtcNow
+            }).ToList();
+
+            await _db.EnhancementNotificationRecipients.AddRangeAsync(newRecipients);
+        }
+
+        await _db.SaveChangesAsync();
+
+        return recipientIds.Count;
+    }
+
 }

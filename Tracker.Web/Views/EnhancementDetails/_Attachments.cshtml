@@ -36,7 +36,7 @@
                         <tr>
                             <td>
                                 <i class="bi @GetFileIcon(attachment.ContentType) me-2 text-muted"></i>
-                                <a href="@Url.Action("DownloadAttachment", "Enhancements", new { id = attachment.Id })" target="_blank">
+                                <a href="@Url.Action("DownloadAttachment", "Enhancements", new { id = attachment.Id })">
                                     @attachment.FileName
                                 </a>
                             </td>

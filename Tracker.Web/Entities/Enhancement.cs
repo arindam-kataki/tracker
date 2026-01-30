@@ -71,6 +71,8 @@ public class Enhancement
     public string? InfLaborType { get; set; }
     [Description("Infosys Priority")]
     public string? InfPriority { get; set; }
+    [Description("Approval Notes")]
+    public string? ApprovalNotes { get; set; }
     [Description("Dependencies")]
     public string? Dependencies { get; set; }
     [Description("Infosys Cost Center")]

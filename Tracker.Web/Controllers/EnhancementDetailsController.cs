@@ -151,6 +151,7 @@ public class EnhancementDetailsController : BaseController
             InfServiceLine = enhancement?.InfServiceLine,
             InfLaborType = enhancement?.InfLaborType,     // ADD THIS
             InfPriority = enhancement?.InfPriority,       // ADD THIS
+            ApprovalNotes = enhancement?.ApprovalNotes,
 
             // Legacy time allocations
             TimeW1 = enhancement?.TimeW1,
@@ -384,6 +385,7 @@ public class EnhancementDetailsController : BaseController
                 InfServiceLine = request.InfServiceLine,
                 InfLaborType = request.InfLaborType,     // ADD THIS
                 InfPriority = request.InfPriority,       // ADD THIS
+                ApprovalNotes = request.ApprovalNotes,
 
                 // Legacy time allocations
                 TimeW1 = request.TimeW1,
@@ -459,7 +461,7 @@ public class EnhancementDetailsController : BaseController
         }
     }
 
-    [HttpGet("DownloadAttachment")]
+    [HttpGet("DownloadAttachment/{id}")]
     public async Task<IActionResult> DownloadAttachment(string id)
     {
         var (stream, contentType, fileName) = await _attachmentService.DownloadAsync(id);
