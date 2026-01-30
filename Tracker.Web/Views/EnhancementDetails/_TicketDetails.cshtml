@@ -343,46 +343,60 @@
         }
 
         <!-- ============================================ -->
-        <!-- SECTION: Weekly Time Allocation (Legacy - Hidden) -->
+        <!-- SECTION: Service Area Allocation -->
         <!-- ============================================ -->
-        <div class="col-12 mt-4" style="display:none;">
+        <div class="col-12 mt-4">
             <div class="d-flex align-items-center mb-2">
                 <div class="bg-purple text-white rounded-circle d-flex align-items-center justify-content-center me-2"
                     style="width: 28px; height: 28px; background-color: #6f42c1;">
                     <i class="bi bi-calendar-week"></i>
                 </div>
-                <h5 class="mb-0 fw-bold" style="color: #6f42c1;">Weekly Time Allocation</h5>
+                <h5 class="mb-0 fw-bold" style="color: #6f42c1;">Allocation</h5>
             </div>
             <hr class="mt-0 mb-3" style="border-top: 2px solid #6f42c1; opacity: 0.5;" />
         </div>
 
-        <div class="col-12" style="display:none;">
+        <div class="col-12">
             <div class="table-responsive">
                 <table class="table table-sm table-bordered mb-0">
                     <thead class="table-light">
                         <tr>
-                            @for (int w = 1; w <= 9; w++)
-                            {
-                                <th class="text-center" style="width: 11%;">W@w</th>
-                            }
+                            <th class="text-center" style="font-size: 0.85rem;">ADM</th>
+                            <th class="text-center" style="font-size: 0.85rem;">ENG/PLM/IOT</th>
+                            <th class="text-center" style="font-size: 0.85rem;">SAP</th>
+                            <th class="text-center" style="font-size: 0.85rem;">DNA</th>
+                            <th class="text-center" style="font-size: 0.85rem;">CIS/DBA</th>
+                            <th class="text-center" style="font-size: 0.85rem;">Oracle</th>
+                            <th class="text-center" style="font-size: 0.85rem;">MSWT</th>
+                            <th class="text-center" style="font-size: 0.85rem;">MSP (MS Dynamics)</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td><input type="number" name="TimeW1" value="@Model.TimeW1" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW2" value="@Model.TimeW2" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW3" value="@Model.TimeW3" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW4" value="@Model.TimeW4" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW5" value="@Model.TimeW5" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW6" value="@Model.TimeW6" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW7" value="@Model.TimeW7" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW8" value="@Model.TimeW8" class="form-control form-control-sm text-center" step="0.5" /></td>
-                            <td><input type="number" name="TimeW9" value="@Model.TimeW9" class="form-control form-control-sm text-center" step="0.5" /></td>
+                            <td><input type="number" name="TimeW1" value="@Model.TimeW1"
+                                    class="form-control form-control-sm text-center" step="0.5" placeholder="0" /></td>
+                            <td><input type="number" name="TimeW2" value="@Model.TimeW2"
+                                    class="form-control form-control-sm text-center" step="0.5" placeholder="0" /></td>
+                            <td><input type="number" name="TimeW3" value="@Model.TimeW3"
+                                    class="form-control form-control-sm text-center" step="0.5" placeholder="0" /></td>
+                            <td><input type="number" name="TimeW4" value="@Model.TimeW4"
+                                    class="form-control form-control-sm text-center" step="0.5" placeholder="0" /></td>
+                            <td><input type="number" name="TimeW5" value="@Model.TimeW5"
+                                    class="form-control form-control-sm text-center" step="0.5" placeholder="0" /></td>
+                            <td><input type="number" name="TimeW6" value="@Model.TimeW6"
+                                    class="form-control form-control-sm text-center" step="0.5" placeholder="0" /></td>
+                            <td><input type="number" name="TimeW7" value="@Model.TimeW7"
+                                    class="form-control form-control-sm text-center" step="0.5" placeholder="0" /></td>
+                            <td><input type="number" name="TimeW8" value="@Model.TimeW8"
+                                    class="form-control form-control-sm text-center" step="0.5" placeholder="0" /></td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
+
+        <!-- Hidden field for unused TimeW9 to preserve data if any exists -->
+        <input type="hidden" name="TimeW9" value="@Model.TimeW9" />
 
         <!-- ============================================ -->
         <!-- SECTION: Audit Information (Read-only) -->
@@ -407,7 +421,8 @@
 
             <div class="col-md-6">
                 <label class="form-label">Created At</label>
-                <input type="text" value="@Model.CreatedAt?.ToString("yyyy-MM-dd HH:mm")" class="form-control" readonly disabled />
+                <input type="text" value="@Model.CreatedAt?.ToString("yyyy-MM-dd HH:mm")" class="form-control" readonly
+                    disabled />
             </div>
 
             <div class="col-md-6">
@@ -417,7 +432,8 @@
 
             <div class="col-md-6">
                 <label class="form-label">Modified At</label>
-                <input type="text" value="@Model.ModifiedAt?.ToString("yyyy-MM-dd HH:mm")" class="form-control" readonly disabled />
+                <input type="text" value="@Model.ModifiedAt?.ToString("yyyy-MM-dd HH:mm")" class="form-control" readonly
+                    disabled />
             </div>
         }
 
