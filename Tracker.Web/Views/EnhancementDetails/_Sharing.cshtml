@@ -1,153 +1,276 @@
 @model SharingViewModel
 
+@Html.AntiForgeryToken()
+
 <div class="mb-4">
     <h6 class="mb-3"><i class="bi bi-share me-1"></i> Share to Another Service Area</h6>
     
-    <p class="text-muted">
-        Create a copy of this work item (<strong>@Model.WorkId</strong>) in another service area. 
-        The copy will include all notes and a sharing record indicating the source.
-    </p>
-
-    @if (Model.ExistingServiceAreaNames.Any())
+    @if (Model.IsSharedCopy)
     {
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle me-1"></i>
-            <strong>@Model.WorkId</strong> already exists in: 
-            <span class="fw-bold">@string.Join(", ", Model.ExistingServiceAreaNames)</span>
-        </div>
-    }
-
-    @if (!Model.AvailableTargetServiceAreas.Any())
-    {
+        <!-- This is a shared copy - don't allow further sharing -->
         <div class="alert alert-warning">
-            <i class="bi bi-exclamation-triangle me-1"></i>
-            No additional service areas available for sharing. This work item either exists in all your accessible service areas, or you don't have access to other areas.
+            <i class="bi bi-info-circle me-1"></i>
+            <strong>This is a shared copy.</strong> 
+            Further sharing is not permitted from shared copies.
         </div>
+        
+        @if (!string.IsNullOrEmpty(Model.OriginalEnhancementId))
+        {
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-link-45deg me-1"></i> Original Work Item</h6>
+                    <p class="card-text">
+                        This work item was shared from <strong>@Model.OriginalServiceAreaName</strong>.
+                    </p>
+                    <a href="/Enhancements/Details/@Model.OriginalEnhancementId?serviceAreaId=@Model.OriginalServiceAreaId" 
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> View Original
+                    </a>
+                </div>
+            </div>
+        }
     }
     else
     {
-        <form id="shareForm">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="EnhancementId" value="@Model.EnhancementId" />
-            
-            <div class="mb-3">
-                <label class="form-label">Target Service Area</label>
-                <select name="TargetServiceAreaId" id="targetServiceArea" class="form-select" required>
-                    <option value="">-- Select Service Area --</option>
-                    @foreach (var sa in Model.AvailableTargetServiceAreas)
-                    {
-                        <option value="@sa.Id">@sa.Name</option>
-                    }
-                </select>
+        <!-- Normal sharing UI -->
+        <p class="text-muted">
+            Create a copy of this work item (<strong>@Model.WorkId</strong>) in another service area. 
+            The copy will include all notes, notification settings, and a sharing record indicating the source.
+        </p>
+
+        @if (Model.ExistingServiceAreaNames.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-1"></i>
+                <strong>@Model.WorkId</strong> already exists in: 
+                <span class="fw-bold">@string.Join(", ", Model.ExistingServiceAreaNames)</span>
             </div>
-            
-            <div class="alert alert-secondary small">
-                <strong>What will be copied:</strong>
-                <ul class="mb-0 mt-1">
-                    <li>Work ID, Description, Notes (quick notes field)</li>
-                    <li>Estimation details (hours, dates, estimation notes)</li>
-                    <li>All notes from the Notes History tab</li>
-                    <li>A sharing record indicating who shared and when</li>
-                </ul>
-                <strong class="mt-2 d-block">What will NOT be copied:</strong>
-                <ul class="mb-0 mt-1">
-                    <li>Assigned resources (will need to be re-assigned)</li>
-                    <li>Actual hours/dates (will be blank)</li>
-                    <li>Attachments (remain with original)</li>
-                    <li>Time recording entries (remain with original)</li>
-                </ul>
+        }
+
+        <!-- Success Message (hidden by default) -->
+        <div class="alert alert-success d-none" id="shareSuccessAlert">
+            <i class="bi bi-check-circle me-1"></i>
+            <strong>Success!</strong> Work item shared successfully.
+            <a href="#" id="viewSharedLink" target="_blank">View the shared copy</a>
+        </div>
+
+        @if (!Model.AvailableTargetServiceAreas.Any())
+        {
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                No additional service areas available for sharing. This work item either exists in all your accessible service areas, or you don't have access to other areas.
             </div>
-            
-            <button type="submit" class="btn btn-primary" id="shareBtn">
-                <i class="bi bi-share me-1"></i> Create Copy
-            </button>
-        </form>
+        }
+        else
+        {
+            <form id="shareForm">
+                <input type="hidden" name="EnhancementId" value="@Model.EnhancementId" />
+                
+                <div class="mb-3">
+                    <label class="form-label">Target Service Area <span class="text-danger">*</span></label>
+                    <select name="TargetServiceAreaId" id="targetServiceArea" class="form-select" required>
+                        <option value="">-- Select Service Area --</option>
+                        @foreach (var sa in Model.AvailableTargetServiceAreas)
+                        {
+                            <option value="@sa.Id">@sa.Name</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Sharing Note <span class="text-danger">*</span></label>
+                    <textarea name="SharingNote" id="sharingNote" class="form-control" rows="3" 
+                              placeholder="Enter a note explaining why this work item is being shared (required)..." 
+                              required minlength="10"></textarea>
+                    <div class="form-text">This note will appear in the Notes tab of the shared copy.</div>
+                </div>
+                
+                <div class="alert alert-secondary small">
+                    <strong>What will be copied:</strong>
+                    <ul class="mb-0 mt-1">
+                        <li>Work ID, Description, Notes (quick notes field)</li>
+                        <li>Estimation details (hours, dates, estimation notes)</li>
+                        <li>All notes from the Notes History tab</li>
+                        <li>Notification recipient settings</li>
+                        <li>A sharing record indicating who shared and when</li>
+                    </ul>
+                    <strong class="mt-2 d-block">What will NOT be copied:</strong>
+                    <ul class="mb-0 mt-1">
+                        <li>Assigned resources (will need to be re-assigned)</li>
+                        <li>Actual hours/dates (will be blank)</li>
+                        <li>Attachments (remain with original)</li>
+                        <li>Time recording entries (remain with original)</li>
+                    </ul>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="shareBtn">
+                    <i class="bi bi-share me-1"></i> Create Copy
+                </button>
+            </form>
+        }
     }
 </div>
 
-<!-- Confirm Modal -->
-<div class="modal fade" id="shareConfirmModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Share</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Create a copy of <strong>@Model.WorkId</strong> in <strong id="targetServiceAreaName"></strong>?</p>
-                <p class="text-muted small">The copy will be created with status "New" and you will be redirected to the new work item.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="confirmShareBtn">
-                    <i class="bi bi-share me-1"></i> Create Copy
-                </button>
+@if (!Model.IsSharedCopy && Model.AvailableTargetServiceAreas.Any())
+{
+    <!-- Confirm Modal -->
+    <div class="modal fade" id="shareConfirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Share</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Create a copy of <strong>@Model.WorkId</strong> in <strong id="targetServiceAreaName"></strong>?</p>
+                    <div class="alert alert-light border">
+                        <strong>Your note:</strong>
+                        <p class="mb-0 mt-1" id="confirmSharingNote"></p>
+                    </div>
+                    <p class="text-muted small mb-0">The copy will be created with status "New".</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmShareBtn">
+                        <i class="bi bi-share me-1"></i> Create Copy
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-(function() {
-    var shareForm = document.getElementById('shareForm');
-    if (!shareForm) return;
-    
-    var targetSelect = document.getElementById('targetServiceArea');
-    var confirmModal = null;
-    
-    shareForm.addEventListener('submit', function(e) {
-        e.preventDefault();
+    <script>
+    (function() {
+        var shareForm = document.getElementById('shareForm');
+        if (!shareForm) return;
         
-        if (!targetSelect.value) {
-            alert('Please select a target service area.');
-            return;
+        var targetSelect = document.getElementById('targetServiceArea');
+        var sharingNoteInput = document.getElementById('sharingNote');
+        var shareBtn = document.getElementById('shareBtn');
+        var successAlert = document.getElementById('shareSuccessAlert');
+        var viewSharedLink = document.getElementById('viewSharedLink');
+        var confirmModal = null;
+        
+        // Get anti-forgery token
+        var tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (!tokenInput) {
+            console.error('Anti-forgery token not found');
         }
+        var antiForgeryToken = tokenInput ? tokenInput.value : '';
         
-        // Show selected name in modal
-        var selectedText = targetSelect.options[targetSelect.selectedIndex].text;
-        document.getElementById('targetServiceAreaName').textContent = selectedText;
+        shareForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!targetSelect.value) {
+                alert('Please select a target service area.');
+                return;
+            }
+            
+            var noteText = sharingNoteInput.value.trim();
+            if (!noteText || noteText.length < 10) {
+                alert('Please enter a sharing note (at least 10 characters).');
+                sharingNoteInput.focus();
+                return;
+            }
+            
+            // Show selected name in modal
+            var selectedText = targetSelect.options[targetSelect.selectedIndex].text;
+            document.getElementById('targetServiceAreaName').textContent = selectedText;
+            document.getElementById('confirmSharingNote').textContent = noteText;
+            
+            confirmModal = new bootstrap.Modal(document.getElementById('shareConfirmModal'));
+            confirmModal.show();
+        });
         
-        confirmModal = new bootstrap.Modal(document.getElementById('shareConfirmModal'));
-        confirmModal.show();
-    });
-    
-    document.getElementById('confirmShareBtn').addEventListener('click', function() {
-        var btn = this;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Creating...';
-        
-        var data = {
-            enhancementId: '@Model.EnhancementId',
-            targetServiceAreaId: targetSelect.value
-        };
-        
-        fetch('@Url.Action("Share", "Enhancements")', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': antiForgeryToken 
-            },
-            body: JSON.stringify(data)
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(result) {
-            if (result.success) {
-                // Redirect to the new enhancement
-                window.location.href = '@Url.Action("Details", "Enhancements")/' + result.newEnhancementId + 
-                    '?serviceAreaId=' + result.serviceAreaId;
-            } else {
+        document.getElementById('confirmShareBtn').addEventListener('click', function() {
+            var btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Creating...';
+            
+            var selectedServiceAreaId = targetSelect.value;
+            var selectedServiceAreaName = targetSelect.options[targetSelect.selectedIndex].text;
+            
+            var data = {
+                enhancementId: '@Model.EnhancementId',
+                targetServiceAreaId: selectedServiceAreaId,
+                sharingNote: sharingNoteInput.value.trim()
+            };
+            
+            fetch('@Url.Action("Share", "EnhancementDetails")', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': antiForgeryToken 
+                },
+                body: JSON.stringify(data)
+            })
+            .then(function(r) { 
+                if (!r.ok) {
+                    return r.text().then(function(text) {
+                        throw new Error('HTTP ' + r.status + ': ' + text.substring(0, 200));
+                    });
+                }
+                return r.json(); 
+            })
+            .then(function(result) {
+                if (result.success) {
+                    // Hide modal
+                    if (confirmModal) confirmModal.hide();
+                    
+                    // Reset form
+                    sharingNoteInput.value = '';
+                    
+                    // Remove the selected option from dropdown (can't share to same place twice)
+                    var selectedOption = targetSelect.querySelector('option[value="' + selectedServiceAreaId + '"]');
+                    if (selectedOption) {
+                        selectedOption.remove();
+                    }
+                    targetSelect.value = '';
+                    
+                    // Update the "already exists in" info
+                    var infoAlert = document.querySelector('.alert-info');
+                    if (infoAlert) {
+                        var existingSpan = infoAlert.querySelector('.fw-bold');
+                        if (existingSpan) {
+                            var currentText = existingSpan.textContent;
+                            existingSpan.textContent = currentText ? currentText + ', ' + selectedServiceAreaName : selectedServiceAreaName;
+                        }
+                    } else {
+                        // Create info alert if it doesn't exist
+                        var newAlert = document.createElement('div');
+                        newAlert.className = 'alert alert-info';
+                        newAlert.innerHTML = '<i class="bi bi-info-circle me-1"></i><strong>@Model.WorkId</strong> already exists in: <span class="fw-bold">' + selectedServiceAreaName + '</span>';
+                        shareForm.parentNode.insertBefore(newAlert, successAlert.nextSibling);
+                    }
+                    
+                    // Show success message with link - use correct URL format
+                    var newEnhancementUrl = '/Enhancements/Details/' + result.newEnhancementId + '?serviceAreaId=' + result.serviceAreaId;
+                    viewSharedLink.href = newEnhancementUrl;
+                    successAlert.classList.remove('d-none');
+                    
+                    // Check if dropdown is now empty
+                    if (targetSelect.querySelectorAll('option[value]').length <= 1) {
+                        // Only the placeholder option remains
+                        shareForm.innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-1"></i>No additional service areas available for sharing.</div>';
+                    }
+                    
+                    // Reset confirm button
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-share me-1"></i> Create Copy';
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-share me-1"></i> Create Copy';
+                    alert(result.message || 'Share failed');
+                    if (confirmModal) confirmModal.hide();
+                }
+            })
+            .catch(function(err) {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-share me-1"></i> Create Copy';
-                alert(result.message || 'Share failed');
+                alert('Error: ' + err.message);
                 if (confirmModal) confirmModal.hide();
-            }
-        })
-        .catch(function(err) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-share me-1"></i> Create Copy';
-            alert('Error: ' + err.message);
-            if (confirmModal) confirmModal.hide();
+            });
         });
-    });
-})();
-</script>
+    })();
+    </script>
+}

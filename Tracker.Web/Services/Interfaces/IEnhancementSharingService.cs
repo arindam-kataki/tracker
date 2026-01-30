@@ -17,7 +17,12 @@ public interface IEnhancementSharingService
     
     /// <summary>
     /// Creates a copy of the enhancement in the target service area.
-    /// Copies all notes and adds a sharing note.
+    /// Copies all notes, notification recipients, and adds a user-provided sharing note.
     /// </summary>
-    Task<Enhancement> ShareToServiceAreaAsync(string enhancementId, string targetServiceAreaId, string userId);
+    /// <param name="enhancementId">Source enhancement ID</param>
+    /// <param name="targetServiceAreaId">Target service area ID</param>
+    /// <param name="userId">User performing the share</param>
+    /// <param name="sharingNote">Required note from the user explaining the share</param>
+    /// <returns>The newly created enhancement</returns>
+    Task<Enhancement> ShareToServiceAreaAsync(string enhancementId, string targetServiceAreaId, string userId, string sharingNote);
 }

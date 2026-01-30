@@ -4,6 +4,8 @@
     var notifications = Model.Notifications;
 }
 
+@Html.AntiForgeryToken()
+
 <div class="row">
     <div class="col-12">
         <div class="d-flex align-items-center mb-3">
@@ -88,11 +90,19 @@
 <script>
 (function() {
     var enhancementId = '@Model.Id';
+    var saveUrl = '@Url.Action("UpdateNotificationRecipients", "Enhancements")';
     var searchInput = document.getElementById('searchResources');
     var selectedCountBadge = document.getElementById('selectedCount');
     var saveBtn = document.getElementById('saveRecipientsBtn');
     var selectAllBtn = document.getElementById('selectAllBtn');
     var clearAllBtn = document.getElementById('clearAllBtn');
+    
+    // Get anti-forgery token
+    var tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+    if (!tokenInput) {
+        console.error('Anti-forgery token not found');
+    }
+    var antiForgeryToken = tokenInput ? tokenInput.value : '';
 
     // Update selected count
     function updateCount() {
@@ -154,13 +164,15 @@
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
 
-            var token = document.querySelector('input[name="__RequestVerificationToken"]');
-            
-            fetch('/Enhancements/UpdateNotificationRecipients', {
+            console.log('Saving to:', saveUrl);
+            console.log('Enhancement ID:', enhancementId);
+            console.log('Selected IDs:', selectedIds);
+
+            fetch(saveUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'RequestVerificationToken': token ? token.value : ''
+                    'RequestVerificationToken': antiForgeryToken
                 },
                 body: JSON.stringify({
                     enhancementId: enhancementId,
@@ -168,9 +180,17 @@
                 })
             })
             .then(function(response) {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    return response.text().then(function(text) {
+                        console.error('Response body:', text);
+                        throw new Error('HTTP ' + response.status + ': ' + text.substring(0, 200));
+                    });
+                }
                 return response.json();
             })
             .then(function(result) {
+                console.log('Result:', result);
                 if (result.success) {
                     saveBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Saved!';
                     saveBtn.classList.remove('btn-primary');
@@ -190,7 +210,7 @@
             })
             .catch(function(error) {
                 console.error('Error saving recipients:', error);
-                alert('Error saving recipients');
+                alert('Error saving recipients: ' + error.message);
                 saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Recipients';
                 saveBtn.disabled = false;
             });

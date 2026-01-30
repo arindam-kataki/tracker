@@ -211,7 +211,7 @@ public class NotificationRecipientViewModel
 }
 
 /// <summary>
-/// Tab 5: Sharing
+/// View model for the Sharing tab
 /// </summary>
 public class SharingViewModel
 {
@@ -219,11 +219,38 @@ public class SharingViewModel
     public string WorkId { get; set; } = string.Empty;
     public string CurrentServiceAreaName { get; set; } = string.Empty;
     
-    // Service areas where this enhancement can be shared
+    /// <summary>
+    /// Service areas where this WorkId already exists
+    /// </summary>
+    public List<string> ExistingServiceAreaNames { get; set; } = new();
+    
+    /// <summary>
+    /// Service areas available for sharing (user has access + WorkId doesn't exist there)
+    /// </summary>
     public List<ServiceAreaOption> AvailableTargetServiceAreas { get; set; } = new();
     
-    // Service areas where this WorkId already exists (for info display)
-    public List<string> ExistingServiceAreaNames { get; set; } = new();
+    // ===== Shared Copy Detection =====
+    
+    /// <summary>
+    /// True if this enhancement was created by sharing from another enhancement.
+    /// Shared copies cannot be shared further.
+    /// </summary>
+    public bool IsSharedCopy { get; set; }
+    
+    /// <summary>
+    /// The original enhancement ID this was shared from (if IsSharedCopy is true)
+    /// </summary>
+    public string? OriginalEnhancementId { get; set; }
+    
+    /// <summary>
+    /// The original service area ID (for building the link)
+    /// </summary>
+    public string? OriginalServiceAreaId { get; set; }
+    
+    /// <summary>
+    /// The original service area name (for display)
+    /// </summary>
+    public string? OriginalServiceAreaName { get; set; }
 }
 
 public class ServiceAreaOption
@@ -256,6 +283,33 @@ public class TimeRecordingViewModel
     
     // Grand total
     public decimal GrandTotal => TotalsByCategory.Values.Sum();
+    
+    /// <summary>
+    /// All work phases that have recorded time (for pill badges)
+    /// </summary>
+    public List<WorkPhaseSummary> WorkPhases { get; set; } = new();
+    
+    /// <summary>
+    /// Monthly summaries (rows) - ordered by date descending (most recent first)
+    /// </summary>
+    public List<MonthlyTimeSummary> MonthlySummaries { get; set; } = new();
+    
+    /// <summary>
+    /// Grand totals by work phase ID (for footer row)
+    /// </summary>
+    public Dictionary<string, decimal> GrandTotalsByPhase { get; set; } = new();
+    
+   
+    
+    /// <summary>
+    /// Overall grand total contributed hours
+    /// </summary>
+    public decimal GrandTotalContributed { get; set; }
+    
+    /// <summary>
+    /// Whether there are any time entries
+    /// </summary>
+    public bool HasEntries => MonthlySummaries.Any();
 }
 
 public class TimeRecordingCategoryViewModel
@@ -355,11 +409,7 @@ public class SaveTimeEntryRequest
 /// <summary>
 /// Request model for sharing
 /// </summary>
-public class ShareEnhancementRequest
-{
-    public string EnhancementId { get; set; } = string.Empty;
-    public string TargetServiceAreaId { get; set; } = string.Empty;
-}
+
 
 /// <summary>
 /// Request model for adding a notification recipient

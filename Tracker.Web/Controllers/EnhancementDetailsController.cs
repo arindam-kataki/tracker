@@ -237,14 +237,40 @@ public class EnhancementDetailsController : BaseController
             var availableTargets = await _sharingService.GetAvailableTargetServiceAreasAsync(enhancementId, accessibleServiceAreaIds);
             var existingAreas = await GetExistingServiceAreasForWorkIdAsync(enhancement!.WorkId, serviceArea.Id);
 
+            // Check if this is a shared copy (has SpawnedFromId)
+            var isSharedCopy = !string.IsNullOrEmpty(enhancement.SpawnedFromId);
+            string? originalServiceAreaId = null;
+            string? originalServiceAreaName = null;
+
+            if (isSharedCopy)
+            {
+                // Get the original enhancement to find its service area
+                var originalEnhancement = await _enhancementService.GetByIdAsync(enhancement.SpawnedFromId);
+                if (originalEnhancement != null)
+                {
+                    originalServiceAreaId = originalEnhancement.ServiceAreaId;
+                    var originalServiceArea = await _serviceAreaService.GetByIdAsync(originalEnhancement.ServiceAreaId);
+                    originalServiceAreaName = originalServiceArea?.Name ?? "Unknown";
+                }
+            }
+
             model.Sharing = new SharingViewModel
             {
                 EnhancementId = enhancementId,
                 WorkId = enhancement.WorkId,
                 CurrentServiceAreaName = serviceArea.Name,
-                AvailableTargetServiceAreas = availableTargets.Select(sa => new ServiceAreaOption { Id = sa.Id, Name = sa.Name }).ToList(),
-                ExistingServiceAreaNames = existingAreas
+                AvailableTargetServiceAreas = isSharedCopy
+                    ? new List<ServiceAreaOption>()  // Don't show options for shared copies
+                    : availableTargets.Select(sa => new ServiceAreaOption { Id = sa.Id, Name = sa.Name }).ToList(),
+                ExistingServiceAreaNames = existingAreas,
+                // Shared copy properties
+                IsSharedCopy = isSharedCopy,
+                OriginalEnhancementId = isSharedCopy ? enhancement.SpawnedFromId : null,
+                OriginalServiceAreaId = originalServiceAreaId,
+                OriginalServiceAreaName = originalServiceAreaName
             };
+
+            /*
 
             // Time Recording
             var selectedCategories = await _timeRecordingService.GetCategoriesForEnhancementAsync(enhancementId);
@@ -274,6 +300,70 @@ public class EnhancementDetailsController : BaseController
                 }).ToList(),
                 TotalsByCategory = totalsByCategory
             };
+
+            */
+
+
+            // Time Recording - Monthly summary by work phase (all resources)
+            var timeEntries = await _context.TimeEntries
+                .Include(te => te.WorkPhase)
+                .Include(te => te.Resource)
+                .Where(te => te.EnhancementId == enhancementId)
+                .ToListAsync();
+
+            // Get unique work phases that have entries
+            var workPhasesWithEntries = timeEntries
+                .Where(te => te.WorkPhase != null)
+                .Select(te => te.WorkPhase)
+                .DistinctBy(wp => wp.Id)
+                .OrderBy(wp => wp.DisplayOrder)
+                .Select(wp => new WorkPhaseSummary
+                {
+                    Id = wp.Id,
+                    Code = wp.Code,
+                    Name = wp.Name,
+                    BadgeClass = GetWorkPhaseBadgeClass(wp.Code),
+                    DisplayOrder = wp.DisplayOrder
+                })
+                .ToList();
+
+            // Group entries by month
+            var monthlySummaries = timeEntries
+                .GroupBy(te => new { te.StartDate.Year, te.StartDate.Month })
+                .Select(g => new MonthlyTimeSummary
+                {
+                    Year = g.Key.Year,
+                    Month = g.Key.Month,
+                    HoursByPhase = g
+                        .GroupBy(te => te.WorkPhaseId)
+                        .ToDictionary(pg => pg.Key, pg => pg.Sum(te => te.Hours)),
+                    ContributedByPhase = g
+                        .GroupBy(te => te.WorkPhaseId)
+                        .ToDictionary(pg => pg.Key, pg => pg.Sum(te => te.ContributedHours)),
+                    TotalHours = g.Sum(te => te.Hours),
+                    TotalContributed = g.Sum(te => te.ContributedHours),
+                    ResourceCount = g.Select(te => te.ResourceId).Distinct().Count()
+                })
+                .OrderByDescending(m => m.SortKey)
+                .ToList();
+
+            // Calculate grand totals by phase
+            var grandTotalsByPhase = timeEntries
+                .GroupBy(te => te.WorkPhaseId)
+                .ToDictionary(g => g.Key, g => g.Sum(te => te.Hours));
+
+            model.TimeRecording = new TimeRecordingViewModel
+            {
+                EnhancementId = enhancementId,
+                WorkPhases = workPhasesWithEntries,
+                MonthlySummaries = monthlySummaries,
+                GrandTotalsByPhase = grandTotalsByPhase,
+                //GrandTotal = timeEntries.Sum(te => te.Hours),
+                GrandTotalContributed = timeEntries.Sum(te => te.ContributedHours)
+            };
+
+
+
         }
         else
         {
@@ -461,6 +551,28 @@ public class EnhancementDetailsController : BaseController
         }
     }
 
+
+    // ============================================================
+    // Add this helper method to the controller class:
+    // ============================================================
+
+    private static string GetWorkPhaseBadgeClass(string code)
+    {
+        return code?.ToUpper() switch
+        {
+            "REQ" => "bg-info",
+            "VENDOR" => "bg-secondary",
+            "DESIGN" => "bg-primary",
+            "DEV" => "bg-success",
+            "STI" => "bg-warning text-dark",
+            "UAT" => "bg-danger",
+            "GOLIVE" => "bg-dark",
+            "SUPPORT" => "bg-light text-dark border",
+            "PM" => "bg-purple",
+            _ => "bg-secondary"
+        };
+    }
+
     [HttpGet("DownloadAttachment/{id}")]
     public async Task<IActionResult> DownloadAttachment(string id)
     {
@@ -524,10 +636,17 @@ public class EnhancementDetailsController : BaseController
     {
         try
         {
+            // Validate sharing note
+            if (string.IsNullOrWhiteSpace(request.SharingNote) || request.SharingNote.Trim().Length < 10)
+            {
+                return Json(new { success = false, message = "A sharing note is required (minimum 10 characters)." });
+            }
+
             var newEnhancement = await _sharingService.ShareToServiceAreaAsync(
                 request.EnhancementId,
                 request.TargetServiceAreaId,
-                CurrentUserId!);
+                CurrentUserId!,
+                request.SharingNote);
 
             return Json(new
             {
