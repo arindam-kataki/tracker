@@ -1,0 +1,19 @@
+{
+       "version": "0.2.0",
+       "configurations": [
+           {
+               "name": "Launch Tracker.Web",
+               "type": "coreclr",
+               "request": "launch",
+               "preLaunchTask": "build",
+               "program": "${workspaceFolder}/Tracker.Web/bin/Debug/net8.0/Tracker.Web.dll",
+               "args": [],
+               "cwd": "${workspaceFolder}/Tracker.Web",
+               "console": "integratedTerminal",
+               "stopAtEntry": false,
+               "env": {
+                   "ASPNETCORE_ENVIRONMENT": "Development"
+               }
+           }
+       ]
+   }
