@@ -2,6 +2,8 @@
 @{
     var isNew = string.IsNullOrEmpty(Model.Id);
     Model.AvailableTimeCategories = new List<TimeRecordingCategory>();
+    //Model.AvailableLaborTypes = new List<string> { "E" };
+    Model.EstimatedLaborType = "Enhancement";
 }
 
 @* Custom styles for better readability *@
@@ -62,7 +64,7 @@
 
         <!-- Row 1: Work ID and Status -->
         <div class="col-md-6">
-            <label class="form-label">Work ID <span class="text-danger">*</span></label>
+            <label class="form-label">Ticket # <span class="text-danger">*</span></label>
             <input type="text" name="WorkId" value="@Model.WorkId" class="form-control" required />
         </div>
 
@@ -98,7 +100,7 @@
                     style="width: 28px; height: 28px;">
                     <i class="bi bi-calculator"></i>
                 </div>
-                <h5 class="mb-0 text-success fw-bold">Sizing</h5>
+                <h5 class="mb-0 text-success fw-bold">Estimation</h5>
             </div>
             <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-success); opacity: 0.5;" />
         </div>
@@ -133,7 +135,7 @@
             </select>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-4" style="display: none;">
             <label class="form-label">Labor Type</label>
             <select name="EstimatedLaborType" class="form-select">
                 <option value="">-- Select --</option>
@@ -156,7 +158,7 @@
         </div>
 
         <!-- Sizing Row 3: Notes -->
-        <div class="col-12">
+        <div class="col-12" style="display: none;">
             <label class="form-label">Sizing Notes</label>
             <textarea name="EstimationNotes" class="form-control" rows="2">@Model.EstimationNotes</textarea>
         </div>
@@ -170,7 +172,7 @@
                     style="width: 28px; height: 28px;">
                     <i class="bi bi-check2-circle"></i>
                 </div>
-                <h5 class="mb-0 text-info fw-bold">Approved</h5>
+                <h5 class="mb-0 text-info fw-bold">Actual</h5>
             </div>
             <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-info); opacity: 0.5;" />
         </div>
@@ -216,7 +218,7 @@
 
         <!-- Approved Row 3: Notes -->
         <div class="col-12">
-            <label class="form-label">Approval Notes</label>
+            <label class="form-label">Notes</label>
             <textarea name="ApprovalNotes" class="form-control" rows="2">@Model.ApprovalNotes</textarea>
         </div>
 
@@ -236,7 +238,7 @@
                     style="width: 28px; height: 28px;">
                     <i class="bi bi-people"></i>
                 </div>
-                <h5 class="mb-0 text-warning fw-bold">Resources</h5>
+                <h5 class="mb-0 text-warning fw-bold">Contacts</h5>
             </div>
             <hr class="mt-0 mb-3" style="border-top: 2px solid var(--bs-warning); opacity: 0.5;" />
         </div>
@@ -265,7 +267,7 @@
             <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-4" style="display: none;">
             <label class="form-label" style="display: none;">Assigned Resources</label>
             <select name="ResourceIds" class="form-select" multiple size="4" style="display: none;">
                 @foreach (var r in Model.AvailableResources)
@@ -350,7 +352,7 @@
             @await Html.PartialAsync("_ResourceAllocations", new ResourceAllocationsPartialViewModel
             {
                 EnhancementId = Model.Id ?? "",
-                        IsEditMode = true,
+                        IsEditMode = false,
                         Allocations = Model.ResourceAllocations ?? new List<ResourceAllocationViewModel>(),
                         AvailableResources = Model.AvailableResources.ToList(),
                         AvailableServiceAreas = Model.AvailableServiceAreas?.ToList() ?? new

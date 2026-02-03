@@ -798,7 +798,7 @@ public class EnhancementDetailsController : BaseController
                 ResourceId = a.ResourceId,
                 ResourceName = a.Resource?.Name ?? "",
                 ServiceAreaId = a.ServiceAreaId,
-                ServiceAreaCode = a.ServiceArea?.Code,
+                ServiceAreaCode = a.ServiceAreaId,
                 ChargeCode = a.ChargeCode,
                 AllocationHours = a.AllocationHours
             }).ToList(),
@@ -838,7 +838,7 @@ public class EnhancementDetailsController : BaseController
                     resourceId = allocation.ResourceId,
                     resourceName = allocation.Resource?.Name ?? "",
                     serviceAreaId = allocation.ServiceAreaId,
-                    serviceAreaCode = allocation.ServiceArea?.Code,
+                    serviceAreaCode = allocation.ServiceAreaId,
                     chargeCode = allocation.ChargeCode,
                     allocationHours = allocation.AllocationHours
                 }
@@ -880,7 +880,7 @@ public class EnhancementDetailsController : BaseController
                 resourceId = allocation.ResourceId,
                 resourceName = allocation.Resource?.Name ?? "",
                 serviceAreaId = allocation.ServiceAreaId,
-                serviceAreaCode = allocation.ServiceArea?.Code,
+                serviceAreaCode = allocation.ServiceAreaId,
                 chargeCode = allocation.ChargeCode,
                 allocationHours = allocation.AllocationHours
             }

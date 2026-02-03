@@ -154,7 +154,7 @@ public class EnhancementService : IEnhancementService
             .Include(e => e.Sponsors).ThenInclude(s => s.Resource)
             .Include(e => e.Spocs).ThenInclude(s => s.Resource)
             .Include(e => e.Resources).ThenInclude(r => r.Resource)
-            .Include(e => e.Resources).ThenInclude(r => r.ServiceArea)
+         //   .Include(e => e.Resources).ThenInclude(r => r.ServiceArea)
             .Include(e => e.Contacts).ThenInclude(c => c.Resource)
             .FirstOrDefaultAsync(e => e.Id == id);
     }
@@ -644,10 +644,10 @@ public class EnhancementService : IEnhancementService
     {
         return await _db.Set<EnhancementResource>()
             .Include(er => er.Resource)
-            .Include(er => er.ServiceArea)
+            //.Include(er => er.ServiceArea)
             .Where(er => er.EnhancementId == enhancementId)
             .OrderBy(er => er.Resource.Name)
-            .ThenBy(er => er.ServiceArea != null ? er.ServiceArea.Code : "")
+            .ThenBy(er => er.ServiceAreaId ?? "")
             .ToListAsync();
     }
 
@@ -680,8 +680,7 @@ public class EnhancementService : IEnhancementService
 
         // Reload with navigation properties
         await _db.Entry(allocation).Reference(a => a.Resource).LoadAsync();
-        if (allocation.ServiceAreaId != null)
-            await _db.Entry(allocation).Reference(a => a.ServiceArea).LoadAsync();
+        
 
         return allocation;
     }
@@ -698,7 +697,7 @@ public class EnhancementService : IEnhancementService
         allocation.ModifiedAt = DateTime.UtcNow;
         allocation.ModifiedBy = userId;
         allocation.AllocationHours = allocationHours;
-        
+
 
         // Update enhancement modified timestamp
         var enhancement = await _db.Enhancements.FindAsync(allocation.EnhancementId);
@@ -712,8 +711,7 @@ public class EnhancementService : IEnhancementService
 
         // Reload with navigation properties
         await _db.Entry(allocation).Reference(a => a.Resource).LoadAsync();
-        if (allocation.ServiceAreaId != null)
-            await _db.Entry(allocation).Reference(a => a.ServiceArea).LoadAsync();
+       
 
         return allocation;
     }

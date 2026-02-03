@@ -1,8 +1,9 @@
 @model ResourceAllocationsPartialViewModel
 @using Tracker.Web.ViewModels
 @{
-    var isEdit = Model.IsEditMode;
+    var isEdit = Model.IsEditMode || true;
     var hasAllocations = Model.Allocations.Any();
+    var colCount = isEdit ? 5 : 4;
 }
 
 <div id="resourceAllocationsContainer">
@@ -34,6 +35,7 @@
                         <th style="min-width: 180px;">Resource</th>
                         <th style="min-width: 140px;">Allocation</th>
                         <th style="min-width: 140px;">Charge Code</th>
+                        <th style="min-width: 100px;">Hours</th>
                         @if (isEdit)
                         {
                             <th style="width: 100px;" class="text-center">Actions</th>
@@ -44,7 +46,7 @@
                     @if (!hasAllocations)
                     {
                         <tr id="noAllocationsRow">
-                            <td colspan="@(isEdit ? 4 : 3)" class="text-center text-muted py-3">
+                            <td colspan="@colCount" class="text-center text-muted py-3">
                                 <i class="bi bi-info-circle me-1"></i>No resources allocated yet.
                                 @if (isEdit)
                                 {
@@ -81,15 +83,25 @@
                                     <span class="text-muted">—</span>
                                 }
                             </td>
+                            <td>
+                                @if (alloc.AllocationHours.HasValue)
+                                {
+                                    <span class="alloc-hours-display">@alloc.AllocationHours.Value.ToString("0.##")</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
                             @if (isEdit)
                             {
                                 <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-primary me-1" 
-                                            onclick="editAllocationRow('@alloc.Id')" title="Edit">
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-1"
+                                        onclick="editAllocationRow('@alloc.Id')" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            onclick="removeAllocation('@alloc.Id')" title="Remove">
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                        onclick="removeAllocation('@alloc.Id')" title="Remove">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -113,14 +125,25 @@
 
         // Available data for dropdowns
         var availableResources = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-            Model.AvailableResources.Select(r => new { id = r.Id, name = r.Name })));
-        var availableServiceAreas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-            Model.AvailableServiceAreas.Select(sa => new { id = sa.Id, code = sa.Code, name = sa.Name })));
+                            Model.AvailableResources.Select(r => new { id = r.Id, name = r.Name })));
+    var availableServiceAreas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                        Model.AvailableServiceAreas.Select(sa => new { id = sa.Id, code = sa.Code, name = sa.Name })));
+
+    availableServiceAreas = [
+        { id: 'ADM', code: 'ADM', name: 'Application Development & Maintenance' },
+        { id: 'ENG/PLM/IOT', code: 'ENG/PLM/IOT', name: 'Engineering / PLM / IOT' },
+        { id: 'SAP', code: 'SAP', name: 'SAP' },
+        { id: 'DNA', code: 'DNA', name: 'Data & Analytics' },
+        { id: 'CIS/DBA', code: 'CIS/DBA', name: 'CIS / DBA' },
+        { id: 'Oracle', code: 'Oracle', name: 'Oracle' },
+        { id: 'MSWT', code: 'MSWT', name: 'MSWT' },
+        { id: 'MSP', code: 'MSP', name: 'MS Dynamics' }
+    ];
 
         function buildResourceSelect(selectedId) {
             var html = '<select class="form-select form-select-sm alloc-resource-select">';
             html += '<option value="">-- Select Resource --</option>';
-            availableResources.forEach(function(r) {
+            availableResources.forEach(function (r) {
                 html += '<option value="' + r.id + '"' + (r.id === selectedId ? ' selected' : '') + '>' + r.name + '</option>';
             });
             html += '</select>';
@@ -130,13 +153,23 @@
         function buildServiceAreaSelect(selectedId) {
             var html = '<select class="form-select form-select-sm alloc-sa-select">';
             html += '<option value="">-- None --</option>';
-            availableServiceAreas.forEach(function(sa) {
+            availableServiceAreas.forEach(function (sa) {
                 html += '<option value="' + sa.id + '"' + (sa.id === selectedId ? ' selected' : '') + '>' + sa.code + ' - ' + sa.name + '</option>';
             });
             html += '</select>';
             return html;
         }
 
+        // ---- Helper: format hours for display ----
+        function formatHours(val) {
+            if (val == null || val === '') return '<span class="text-muted">—</span>';
+            var n = parseFloat(val);
+            if (isNaN(n)) return '<span class="text-muted">—</span>';
+            // Remove trailing zeros: 8.00 → "8", 2.50 → "2.5"
+            return n % 1 === 0 ? n.toFixed(0) : n.toFixed(2).replace(/0+$/, '');
+        }
+
+        // ---- Show Add Row ----
         function showAddAllocationRow() {
             // Remove "no allocations" placeholder
             var noRow = document.getElementById('noAllocationsRow');
@@ -154,13 +187,14 @@
                 '<td>' + buildResourceSelect('') + '</td>' +
                 '<td>' + buildServiceAreaSelect('') + '</td>' +
                 '<td><input type="text" class="form-control form-control-sm alloc-charge-input" placeholder="Charge code..." /></td>' +
+                '<td><input type="number" step="0.01" min="0" class="form-control form-control-sm alloc-hours-input" placeholder="Hours" /></td>' +
                 '<td class="text-center">' +
-                    '<button type="button" class="btn btn-sm btn-success me-1" onclick="saveNewAllocation()" title="Save">' +
-                        '<i class="bi bi-check-lg"></i>' +
-                    '</button>' +
-                    '<button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelAddAllocation()" title="Cancel">' +
-                        '<i class="bi bi-x-lg"></i>' +
-                    '</button>' +
+                '<button type="button" class="btn btn-sm btn-success me-1" onclick="saveNewAllocation()" title="Save">' +
+                '<i class="bi bi-check-lg"></i>' +
+                '</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelAddAllocation()" title="Cancel">' +
+                '<i class="bi bi-x-lg"></i>' +
+                '</button>' +
                 '</td>';
             tbody.appendChild(tr);
 
@@ -168,6 +202,7 @@
             tr.querySelector('.alloc-resource-select').focus();
         }
 
+        // ---- Cancel Add ----
         function cancelAddAllocation() {
             var addRow = document.getElementById('alloc-add-row');
             if (addRow) addRow.remove();
@@ -175,16 +210,19 @@
             // Show "no allocations" if empty
             var tbody = document.getElementById('allocationsBody');
             if (tbody.querySelectorAll('tr[data-id]').length === 0) {
-                tbody.innerHTML = '<tr id="noAllocationsRow"><td colspan="4" class="text-center text-muted py-3">' +
-                    '<i class="bi bi-info-circle me-1"></i>No resources allocated yet. Click <strong>Add Resource</strong> above to assign resources.</td></tr>';
+                tbody.innerHTML = '<tr id="noAllocationsRow"><td colspan="5" class="text-center text-muted py-3">' +
+                    '<i class="bi bi-info-circle me-1"></i>No resources allocated yet. ' +
+                    'Click <strong>Add Resource</strong> above to assign resources.</td></tr>';
             }
         }
 
+        // ---- Save New Allocation ----
         function saveNewAllocation() {
             var row = document.getElementById('alloc-add-row');
             var resourceId = row.querySelector('.alloc-resource-select').value;
             var serviceAreaId = row.querySelector('.alloc-sa-select').value;
             var chargeCode = row.querySelector('.alloc-charge-input').value.trim();
+            var hoursVal = row.querySelector('.alloc-hours-input').value;
 
             if (!resourceId) {
                 alert('Please select a resource.');
@@ -205,62 +243,70 @@
                     enhancementId: enhancementId,
                     resourceId: resourceId,
                     serviceAreaId: serviceAreaId || null,
-                    chargeCode: chargeCode || null
+                    chargeCode: chargeCode || null,
+                    allocationHours: hoursVal ? parseFloat(hoursVal) : null
                 })
             })
-            .then(function(r) { return r.json(); })
-            .then(function(result) {
-                if (result.success) {
-                    // Remove the add row
-                    row.remove();
-                    // Append the saved row
-                    appendAllocationRow(result.allocation);
-                } else {
-                    alert(result.message || 'Failed to add allocation.');
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+                    if (result.success) {
+                        row.remove();
+                        appendAllocationRow(result.allocation);
+                    } else {
+                        alert(result.message || 'Failed to add allocation.');
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+                    }
+                })
+                .catch(function (err) {
+                    alert('Error adding allocation.');
                     saveBtn.disabled = false;
                     saveBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
-                }
-            })
-            .catch(function(err) {
-                alert('Error adding allocation.');
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
-            });
+                });
         }
 
+        // ---- Append a saved row to the table ----
         function appendAllocationRow(alloc) {
             var tbody = document.getElementById('allocationsBody');
+
+            // Remove "no allocations" placeholder if present
+            var noRow = document.getElementById('noAllocationsRow');
+            if (noRow) noRow.remove();
 
             var tr = document.createElement('tr');
             tr.id = 'alloc-row-' + alloc.id;
             tr.dataset.id = alloc.id;
             tr.innerHTML =
                 '<td>' +
-                    '<span class="fw-semibold">' + escapeHtml(alloc.resourceName) + '</span>' +
-                    '<input type="hidden" class="alloc-resource-id" value="' + alloc.resourceId + '" />' +
+                '<span class="fw-semibold">' + escapeHtml(alloc.resourceName) + '</span>' +
+                '<input type="hidden" class="alloc-resource-id" value="' + alloc.resourceId + '" />' +
                 '</td>' +
                 '<td>' +
-                    (alloc.serviceAreaCode
-                        ? '<span class="badge bg-primary">' + escapeHtml(alloc.serviceAreaCode) + '</span>'
-                        : '<span class="text-muted">—</span>') +
-                    '<input type="hidden" class="alloc-sa-id" value="' + (alloc.serviceAreaId || '') + '" />' +
+                (alloc.serviceAreaCode
+                    ? '<span class="badge bg-primary">' + escapeHtml(alloc.serviceAreaCode) + '</span>'
+                    : '<span class="text-muted">—</span>') +
+                '<input type="hidden" class="alloc-sa-id" value="' + (alloc.serviceAreaId || '') + '" />' +
                 '</td>' +
                 '<td>' +
-                    (alloc.chargeCode
-                        ? '<code>' + escapeHtml(alloc.chargeCode) + '</code>'
-                        : '<span class="text-muted">—</span>') +
+                (alloc.chargeCode
+                    ? '<code>' + escapeHtml(alloc.chargeCode) + '</code>'
+                    : '<span class="text-muted">—</span>') +
+                '</td>' +
+                '<td>' +
+                '<span class="alloc-hours-display">' + formatHours(alloc.allocationHours) + '</span>' +
                 '</td>' +
                 '<td class="text-center">' +
-                    '<button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editAllocationRow(\'' + alloc.id + '\')" title="Edit">' +
-                        '<i class="bi bi-pencil"></i>' +
-                    '</button>' +
-                    '<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAllocation(\'' + alloc.id + '\')" title="Remove">' +
-                        '<i class="bi bi-trash"></i>' +
-                    '</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editAllocationRow(\'' + alloc.id + '\')" title="Edit">' +
+                '<i class="bi bi-pencil"></i>' +
+                '</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAllocation(\'' + alloc.id + '\')" title="Remove">' +
+                '<i class="bi bi-trash"></i>' +
+                '</button>' +
                 '</td>';
             tbody.appendChild(tr);
         }
 
+        // ---- Edit an existing row inline ----
         function editAllocationRow(id) {
             var row = document.getElementById('alloc-row-' + id);
             if (!row) return;
@@ -268,6 +314,12 @@
             var resourceId = row.querySelector('.alloc-resource-id').value;
             var saId = row.querySelector('.alloc-sa-id').value;
             var chargeCode = row.querySelector('code')?.textContent || '';
+            var hoursDisplay = row.querySelector('.alloc-hours-display');
+            var existingHours = '';
+            if (hoursDisplay) {
+                var txt = hoursDisplay.textContent.trim();
+                if (txt !== '—' && txt !== '') existingHours = txt;
+            }
 
             // Store original HTML for cancel
             row.dataset.originalHtml = row.innerHTML;
@@ -277,16 +329,18 @@
                 '<td>' + buildResourceSelect(resourceId) + '</td>' +
                 '<td>' + buildServiceAreaSelect(saId) + '</td>' +
                 '<td><input type="text" class="form-control form-control-sm alloc-charge-input" value="' + escapeHtml(chargeCode) + '" /></td>' +
+                '<td><input type="number" step="0.01" min="0" class="form-control form-control-sm alloc-hours-input" value="' + existingHours + '" placeholder="Hours" /></td>' +
                 '<td class="text-center">' +
-                    '<button type="button" class="btn btn-sm btn-warning me-1" onclick="saveEditAllocation(\'' + id + '\')" title="Save">' +
-                        '<i class="bi bi-check-lg"></i>' +
-                    '</button>' +
-                    '<button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelEditAllocation(\'' + id + '\')" title="Cancel">' +
-                        '<i class="bi bi-x-lg"></i>' +
-                    '</button>' +
+                '<button type="button" class="btn btn-sm btn-warning me-1" onclick="saveEditAllocation(\'' + id + '\')" title="Save">' +
+                '<i class="bi bi-check-lg"></i>' +
+                '</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelEditAllocation(\'' + id + '\')" title="Cancel">' +
+                '<i class="bi bi-x-lg"></i>' +
+                '</button>' +
                 '</td>';
         }
 
+        // ---- Cancel Edit ----
         function cancelEditAllocation(id) {
             var row = document.getElementById('alloc-row-' + id);
             if (!row || !row.dataset.originalHtml) return;
@@ -295,11 +349,13 @@
             delete row.dataset.originalHtml;
         }
 
+        // ---- Save Edited Allocation ----
         function saveEditAllocation(id) {
             var row = document.getElementById('alloc-row-' + id);
             var resourceId = row.querySelector('.alloc-resource-select').value;
             var serviceAreaId = row.querySelector('.alloc-sa-select').value;
             var chargeCode = row.querySelector('.alloc-charge-input').value.trim();
+            var hoursVal = row.querySelector('.alloc-hours-input').value;
 
             if (!resourceId) {
                 alert('Please select a resource.');
@@ -320,52 +376,57 @@
                     id: id,
                     resourceId: resourceId,
                     serviceAreaId: serviceAreaId || null,
-                    chargeCode: chargeCode || null
+                    chargeCode: chargeCode || null,
+                    allocationHours: hoursVal ? parseFloat(hoursVal) : null
                 })
             })
-            .then(function(r) { return r.json(); })
-            .then(function(result) {
-                if (result.success) {
-                    // Replace with display row
-                    row.className = '';
-                    delete row.dataset.originalHtml;
-                    row.innerHTML =
-                        '<td>' +
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+                    if (result.success) {
+                        // Replace with display row
+                        row.className = '';
+                        delete row.dataset.originalHtml;
+                        row.innerHTML =
+                            '<td>' +
                             '<span class="fw-semibold">' + escapeHtml(result.allocation.resourceName) + '</span>' +
                             '<input type="hidden" class="alloc-resource-id" value="' + result.allocation.resourceId + '" />' +
-                        '</td>' +
-                        '<td>' +
+                            '</td>' +
+                            '<td>' +
                             (result.allocation.serviceAreaCode
                                 ? '<span class="badge bg-primary">' + escapeHtml(result.allocation.serviceAreaCode) + '</span>'
                                 : '<span class="text-muted">—</span>') +
                             '<input type="hidden" class="alloc-sa-id" value="' + (result.allocation.serviceAreaId || '') + '" />' +
-                        '</td>' +
-                        '<td>' +
+                            '</td>' +
+                            '<td>' +
                             (result.allocation.chargeCode
                                 ? '<code>' + escapeHtml(result.allocation.chargeCode) + '</code>'
                                 : '<span class="text-muted">—</span>') +
-                        '</td>' +
-                        '<td class="text-center">' +
+                            '</td>' +
+                            '<td>' +
+                            '<span class="alloc-hours-display">' + formatHours(result.allocation.allocationHours) + '</span>' +
+                            '</td>' +
+                            '<td class="text-center">' +
                             '<button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editAllocationRow(\'' + id + '\')" title="Edit">' +
-                                '<i class="bi bi-pencil"></i>' +
+                            '<i class="bi bi-pencil"></i>' +
                             '</button>' +
                             '<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAllocation(\'' + id + '\')" title="Remove">' +
-                                '<i class="bi bi-trash"></i>' +
+                            '<i class="bi bi-trash"></i>' +
                             '</button>' +
-                        '</td>';
-                } else {
-                    alert(result.message || 'Failed to update.');
+                            '</td>';
+                    } else {
+                        alert(result.message || 'Failed to update.');
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+                    }
+                })
+                .catch(function () {
+                    alert('Error updating allocation.');
                     saveBtn.disabled = false;
                     saveBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
-                }
-            })
-            .catch(function() {
-                alert('Error updating allocation.');
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
-            });
+                });
         }
 
+        // ---- Remove Allocation ----
         function removeAllocation(id) {
             if (!confirm('Remove this resource allocation?')) return;
 
@@ -377,25 +438,27 @@
                 },
                 body: JSON.stringify({ id: id })
             })
-            .then(function(r) { return r.json(); })
-            .then(function(result) {
-                if (result.success) {
-                    var row = document.getElementById('alloc-row-' + id);
-                    if (row) row.remove();
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+                    if (result.success) {
+                        var row = document.getElementById('alloc-row-' + id);
+                        if (row) row.remove();
 
-                    // Show "no allocations" if empty
-                    var tbody = document.getElementById('allocationsBody');
-                    if (tbody.querySelectorAll('tr[data-id]').length === 0) {
-                        tbody.innerHTML = '<tr id="noAllocationsRow"><td colspan="4" class="text-center text-muted py-3">' +
-                            '<i class="bi bi-info-circle me-1"></i>No resources allocated yet. Click <strong>Add Resource</strong> above to assign resources.</td></tr>';
+                        // Show "no allocations" if empty
+                        var tbody = document.getElementById('allocationsBody');
+                        if (tbody.querySelectorAll('tr[data-id]').length === 0) {
+                            tbody.innerHTML = '<tr id="noAllocationsRow"><td colspan="5" class="text-center text-muted py-3">' +
+                                '<i class="bi bi-info-circle me-1"></i>No resources allocated yet. ' +
+                                'Click <strong>Add Resource</strong> above to assign resources.</td></tr>';
+                        }
+                    } else {
+                        alert('Failed to remove allocation.');
                     }
-                } else {
-                    alert('Failed to remove allocation.');
-                }
-            })
-            .catch(function() { alert('Error removing allocation.'); });
+                })
+                .catch(function () { alert('Error removing allocation.'); });
         }
 
+        // ---- Utility ----
         function escapeHtml(text) {
             if (!text) return '';
             var div = document.createElement('div');

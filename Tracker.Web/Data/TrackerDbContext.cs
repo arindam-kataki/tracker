@@ -224,10 +224,7 @@ public class TrackerDbContext : DbContext
                 .HasForeignKey(e => e.ResourceId)
                 .OnDelete(DeleteBehavior.Cascade);
             
-            entity.HasOne(e => e.ServiceArea)
-                .WithMany()
-                .HasForeignKey(e => e.ServiceAreaId)
-                .OnDelete(DeleteBehavior.SetNull);
+            entity.Ignore(e => e.ServiceArea);
         });
 
         // EnhancementSponsor

@@ -86,8 +86,8 @@ public class ResourceService : IResourceService
             ServiceAreas = r.ServiceAreas.Select(sa => new ResourceServiceAreaSummary
             {
                 ServiceAreaId = sa.ServiceAreaId,
-                Code = sa.ServiceArea?.Code ?? "",
-                Name = sa.ServiceArea?.Name ?? "",
+                Code = sa.ServiceAreaId ?? "",
+                Name = sa.ServiceAreaId ?? "",
                 IsPrimary = sa.IsPrimary,
                 Permissions = sa.Permissions
             }).ToList()
@@ -128,15 +128,15 @@ public class ResourceService : IResourceService
             SelectedSkillIds = resource.Skills.Select(s => s.SkillId).ToList(),
             ServiceAreaMemberships = resource.ServiceAreas
                 .OrderByDescending(sa => sa.IsPrimary)
-                .ThenBy(sa => sa.ServiceArea?.Code)
+                .ThenBy(sa => sa.ServiceAreaId)
                 .Select(sa =>
                 {
                     var vm = new EditResourceServiceAreaViewModel
                     {
                         Id = sa.Id,
                         ServiceAreaId = sa.ServiceAreaId,
-                        ServiceAreaCode = sa.ServiceArea?.Code ?? "",
-                        ServiceAreaName = sa.ServiceArea?.Name ?? "",
+                        ServiceAreaCode = sa.ServiceAreaId ?? "",
+                        ServiceAreaName = sa.ServiceAreaId ?? "",
                         IsPrimary = sa.IsPrimary
                     };
                     vm.FromPermissions(sa.Permissions);
