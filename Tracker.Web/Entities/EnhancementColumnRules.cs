@@ -7,7 +7,7 @@ public static class EnhancementColumnRules
         ["Sponsors"]        = new[] { OrganizationType.Client },
         ["ClientSMEs"]      = new[] { OrganizationType.Client },
         ["InvoiceApprover"] = new[] { OrganizationType.Client },
-        ["SPOCs"]           = new[] { OrganizationType.Implementor, OrganizationType.Vendor },
+        ["SPOCs"]           = new[] { OrganizationType.Client, OrganizationType.Implementor, OrganizationType.Vendor },
         ["InternalSMEs"]    = new[] { OrganizationType.Implementor },
         ["Resources"]       = new[] { OrganizationType.Implementor, OrganizationType.Vendor }
     };

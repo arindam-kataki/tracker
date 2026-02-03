@@ -154,6 +154,7 @@ public class EnhancementService : IEnhancementService
             .Include(e => e.Sponsors).ThenInclude(s => s.Resource)
             .Include(e => e.Spocs).ThenInclude(s => s.Resource)
             .Include(e => e.Resources).ThenInclude(r => r.Resource)
+            .Include(e => e.Resources).ThenInclude(r => r.ServiceArea)
             .Include(e => e.Contacts).ThenInclude(c => c.Resource)
             .FirstOrDefaultAsync(e => e.Id == id);
     }
@@ -375,8 +376,11 @@ public class EnhancementService : IEnhancementService
                 {
                     enhancement.Resources.Add(new EnhancementResource
                     {
+                        Id = Guid.NewGuid().ToString(),
                         EnhancementId = enhancement.Id,
-                        ResourceId = resourceId
+                        ResourceId = resourceId,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = userId
                     });
                 }
             }
@@ -631,5 +635,105 @@ public class EnhancementService : IEnhancementService
 
         return recipientIds.Count;
     }
+
+    // ---------------------------------------------------------------
+    // Resource Allocations (new)
+    // ---------------------------------------------------------------
+
+    public async Task<List<EnhancementResource>> GetResourceAllocationsAsync(string enhancementId)
+    {
+        return await _db.Set<EnhancementResource>()
+            .Include(er => er.Resource)
+            .Include(er => er.ServiceArea)
+            .Where(er => er.EnhancementId == enhancementId)
+            .OrderBy(er => er.Resource.Name)
+            .ThenBy(er => er.ServiceArea != null ? er.ServiceArea.Code : "")
+            .ToListAsync();
+    }
+
+    public async Task<EnhancementResource> AddResourceAllocationAsync(
+        string enhancementId, string resourceId, string? serviceAreaId, string? chargeCode, string userId)
+    {
+        var allocation = new EnhancementResource
+        {
+            Id = Guid.NewGuid().ToString(),
+            EnhancementId = enhancementId,
+            ResourceId = resourceId,
+            ServiceAreaId = string.IsNullOrEmpty(serviceAreaId) ? null : serviceAreaId,
+            ChargeCode = string.IsNullOrEmpty(chargeCode) ? null : chargeCode,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = userId
+        };
+
+        _db.Set<EnhancementResource>().Add(allocation);
+
+        // Update enhancement modified timestamp
+        var enhancement = await _db.Enhancements.FindAsync(enhancementId);
+        if (enhancement != null)
+        {
+            enhancement.ModifiedBy = userId;
+            enhancement.ModifiedAt = DateTime.UtcNow;
+        }
+
+        await _db.SaveChangesAsync();
+
+        // Reload with navigation properties
+        await _db.Entry(allocation).Reference(a => a.Resource).LoadAsync();
+        if (allocation.ServiceAreaId != null)
+            await _db.Entry(allocation).Reference(a => a.ServiceArea).LoadAsync();
+
+        return allocation;
+    }
+
+    public async Task<EnhancementResource?> UpdateResourceAllocationAsync(
+        string allocationId, string resourceId, string? serviceAreaId, string? chargeCode, string userId)
+    {
+        var allocation = await _db.Set<EnhancementResource>().FindAsync(allocationId);
+        if (allocation == null) return null;
+
+        allocation.ResourceId = resourceId;
+        allocation.ServiceAreaId = string.IsNullOrEmpty(serviceAreaId) ? null : serviceAreaId;
+        allocation.ChargeCode = string.IsNullOrEmpty(chargeCode) ? null : chargeCode;
+        allocation.ModifiedAt = DateTime.UtcNow;
+        allocation.ModifiedBy = userId;
+
+        // Update enhancement modified timestamp
+        var enhancement = await _db.Enhancements.FindAsync(allocation.EnhancementId);
+        if (enhancement != null)
+        {
+            enhancement.ModifiedBy = userId;
+            enhancement.ModifiedAt = DateTime.UtcNow;
+        }
+
+        await _db.SaveChangesAsync();
+
+        // Reload with navigation properties
+        await _db.Entry(allocation).Reference(a => a.Resource).LoadAsync();
+        if (allocation.ServiceAreaId != null)
+            await _db.Entry(allocation).Reference(a => a.ServiceArea).LoadAsync();
+
+        return allocation;
+    }
+
+    public async Task<bool> RemoveResourceAllocationAsync(string allocationId, string userId)
+    {
+        var allocation = await _db.Set<EnhancementResource>().FindAsync(allocationId);
+        if (allocation == null) return false;
+
+        var enhancementId = allocation.EnhancementId;
+        _db.Set<EnhancementResource>().Remove(allocation);
+
+        // Update enhancement modified timestamp
+        var enhancement = await _db.Enhancements.FindAsync(enhancementId);
+        if (enhancement != null)
+        {
+            enhancement.ModifiedBy = userId;
+            enhancement.ModifiedAt = DateTime.UtcNow;
+        }
+
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
 
 }

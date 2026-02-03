@@ -203,7 +203,16 @@ public class TrackerDbContext : DbContext
         // EnhancementResource
         modelBuilder.Entity<EnhancementResource>(entity =>
         {
-            entity.HasKey(e => new { e.EnhancementId, e.ResourceId });
+            entity.HasKey(e => e.Id);
+            
+            entity.Property(e => e.ChargeCode).HasMaxLength(50);
+            entity.Property(e => e.CreatedBy).HasMaxLength(200);
+            entity.Property(e => e.ModifiedBy).HasMaxLength(200);
+
+            entity.HasIndex(e => e.EnhancementId);
+            entity.HasIndex(e => e.ResourceId);
+            entity.HasIndex(e => e.ServiceAreaId);
+            entity.HasIndex(e => new { e.EnhancementId, e.ResourceId, e.ServiceAreaId });
 
             entity.HasOne(e => e.Enhancement)
                 .WithMany(e => e.Resources)
@@ -214,6 +223,11 @@ public class TrackerDbContext : DbContext
                 .WithMany(r => r.EnhancementResources)
                 .HasForeignKey(e => e.ResourceId)
                 .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(e => e.ServiceArea)
+                .WithMany()
+                .HasForeignKey(e => e.ServiceAreaId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // EnhancementSponsor

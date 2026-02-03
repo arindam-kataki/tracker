@@ -127,6 +127,8 @@ public class TicketDetailsViewModel
     public List<string> SelectedResourceIds { get; set; } = new();
     public List<string> SelectedSkillIds { get; set; } = new();
     public List<string> SelectedTimeCategoryIds { get; set; } = new();
+
+    public List<ResourceAllocationViewModel> ResourceAllocations { get; set; } = new();
 }
 
 /// <summary>

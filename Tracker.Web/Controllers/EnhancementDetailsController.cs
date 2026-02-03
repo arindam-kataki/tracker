@@ -103,9 +103,9 @@ public class EnhancementDetailsController : BaseController
 
         // Get dropdown data
         var serviceAreas = await _serviceAreaService.GetAllAsync();
-        var sponsors = await _resourceService.GetByResourceTypeNameAsync("Client");
-        var spocs = await _resourceService.GetByResourceTypeNameAsync("SPOC");
-        var resources = await _resourceService.GetByResourceTypeNameAsync("Internal");
+        var sponsors = await _resourceService.GetResourcesForColumnAsync(serviceArea.Id, "Sponsors");
+        var spocs = await _resourceService.GetResourcesForColumnAsync(serviceArea.Id, "SPOCs");
+        var resources = await _resourceService.GetResourcesForColumnAsync(serviceArea.Id, "Resources");
         var skills = await _skillService.GetActiveByServiceAreaAsync(serviceArea.Id);
         var timeCategories = await _timeRecordingService.GetAllCategoriesAsync();
 
@@ -186,8 +186,19 @@ public class EnhancementDetailsController : BaseController
             SelectedSponsorIds = enhancement?.Sponsors?.Select(s => s.ResourceId).ToList() ?? new(),
             SelectedSpocIds = enhancement?.Spocs?.Select(s => s.ResourceId).ToList() ?? new(),
             SelectedResourceIds = enhancement?.Resources?.Select(r => r.ResourceId).ToList() ?? new(),
+            ResourceAllocations = enhancement?.Resources?.Select(r => new ResourceAllocationViewModel
+            {
+                Id = r.Id,
+                EnhancementId = r.EnhancementId,
+                ResourceId = r.ResourceId,
+                ResourceName = r.Resource?.Name ?? "",
+                ServiceAreaId = r.ServiceAreaId,
+                ServiceAreaCode = r.ServiceArea?.Code,
+                ChargeCode = r.ChargeCode
+            }).ToList() ?? new(),
             SelectedSkillIds = enhancement?.Skills?.Select(s => s.SkillId).ToList() ?? new(),
             SelectedTimeCategoryIds = !isNew ? (await _timeRecordingService.GetCategoriesForEnhancementAsync(enhancementId)).Select(c => c.Id).ToList() : new()
+
         };
 
         // Build model
@@ -501,7 +512,7 @@ public class EnhancementDetailsController : BaseController
             // Update resources
             await _enhancementService.UpdateSponsorsAsync(enhancement.Id, request.SponsorIds, CurrentUserId!);
             await _enhancementService.UpdateSpocsAsync(enhancement.Id, request.SpocIds, CurrentUserId!);
-            await _enhancementService.UpdateResourcesAsync(enhancement.Id, request.ResourceIds, CurrentUserId!);
+            //await _enhancementService.UpdateResourcesAsync(enhancement.Id, request.ResourceIds, CurrentUserId!);
 
             // Update skills
             await _skillService.UpdateEnhancementSkillsAsync(enhancement.Id, request.SkillIds);
@@ -763,6 +774,130 @@ public class EnhancementDetailsController : BaseController
     }
 
     #endregion
+
+    #region Resource Allocations
+
+    /// <summary>
+    /// Get resource allocations for an enhancement (returns partial view)
+    /// </summary>
+    [HttpGet("ResourceAllocations/{enhancementId}")]
+    public async Task<IActionResult> GetResourceAllocations(string enhancementId, bool editMode = false)
+    {
+        var allocations = await _enhancementService.GetResourceAllocationsAsync(enhancementId);
+        var resources = await _resourceService.GetByResourceTypeNameAsync("Internal");
+        var serviceAreas = await _serviceAreaService.GetAllAsync();
+
+        var model = new ResourceAllocationsPartialViewModel
+        {
+            EnhancementId = enhancementId,
+            IsEditMode = editMode,
+            Allocations = allocations.Select(a => new ResourceAllocationViewModel
+            {
+                Id = a.Id,
+                EnhancementId = a.EnhancementId,
+                ResourceId = a.ResourceId,
+                ResourceName = a.Resource?.Name ?? "",
+                ServiceAreaId = a.ServiceAreaId,
+                ServiceAreaCode = a.ServiceArea?.Code,
+                ChargeCode = a.ChargeCode
+            }).ToList(),
+            AvailableResources = resources,
+            AvailableServiceAreas = serviceAreas
+        };
+
+        return PartialView("_ResourceAllocations", model);
+    }
+
+    /// <summary>
+    /// Add a resource allocation
+    /// </summary>
+    [HttpPost("ResourceAllocations/Add")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddResourceAllocation([FromBody] AddResourceAllocationRequest request)
+    {
+        if (string.IsNullOrEmpty(request.EnhancementId) || string.IsNullOrEmpty(request.ResourceId))
+            return BadRequest(new { success = false, message = "Enhancement and Resource are required." });
+
+        try
+        {
+            var allocation = await _enhancementService.AddResourceAllocationAsync(
+                request.EnhancementId,
+                request.ResourceId,
+                request.ServiceAreaId,
+                request.ChargeCode,
+                CurrentUserId!);
+
+            return Json(new
+            {
+                success = true,
+                allocation = new
+                {
+                    id = allocation.Id,
+                    resourceId = allocation.ResourceId,
+                    resourceName = allocation.Resource?.Name ?? "",
+                    serviceAreaId = allocation.ServiceAreaId,
+                    serviceAreaCode = allocation.ServiceArea?.Code,
+                    chargeCode = allocation.ChargeCode
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Update a resource allocation
+    /// </summary>
+    [HttpPost("ResourceAllocations/Update")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateResourceAllocation([FromBody] UpdateResourceAllocationRequest request)
+    {
+        if (string.IsNullOrEmpty(request.Id))
+            return BadRequest(new { success = false, message = "Allocation ID is required." });
+
+        var allocation = await _enhancementService.UpdateResourceAllocationAsync(
+            request.Id,
+            request.ResourceId,
+            request.ServiceAreaId,
+            request.ChargeCode,
+            CurrentUserId!);
+
+        if (allocation == null)
+            return NotFound(new { success = false, message = "Allocation not found." });
+
+        return Json(new
+        {
+            success = true,
+            allocation = new
+            {
+                id = allocation.Id,
+                resourceId = allocation.ResourceId,
+                resourceName = allocation.Resource?.Name ?? "",
+                serviceAreaId = allocation.ServiceAreaId,
+                serviceAreaCode = allocation.ServiceArea?.Code,
+                chargeCode = allocation.ChargeCode
+            }
+        });
+    }
+
+    /// <summary>
+    /// Remove a resource allocation
+    /// </summary>
+    [HttpPost("ResourceAllocations/Remove")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveResourceAllocation([FromBody] RemoveResourceAllocationRequest request)
+    {
+        if (string.IsNullOrEmpty(request.Id))
+            return BadRequest(new { success = false, message = "Allocation ID is required." });
+
+        var result = await _enhancementService.RemoveResourceAllocationAsync(request.Id, CurrentUserId!);
+
+        return Json(new { success = result });
+    }
+
+    #endregion
 }
 
 public class DeleteRequest
@@ -781,4 +916,25 @@ public class AddNotificationRecipientRequest
 public class RemoveNotificationRecipientRequest
 {
     public string RecipientId { get; set; } = string.Empty;
+}
+
+public class AddResourceAllocationRequest
+{
+    public string EnhancementId { get; set; } = string.Empty;
+    public string ResourceId { get; set; } = string.Empty;
+    public string? ServiceAreaId { get; set; }
+    public string? ChargeCode { get; set; }
+}
+
+public class UpdateResourceAllocationRequest
+{
+    public string Id { get; set; } = string.Empty;
+    public string ResourceId { get; set; } = string.Empty;
+    public string? ServiceAreaId { get; set; }
+    public string? ChargeCode { get; set; }
+}
+
+public class RemoveResourceAllocationRequest
+{
+    public string Id { get; set; } = string.Empty;
 }
