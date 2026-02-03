@@ -15,6 +15,10 @@ public class EnhancementResource
     /// Charge code for billing/tracking purposes
     /// </summary>
     public string? ChargeCode { get; set; }
+    /// <summary>
+    /// Hours/effort allocated to this resource
+    /// </summary>
+    public decimal? AllocationHours { get; set; }
     
     // Audit
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -5,25 +5,24 @@
 namespace Tracker.Web.Migrations
 {
     /// <inheritdoc />
-    public partial class AddTimesheetAndConsolidation2 : Migration
+    public partial class AllocatedHours : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "CanConsolidate",
-                table: "Users",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: false);
+            migrationBuilder.AddColumn<decimal>(
+                name: "AllocationHours",
+                table: "EnhancementResources",
+                type: "TEXT",
+                nullable: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "CanConsolidate",
-                table: "Users");
+                name: "AllocationHours",
+                table: "EnhancementResources");
         }
     }
 }

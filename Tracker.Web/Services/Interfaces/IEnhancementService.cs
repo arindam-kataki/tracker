@@ -23,8 +23,8 @@ public interface IEnhancementService
     Task UpdateResourcesAsync(string enhancementId, List<string>? resourceIds, string userId);
     Task<int> UpdateNotificationRecipientsAsync(string enhancementId, List<string> recipientIds, string userId);
     Task<List<EnhancementResource>> GetResourceAllocationsAsync(string enhancementId);
-    Task<EnhancementResource> AddResourceAllocationAsync(string enhancementId, string resourceId, string? serviceAreaId, string? chargeCode, string userId);
-    Task<EnhancementResource?> UpdateResourceAllocationAsync(string allocationId, string resourceId, string? serviceAreaId, string? chargeCode, string userId);
+    Task<EnhancementResource> AddResourceAllocationAsync(string enhancementId, string resourceId, string? serviceAreaId, string? chargeCode, decimal? allocationHours, string userId);
+    Task<EnhancementResource?> UpdateResourceAllocationAsync(string allocationId, string resourceId, string? serviceAreaId, string? chargeCode, decimal? allocationHours, string userId);
     Task<bool> RemoveResourceAllocationAsync(string allocationId, string userId);
 
 }

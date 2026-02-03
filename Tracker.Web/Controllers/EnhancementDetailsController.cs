@@ -799,7 +799,8 @@ public class EnhancementDetailsController : BaseController
                 ResourceName = a.Resource?.Name ?? "",
                 ServiceAreaId = a.ServiceAreaId,
                 ServiceAreaCode = a.ServiceArea?.Code,
-                ChargeCode = a.ChargeCode
+                ChargeCode = a.ChargeCode,
+                AllocationHours = a.AllocationHours
             }).ToList(),
             AvailableResources = resources,
             AvailableServiceAreas = serviceAreas
@@ -825,6 +826,7 @@ public class EnhancementDetailsController : BaseController
                 request.ResourceId,
                 request.ServiceAreaId,
                 request.ChargeCode,
+                request.AllocationHours,
                 CurrentUserId!);
 
             return Json(new
@@ -837,7 +839,8 @@ public class EnhancementDetailsController : BaseController
                     resourceName = allocation.Resource?.Name ?? "",
                     serviceAreaId = allocation.ServiceAreaId,
                     serviceAreaCode = allocation.ServiceArea?.Code,
-                    chargeCode = allocation.ChargeCode
+                    chargeCode = allocation.ChargeCode,
+                    allocationHours = allocation.AllocationHours
                 }
             });
         }
@@ -862,6 +865,7 @@ public class EnhancementDetailsController : BaseController
             request.ResourceId,
             request.ServiceAreaId,
             request.ChargeCode,
+            request.AllocationHours,
             CurrentUserId!);
 
         if (allocation == null)
@@ -877,7 +881,8 @@ public class EnhancementDetailsController : BaseController
                 resourceName = allocation.Resource?.Name ?? "",
                 serviceAreaId = allocation.ServiceAreaId,
                 serviceAreaCode = allocation.ServiceArea?.Code,
-                chargeCode = allocation.ChargeCode
+                chargeCode = allocation.ChargeCode,
+                allocationHours = allocation.AllocationHours
             }
         });
     }
@@ -924,6 +929,7 @@ public class AddResourceAllocationRequest
     public string ResourceId { get; set; } = string.Empty;
     public string? ServiceAreaId { get; set; }
     public string? ChargeCode { get; set; }
+    public decimal? AllocationHours { get; set; }
 }
 
 public class UpdateResourceAllocationRequest
@@ -932,6 +938,7 @@ public class UpdateResourceAllocationRequest
     public string ResourceId { get; set; } = string.Empty;
     public string? ServiceAreaId { get; set; }
     public string? ChargeCode { get; set; }
+    public decimal? AllocationHours { get; set; }
 }
 
 public class RemoveResourceAllocationRequest

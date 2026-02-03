@@ -266,8 +266,8 @@
         </div>
 
         <div class="col-md-4">
-            <label class="form-label">Assigned Resources</label>
-            <select name="ResourceIds" class="form-select" multiple size="4">
+            <label class="form-label" style="display: none;">Assigned Resources</label>
+            <select name="ResourceIds" class="form-select" multiple size="4" style="display: none;">
                 @foreach (var r in Model.AvailableResources)
                 {
                     var selected = Model.SelectedResourceIds.Contains(r.Id);
@@ -345,7 +345,20 @@
         <!-- ============================================ -->
         <!-- SECTION: Service Area Allocation -->
         <!-- ============================================ -->
-        <div class="col-12 mt-4">
+
+        <div class="col-12 mt-3">
+            @await Html.PartialAsync("_ResourceAllocations", new ResourceAllocationsPartialViewModel
+            {
+                EnhancementId = Model.Id ?? "",
+                        IsEditMode = true,
+                        Allocations = Model.ResourceAllocations ?? new List<ResourceAllocationViewModel>(),
+                        AvailableResources = Model.AvailableResources.ToList(),
+                        AvailableServiceAreas = Model.AvailableServiceAreas?.ToList() ?? new
+                        List<Tracker.Web.Entities.ServiceArea>()
+                        })
+        </div>
+
+        <div class="col-12 mt-4" style="display: none;">
             <div class="d-flex align-items-center mb-2">
                 <div class="bg-purple text-white rounded-circle d-flex align-items-center justify-content-center me-2"
                     style="width: 28px; height: 28px; background-color: #6f42c1;">
@@ -356,7 +369,7 @@
             <hr class="mt-0 mb-3" style="border-top: 2px solid #6f42c1; opacity: 0.5;" />
         </div>
 
-        <div class="col-12">
+        <div class="col-12" style="display: none;">
             <div class="table-responsive">
                 <table class="table table-sm table-bordered mb-0">
                     <thead class="table-light">

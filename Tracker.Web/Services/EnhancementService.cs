@@ -652,7 +652,7 @@ public class EnhancementService : IEnhancementService
     }
 
     public async Task<EnhancementResource> AddResourceAllocationAsync(
-        string enhancementId, string resourceId, string? serviceAreaId, string? chargeCode, string userId)
+        string enhancementId, string resourceId, string? serviceAreaId, string? chargeCode, decimal? allocationHours, string userId)
     {
         var allocation = new EnhancementResource
         {
@@ -661,6 +661,7 @@ public class EnhancementService : IEnhancementService
             ResourceId = resourceId,
             ServiceAreaId = string.IsNullOrEmpty(serviceAreaId) ? null : serviceAreaId,
             ChargeCode = string.IsNullOrEmpty(chargeCode) ? null : chargeCode,
+            AllocationHours = allocationHours,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = userId
         };
@@ -686,7 +687,7 @@ public class EnhancementService : IEnhancementService
     }
 
     public async Task<EnhancementResource?> UpdateResourceAllocationAsync(
-        string allocationId, string resourceId, string? serviceAreaId, string? chargeCode, string userId)
+        string allocationId, string resourceId, string? serviceAreaId, string? chargeCode, decimal? allocationHours, string userId)
     {
         var allocation = await _db.Set<EnhancementResource>().FindAsync(allocationId);
         if (allocation == null) return null;
@@ -696,6 +697,8 @@ public class EnhancementService : IEnhancementService
         allocation.ChargeCode = string.IsNullOrEmpty(chargeCode) ? null : chargeCode;
         allocation.ModifiedAt = DateTime.UtcNow;
         allocation.ModifiedBy = userId;
+        allocation.AllocationHours = allocationHours;
+        
 
         // Update enhancement modified timestamp
         var enhancement = await _db.Enhancements.FindAsync(allocation.EnhancementId);

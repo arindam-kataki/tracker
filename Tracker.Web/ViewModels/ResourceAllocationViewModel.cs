@@ -13,6 +13,7 @@ public class ResourceAllocationViewModel
     public string? ServiceAreaId { get; set; }
     public string? ServiceAreaCode { get; set; }
     public string? ChargeCode { get; set; }
+    public decimal? AllocationHours { get; set; }
 }
 
 /// <summary>
