@@ -195,7 +195,8 @@ public class EnhancementDetailsController : BaseController
                 ResourceName = r.Resource?.Name ?? "",
                 ServiceAreaId = r.ServiceAreaId,
                 ServiceAreaCode = r.ServiceArea?.Code,
-                ChargeCode = r.ChargeCode
+                ChargeCode = r.ChargeCode,
+                AllocationHours = r.AllocationHours
             }).ToList() ?? new(),
             SelectedSkillIds = enhancement?.Skills?.Select(s => s.SkillId).ToList() ?? new(),
             SelectedTimeCategoryIds = !isNew ? (await _timeRecordingService.GetCategoriesForEnhancementAsync(enhancementId)).Select(c => c.Id).ToList() : new()

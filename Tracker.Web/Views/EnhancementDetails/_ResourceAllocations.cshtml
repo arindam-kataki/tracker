@@ -63,9 +63,9 @@
                                 <input type="hidden" class="alloc-resource-id" value="@alloc.ResourceId" />
                             </td>
                             <td>
-                                @if (!string.IsNullOrEmpty(alloc.ServiceAreaCode))
+                                @if (!string.IsNullOrEmpty(alloc.ServiceAreaId))
                                 {
-                                    <span class="badge bg-primary">@alloc.ServiceAreaCode</span>
+                                    <span class="badge bg-primary">@alloc.ServiceAreaId</span>
                                 }
                                 else
                                 {
