@@ -67,7 +67,7 @@ public class TicketDetailsViewModel
     public string? ServiceLine { get; set; }
     public string? EstimatedLaborType { get; set; }           // ADD THIS - L3H Labor Type
     public string? EstimatedPriority { get; set; }            // ADD THIS - L3H Priority
-    
+    public string? SignITReference { get; set; }
     // ---------------------------------------------------------------
     // Core Information / Actual Section - Inf* fields
     // ---------------------------------------------------------------
@@ -357,7 +357,7 @@ public class SaveTicketDetailsRequest
     public string? ServiceLine { get; set; }
     public string? EstimatedLaborType { get; set; }       // ADD THIS
     public string? EstimatedPriority { get; set; }         // ADD THIS
-    
+    public string? SignITReference { get; set; }
     // Actual/Core Info - Inf* fields
     public decimal? ReturnedHours { get; set; }
     public DateTime? StartDate { get; set; }

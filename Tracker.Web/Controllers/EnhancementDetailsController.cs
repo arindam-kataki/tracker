@@ -142,6 +142,7 @@ public class EnhancementDetailsController : BaseController
             EstimatedLaborType = enhancement?.EstimatedLaborType,           // ADD THIS
             EstimatedPriority = enhancement?.EstimatedPriority,              // ADD THIS
             ServiceLine = enhancement?.ServiceLine,
+            SignITReference = enhancement?.SignITReference,
 
             // Actual/Core Info - Inf* fields
             ReturnedHours = enhancement?.ReturnedHours,
@@ -477,6 +478,7 @@ public class EnhancementDetailsController : BaseController
                 ServiceLine = request.ServiceLine,
                 EstimatedLaborType = request.EstimatedLaborType,           // ADD THIS
                 EstimatedPriority = request.EstimatedPriority,              // ADD THIS
+                SignITReference = request.SignITReference,
 
                 // Actual/Core Info - Inf* fields
                 ReturnedHours = request.ReturnedHours,

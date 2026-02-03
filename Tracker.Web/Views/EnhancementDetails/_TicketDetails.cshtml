@@ -4,6 +4,8 @@
     Model.AvailableTimeCategories = new List<TimeRecordingCategory>();
     //Model.AvailableLaborTypes = new List<string> { "E" };
     Model.EstimatedLaborType = "Enhancement";
+
+    Model.AvailableInfStatuses = (new[] { "New", "In Progress", "On Hold", "Completed", "Cancelled" }).ToList();
 }
 
 @* Custom styles for better readability *@
@@ -63,12 +65,18 @@
         </div>
 
         <!-- Row 1: Work ID and Status -->
-        <div class="col-md-6">
+        <div class="col-md-4">
             <label class="form-label">Ticket # <span class="text-danger">*</span></label>
             <input type="text" name="WorkId" value="@Model.WorkId" class="form-control" required />
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-4">
+            <label class="form-label">SignIT</label>
+            <input type="text" name="SignITReference" value="@Model.SignITReference" class="form-control"
+                placeholder="e.g. SIT-12345" />
+        </div>
+
+        <div class="col-md-4">
             <label class="form-label">Status</label>
             <select name="Status" class="form-select">
                 <option value="">-- Select --</option>
@@ -125,7 +133,7 @@
 
         <!-- Sizing Row 2: Status, Labor Type, Priority -->
         <div class="col-md-4">
-            <label class="form-label">Sizing Status</label>
+            <label class="form-label">Stage</label>
             <select name="EstimatedStatus" class="form-select">
                 <option value="">-- Select --</option>
                 @foreach (var s in Model.AvailableSizingStatuses)
@@ -508,6 +516,7 @@
                 estimatedStatus: formData.get('EstimatedStatus'),
                 estimatedLaborType: formData.get('EstimatedLaborType'),
                 estimatedPriority: formData.get('EstimatedPriority'),
+                signITReference: formData.get('SignITReference'),
                 // Approved fields
                 returnedHours: parseFloat(formData.get('ReturnedHours')) || null,
                 startDate: formData.get('StartDate') || null,

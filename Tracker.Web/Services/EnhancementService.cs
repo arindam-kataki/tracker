@@ -218,6 +218,7 @@ public class EnhancementService : IEnhancementService
         existing.EstimatedEndDate = enhancement.EstimatedEndDate;
         existing.EstimationNotes = enhancement.EstimationNotes;
         existing.EstimatedStatus = enhancement.EstimatedStatus;
+        existing.SignITReference = enhancement.SignITReference;
 
         existing.ServiceLine = enhancement.ServiceLine;
         existing.EstimatedLaborType = enhancement.EstimatedLaborType;         // ADD THIS
