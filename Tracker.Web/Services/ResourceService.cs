@@ -86,8 +86,8 @@ public class ResourceService : IResourceService
             ServiceAreas = r.ServiceAreas.Select(sa => new ResourceServiceAreaSummary
             {
                 ServiceAreaId = sa.ServiceAreaId,
-                Code = sa.ServiceAreaId ?? "",
-                Name = sa.ServiceAreaId ?? "",
+                Code = sa.ServiceArea?.Code ?? sa.ServiceAreaId ?? "",
+Name = sa.ServiceArea?.Name ?? sa.ServiceAreaId ?? "",
                 IsPrimary = sa.IsPrimary,
                 Permissions = sa.Permissions
             }).ToList()
@@ -135,8 +135,8 @@ public class ResourceService : IResourceService
                     {
                         Id = sa.Id,
                         ServiceAreaId = sa.ServiceAreaId,
-                        ServiceAreaCode = sa.ServiceAreaId ?? "",
-                        ServiceAreaName = sa.ServiceAreaId ?? "",
+                        ServiceAreaCode = sa.ServiceArea?.Code ?? sa.ServiceAreaId ?? "",
+                        ServiceAreaName = sa.ServiceArea?.Name ?? sa.ServiceAreaId ?? "",
                         IsPrimary = sa.IsPrimary
                     };
                     vm.FromPermissions(sa.Permissions);
