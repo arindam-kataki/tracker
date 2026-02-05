@@ -99,7 +99,8 @@ Name = sa.ServiceArea?.Name ?? sa.ServiceAreaId ?? "",
         return await _db.Resources
             .Include(r => r.ResourceType)
             .Include(r => r.Skills).ThenInclude(rs => rs.Skill)
-            .Include(r => r.ServiceAreas).ThenInclude(rsa => rsa.ServiceArea)
+            
+            .Include(r => r.ServiceAreas).ThenInclude(rsa => rsa.ReportsTo)
             .FirstOrDefaultAsync(r => r.Id == id);
     }
 
@@ -137,7 +138,9 @@ Name = sa.ServiceArea?.Name ?? sa.ServiceAreaId ?? "",
                         ServiceAreaId = sa.ServiceAreaId,
                         ServiceAreaCode = sa.ServiceArea?.Code ?? sa.ServiceAreaId ?? "",
                         ServiceAreaName = sa.ServiceArea?.Name ?? sa.ServiceAreaId ?? "",
-                        IsPrimary = sa.IsPrimary
+                        IsPrimary = sa.IsPrimary,
+                        ReportsToResourceId = sa.ReportsToResourceId,
+                        ReportsToName = sa.ReportsTo?.Name
                     };
                     vm.FromPermissions(sa.Permissions);
                     return vm;
@@ -195,6 +198,7 @@ Name = sa.ServiceArea?.Name ?? sa.ServiceAreaId ?? "",
                     ServiceAreaId = sa.ServiceAreaId,
                     IsPrimary = sa.IsPrimary,
                     Permissions = sa.ToPermissions(),
+                    ReportsToResourceId = sa.ReportsToResourceId,
                     JoinedAt = DateTime.UtcNow
                 });
             }
@@ -282,6 +286,7 @@ Name = sa.ServiceArea?.Name ?? sa.ServiceAreaId ?? "",
                     ServiceAreaId = sa.ServiceAreaId,
                     IsPrimary = sa.IsPrimary,
                     Permissions = sa.ToPermissions(),
+                    ReportsToResourceId = sa.ReportsToResourceId,
                     JoinedAt = DateTime.UtcNow
                 });
             }
