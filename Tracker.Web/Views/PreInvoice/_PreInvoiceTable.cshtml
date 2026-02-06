@@ -1,0 +1,80 @@
+@model PreInvoiceViewModel
+
+@{
+    // Flatten all items across groups into a single sorted list
+    var allItems = Model.Groups.SelectMany(g => g.Items)
+        .OrderBy(i => i.SignITReference)
+        .ThenBy(i => i.ServiceAreaCode)
+        .ThenBy(i => i.ChargeCode)
+        .ToList();
+}
+
+<table class="table table-hover work-items-table">
+    <thead>
+        <tr>
+            <th style="width:130px;">SignIT</th>
+            <th>Project Title</th>
+            <th class="text-end" style="width:100px;">Approved</th>
+            <th style="width:90px;">Service Area</th>
+            <th style="width:110px;">Charge Code</th>
+            <th class="text-end" style="width:110px;">To Last Mth</th>
+            <th class="text-end" style="width:100px;">This Mth</th>
+            <th class="text-end" style="width:100px;">To Date</th>
+            <th class="text-end" style="width:100px;">Remaining</th>
+            <th style="width:100px;">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!allItems.Any())
+        {
+            <tr>
+                <td colspan="10" class="text-center text-muted py-4">
+                    <i class="bi bi-inbox me-1"></i> No data for this period.
+                </td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var item in allItems)
+            {
+                <tr>
+                    <td class="signit-cell">@(item.SignITReference)</td>
+                    <td class="description">@item.ProjectTitle</td>
+                    <td class="text-end">@item.ApprovedEffort.ToString("N1")</td>
+                    <td><span class="badge bg-secondary">@item.ServiceAreaCode</span></td>
+                    <td><code>@(string.IsNullOrEmpty(item.ChargeCode) ? "—" : item.ChargeCode)</code></td>
+                    <td class="text-end">@item.HoursConsumedToLastMonth.ToString("N1")</td>
+                    <td class="text-end">@item.HoursConsumedThisMonth.ToString("N1")</td>
+                    <td class="text-end">@item.HoursConsumedToDate.ToString("N1")</td>
+                    <td class="text-end @(item.EffortRemaining < 0 ? "text-overrun" : "")">@item.EffortRemaining.ToString("N1")</td>
+                    <td>
+                        @{
+                            var badgeClass = item.Status?.ToLower() switch
+                            {
+                                "completed" or "closed" => "bg-success",
+                                "in progress" or "wip" => "bg-primary",
+                                "on hold" => "bg-warning text-dark",
+                                "cancelled" => "bg-danger",
+                                "new" => "bg-info",
+                                _ => "bg-secondary"
+                            };
+                        }
+                        <span class="badge @badgeClass">@(item.Status ?? "N/A")</span>
+                    </td>
+                </tr>
+            }
+            
+            @* Totals row *@
+            <tr class="totals-row">
+                <td colspan="2" class="text-end"><strong>Total</strong></td>
+                <td class="text-end">@Model.TotalApprovedEffort.ToString("N1")</td>
+                <td colspan="2"></td>
+                <td class="text-end">@Model.TotalHoursToLastMonth.ToString("N1")</td>
+                <td class="text-end">@Model.TotalHoursThisMonth.ToString("N1")</td>
+                <td class="text-end">@Model.TotalHoursToDate.ToString("N1")</td>
+                <td class="text-end @(Model.TotalEffortRemaining < 0 ? "text-overrun" : "")">@Model.TotalEffortRemaining.ToString("N1")</td>
+                <td></td>
+            </tr>
+        }
+    </tbody>
+</table>

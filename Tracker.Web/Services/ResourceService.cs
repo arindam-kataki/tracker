@@ -99,7 +99,7 @@ Name = sa.ServiceArea?.Name ?? sa.ServiceAreaId ?? "",
         return await _db.Resources
             .Include(r => r.ResourceType)
             .Include(r => r.Skills).ThenInclude(rs => rs.Skill)
-            
+            .Include(r => r.ServiceAreas).ThenInclude(rsa => rsa.ServiceArea)
             .Include(r => r.ServiceAreas).ThenInclude(rsa => rsa.ReportsTo)
             .FirstOrDefaultAsync(r => r.Id == id);
     }

@@ -8,52 +8,52 @@
             <i class="bi bi-kanban me-2"></i>TRACKER
         </h4>
     </div>
-    
+
     <!-- Navigation (flex-grow to push user section to bottom) -->
     <nav class="mt-2 flex-grow-1">
         <!-- Dashboard -->
         <div class="sidebar-section">
-            <a href="@Url.Action("Index", "Dashboard")" 
-               class="sidebar-link d-block px-3 py-2 text-decoration-none @(Model.CurrentPage == "dashboard" ? "active" : "")">
+            <a href="@Url.Action("Index", "Dashboard")"
+                class="sidebar-link d-block px-3 py-2 text-decoration-none @(Model.CurrentPage == "dashboard" ? "active" : "")">
                 <i class="bi bi-speedometer2 me-2"></i>Dashboard
             </a>
         </div>
-        
+
         <!-- Enhancements Section -->
         <div class="sidebar-section">
             <div class="sidebar-header px-3 py-2 text-uppercase small text-secondary">
                 <i class="bi bi-list-check me-2"></i>Enhancements
             </div>
-            
+
             @foreach (var sa in Model.ServiceAreas)
             {
                 var isActive = Model.CurrentServiceAreaId == sa.Id;
-                <a href="@Url.Action("Index", "Enhancements", new { serviceAreaId = sa.Id })" 
-                   class="sidebar-link d-block px-4 py-2 text-decoration-none @(isActive ? "active" : "")">
+                <a href="@Url.Action("Index", "Enhancements", new { serviceAreaId = sa.Id })"
+                    class="sidebar-link d-block px-4 py-2 text-decoration-none @(isActive ? "active" : "")">
                     <i class="bi bi-folder me-2"></i>@sa.Name
                 </a>
             }
-            
-            <a href="@Url.Action("Index", "Upload")" 
-               class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "upload" ? "active" : "")">
+
+            <a href="@Url.Action("Index", "Upload")"
+                class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "upload" ? "active" : "")">
                 <i class="bi bi-upload me-2"></i>Upload
             </a>
         </div>
-        
+
         <!-- Timesheet Section -->
-<!-- Time Management Section -->
+        <!-- Time Management Section -->
         <div class="sidebar-section mt-3 border-top border-secondary pt-3">
             <div class="sidebar-header px-3 py-2 text-uppercase small text-secondary">
                 <i class="bi bi-clock-history me-2"></i>Time Management
             </div>
-            
-            <a href="@Url.Action("MyTimesheetCalendar", "Timesheet")" 
-               class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "timesheet-calendar" ? "active" : "")">
+
+            <a href="@Url.Action("MyTimesheetCalendar", "Timesheet")"
+                class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "timesheet-calendar" ? "active" : "")">
                 <i class="bi bi-calendar3 me-2"></i>My Timesheet
             </a>
 
             <a href="@Url.Action("Index", "ManagerTimesheet")"
-               class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "manager-timesheet" ? "active" : "")">
+                class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "manager-timesheet" ? "active" : "")">
                 <i class="bi bi-people me-2"></i>Team Overview
             </a>
         </div>
@@ -63,23 +63,33 @@
             <div class="sidebar-header px-3 py-2 text-uppercase small text-secondary">
                 <i class="bi bi-receipt me-2"></i>Invoicing
             </div>
-            
-            <a href="@Url.Action("TeamTimesheet", "Timesheet")" 
-               class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "team-timesheet" ? "active" : "")">
+
+            <a href="@Url.Action("TeamTimesheet", "Timesheet")"
+                class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "team-timesheet" ? "active" : "")">
                 <i class="bi bi-calendar-check me-2"></i>Monthly Review
             </a>
-            
+
+            <a href="@Url.Action("Index", "PreInvoice")"
+                class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "pre-invoice" ? "active" : "")">
+                <i class="bi bi-file-earmark-text me-2"></i>Pre Invoice
+            </a>
+
+            <a href="@Url.Action("Index", "EffortMatrix")"
+                class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "effort-matrix" ? "active" : "")">
+                <i class="bi bi-grid-3x3-gap me-2"></i>Effort Matrix
+            </a>
+
             @* Add Consolidation link here if it exists *@
         </div>
-        
+
         <!-- Reports -->
         <div class="sidebar-section mt-3 border-top border-secondary pt-3">
-            <a href="@Url.Action("Index", "Reports")" 
-               class="sidebar-link d-block px-3 py-2 text-decoration-none @(Model.CurrentPage == "reports" ? "active" : "")">
+            <a href="@Url.Action("Index", "Reports")"
+                class="sidebar-link d-block px-3 py-2 text-decoration-none @(Model.CurrentPage == "reports" ? "active" : "")">
                 <i class="bi bi-bar-chart me-2"></i>Reports
             </a>
         </div>
-        
+
         <!-- Admin Section (SuperAdmin only) -->
         @if (Model.IsSuperAdmin)
         {
@@ -88,38 +98,38 @@
                     <i class="bi bi-gear me-2"></i>Administration
                 </div>
 
-                <a href="@Url.Action("Index", "Resources")" 
+                <a href="@Url.Action("Index", "Resources")"
                     class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "resources" ? "active" : "")">
                     <i class="bi bi-people me-2"></i>Resources
                 </a>
-                
+
 
             </div>
-            
+
             <!-- Lookups Section (SuperAdmin only) -->
             <div class="sidebar-section mt-3 border-top border-secondary pt-3">
                 <div class="sidebar-header px-3 py-2 text-uppercase small text-secondary">
                     <i class="bi bi-sliders me-2"></i>Lookups
                 </div>
 
-                <a href="@Url.Action("ServiceAreas", "Admin")" 
-                   class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "serviceareas" ? "active" : "")">
+                <a href="@Url.Action("ServiceAreas", "Admin")"
+                    class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "serviceareas" ? "active" : "")">
                     <i class="bi bi-diagram-3 me-2"></i>Service Areas
                 </a>
-                
-                <a href="@Url.Action("Skills", "Lookups")" 
-                   class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "skills" ? "active" : "")">
+
+                <a href="@Url.Action("Skills", "Lookups")"
+                    class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "skills" ? "active" : "")">
                     <i class="bi bi-tools me-2"></i>Skills
                 </a>
-                
-                <a href="@Url.Action("WorkPhases", "Lookups")" 
-                   class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "workphases" ? "active" : "")">
+
+                <a href="@Url.Action("WorkPhases", "Lookups")"
+                    class="sidebar-link d-block px-4 py-2 text-decoration-none @(Model.CurrentPage == "workphases" ? "active" : "")">
                     <i class="bi bi-diagram-2 me-2"></i>Work Phases
                 </a>
             </div>
         }
     </nav>
-    
+
     <!-- User Section (pinned to bottom) -->
     <div class="user-section p-3 border-top border-secondary mt-auto">
         <div class="d-flex align-items-center">

@@ -104,4 +104,5 @@ public class TimeEntry
 
     public decimal AvailableHours { get; set; }
     public bool IsFullyConsolidated => AvailableHours <= 0;
+    public string? ChargeCode { get; set; }
 }

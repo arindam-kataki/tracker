@@ -191,7 +191,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3" style="display:none;">
                     <div class="card bg-success text-white summary-card">
                         <div class="card-body text-center py-3">
                             <h3 class="mb-0">@Model.TotalContributedHours.ToString("N1")</h3>
@@ -342,7 +342,7 @@
                                 <strong><i class="bi bi-calculator me-2"></i>Grand Total</strong>
                                 <span class="text-muted ms-2">(@Model.TeamMemberCount team members)</span>
                             </div>
-                            <div class="col-auto text-end">
+                            <div class="col-auto text-end" >
                                 <span class="badge bg-primary fs-6 me-2">@Model.TotalHours.ToString("N1") hours</span>
                                 <span class="badge bg-success fs-6">@Model.TotalContributedHours.ToString("N1") contributed</span>
                             </div>

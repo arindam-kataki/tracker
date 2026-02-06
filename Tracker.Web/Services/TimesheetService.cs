@@ -132,6 +132,32 @@ public class TimesheetService : ITimesheetService
             CreatedAt = DateTime.UtcNow
         };
 
+        // Auto-populate charge code from EnhancementResource
+        if (string.IsNullOrEmpty(entry.ChargeCode))
+        {
+            var enhancementResource = await _db.Set<EnhancementResource>()
+                .Where(er => er.EnhancementId == enhancementId
+                          && er.ResourceId == resourceId
+                          && !string.IsNullOrEmpty(er.ChargeCode))
+                .FirstOrDefaultAsync();
+
+            // Fallback: any charge code for this enhancement + same service area
+            if (enhancementResource == null)
+            {
+                var enhancement = await _db.Enhancements.FindAsync(enhancementId);
+                if (enhancement != null)
+                {
+                    enhancementResource = await _db.Set<EnhancementResource>()
+                        .Where(er => er.EnhancementId == enhancementId
+                                  && er.ServiceAreaId == enhancement.ServiceAreaId
+                                  && !string.IsNullOrEmpty(er.ChargeCode))
+                        .FirstOrDefaultAsync();
+                }
+            }
+
+            entry.ChargeCode = enhancementResource?.ChargeCode;
+        }
+
         _db.TimeEntries.Add(entry);
         await _db.SaveChangesAsync();
 

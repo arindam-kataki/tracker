@@ -131,7 +131,7 @@
                         <th style="width: 120px;">Work ID</th>
                         <th>Description</th>
                         <th style="width: 100px;" class="text-end">Hours</th>
-                        <th style="width: 100px;" class="text-end">Contributed</th>
+                        <!--<th style="width: 100px;" class="text-end">Contributed</th>-->
                     </tr>
                 </thead>
                 <tbody>
@@ -157,7 +157,7 @@
                     <tr class="service-area-row">
                         <td colspan="2"><i class="bi bi-folder me-1"></i>${saCode} - ${saData.name}</td>
                         <td class="text-end">${saData.totalHours.toFixed(1)}</td>
-                        <td class="text-end">${saData.totalContributed.toFixed(1)}</td>
+                        <!--<td class="text-end">${saData.totalContributed.toFixed(1)}</td>-->
                     </tr>
                 `;
                 
@@ -178,7 +178,7 @@
                     <tr class="table-secondary">
                         <td colspan="2"><strong>Total</strong></td>
                         <td class="text-end"><strong>${data.totalHours.toFixed(1)}</strong></td>
-                        <td class="text-end"><strong>${data.totalContributed.toFixed(1)}</strong></td>
+                       <!-- <td class="text-end"><strong>${data.totalContributed.toFixed(1)}</strong></td>-->
                     </tr>
                 </tfoot>
             </table>
@@ -228,7 +228,7 @@
                     ${phaseBreakdown}
                 </td>
                 <td class="hours-cell">${item.hours.toFixed(1)}</td>
-                <td class="hours-cell">${item.contributedHours.toFixed(1)}</td>
+                <!--<td class="hours-cell">${item.contributedHours.toFixed(1)}</td>-->
             </tr>
         `;
     }

@@ -1,0 +1,75 @@
+@model EffortMatrixViewModel
+@{
+    var monthNames = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+}
+
+<table class="table table-hover matrix-table">
+    <thead>
+        <tr>
+            <th class="text-start" style="width:120px;">SignIT</th>
+            <th class="text-start">Project Title</th>
+            <th class="text-start" style="width:140px;">Resource</th>
+            <th class="text-start" style="width:80px;">Service Area</th>
+            <th class="text-start" style="width:100px;">Charge Code</th>
+            @for (int m = 0; m < 12; m++)
+            {
+                <th style="width:60px;">@monthNames[m]</th>
+            }
+            <th style="width:70px;">Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Model.Rows.Any())
+        {
+            <tr>
+                <td colspan="18" class="text-center text-muted py-4">
+                    <i class="bi bi-inbox me-1"></i> No data for this year.
+                </td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var row in Model.Rows)
+            {
+                <tr>
+                    <td class="signit-cell">@row.SignITReference</td>
+                    <td class="description">@row.ProjectTitle</td>
+                    <td>@row.ResourceName</td>
+                    <td><span class="badge bg-secondary">@row.ServiceAreaCode</span></td>
+                    <td><code>@(string.IsNullOrEmpty(row.ChargeCode) ? "—" : row.ChargeCode)</code></td>
+                    @for (int m = 0; m < 12; m++)
+                    {
+                        var val = row.MonthlyHours[m];
+                        if (val > 0)
+                        {
+                            <td class="month-cell has-value">@val.ToString("N1")</td>
+                        }
+                        else
+                        {
+                            <td class="month-cell"></td>
+                        }
+                    }
+                    <td class="total-cell">@row.RowTotal.ToString("N1")</td>
+                </tr>
+            }
+
+            @* Totals row *@
+            <tr class="totals-row">
+                <td colspan="5" class="text-end"><strong>Total</strong></td>
+                @for (int m = 0; m < 12; m++)
+                {
+                    var val = Model.MonthlyTotals[m];
+                    if (val > 0)
+                    {
+                        <td class="month-cell">@val.ToString("N1")</td>
+                    }
+                    else
+                    {
+                        <td class="month-cell"></td>
+                    }
+                }
+                <td class="total-cell">@Model.GrandTotal.ToString("N1")</td>
+            </tr>
+        }
+    </tbody>
+</table>

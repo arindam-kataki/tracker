@@ -1,0 +1,319 @@
+@model EffortMatrixViewModel
+@{
+    ViewData["Title"] = "Effort Matrix";
+    var monthNames = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+}
+
+<style>
+    .effort-matrix-container {
+        font-size: 1rem;
+    }
+
+    .summary-card {
+        transition: transform 0.15s;
+    }
+    .summary-card:hover {
+        transform: translateY(-2px);
+    }
+
+    /* Table */
+    .matrix-table {
+        font-size: 0.85rem;
+        margin-bottom: 0;
+    }
+    .matrix-table th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        color: #6c757d;
+        border-bottom-width: 2px;
+        white-space: nowrap;
+        text-align: center;
+    }
+    .matrix-table th.text-start {
+        text-align: left;
+    }
+    .matrix-table td {
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+    .matrix-table .signit-cell {
+        font-weight: 600;
+        color: #0d6efd;
+    }
+    .matrix-table .description {
+        color: #6c757d;
+        font-size: 0.85rem;
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .matrix-table .month-cell {
+        text-align: right;
+        min-width: 60px;
+    }
+    .matrix-table .month-cell.has-value {
+        font-weight: 500;
+    }
+    .matrix-table .total-cell {
+        text-align: right;
+        font-weight: 700;
+        background-color: #f8f9fa;
+    }
+
+    /* Totals row */
+    .totals-row {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    .totals-row td {
+        border-top: 2px solid #dee2e6;
+    }
+
+    /* Empty state */
+    .empty-state {
+        padding: 3rem;
+        text-align: center;
+        color: #6c757d;
+    }
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+
+<div class="container-fluid effort-matrix-container">
+
+    @* ============================================
+       PAGE HEADER
+       ============================================ *@
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">
+            <i class="bi bi-grid-3x3-gap me-2"></i>Effort Matrix
+        </h4>
+        <div>
+            <button type="button" class="btn btn-outline-success btn-sm" id="exportBtn"
+                    onclick="exportToExcel()" disabled>
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export
+            </button>
+        </div>
+    </div>
+
+    @* ============================================
+       FILTER CARD
+       ============================================ *@
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <div class="row g-2 align-items-center">
+                <div class="col-auto">
+                    <label class="form-label mb-0 fw-semibold">Year:</label>
+                </div>
+                <div class="col-auto">
+                    <select id="yearSelector" class="form-select form-select-sm" style="width: 140px;"
+                            onchange="onYearChanged()">
+                        @foreach (var y in Model.AvailableYears)
+                        {
+                            <option value="@y" selected="@(y == Model.SelectedYear)">@y</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <small class="text-muted">Resource-level monthly contribution by SignIT, Service Area, and Charge Code</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ============================================
+       SUMMARY CARDS
+       ============================================ *@
+    <div id="summaryCards" class="row g-3 mb-4" style="@(Model.Rows.Any() ? "" : "display:none;")">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white summary-card">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0" id="sumGrandTotal">@Model.GrandTotal.ToString("N1")</h3>
+                    <small>Total Contributed Hours</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white summary-card">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0" id="sumRowCount">@Model.Rows.Count</h3>
+                    <small>Resource Assignments</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-secondary text-white summary-card">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0" id="sumYear">@Model.SelectedYear</h3>
+                    <small>Year</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ============================================
+       LOADING
+       ============================================ *@
+    <div id="loadingIndicator" class="text-center py-5" style="display: none;">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="mt-2 text-muted">Generating effort matrix...</div>
+    </div>
+
+    @* ============================================
+       DATA CARD
+       ============================================ *@
+    <div id="dataContainer" style="@(Model.Rows.Any() ? "" : "display:none;")">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="bi bi-list-check me-2"></i>
+                    <strong>Effort Matrix</strong>
+                </span>
+                <span class="badge bg-secondary" id="yearBadge">@Model.SelectedYear</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" id="dataBody">
+                    @if (Model.Rows.Any())
+                    {
+                        @await Html.PartialAsync("_EffortMatrixTable", Model)
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* No data *@
+    <div id="noDataMessage" style="@(Model.Rows.Any() ? "display:none;" : "")">
+        <div class="empty-state">
+            <i class="bi bi-inbox d-block"></i>
+            <p>No timesheet data found for the selected year.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    function onYearChanged() {
+        var year = document.getElementById('yearSelector').value;
+
+        document.getElementById('noDataMessage').style.display = 'none';
+        document.getElementById('dataContainer').style.display = 'none';
+        document.getElementById('summaryCards').style.display = 'none';
+        document.getElementById('loadingIndicator').style.display = '';
+
+        fetch('/invoicing/effort-matrix/data?year=' + encodeURIComponent(year))
+            .then(function(r) { return r.json(); })
+            .then(function(result) {
+                document.getElementById('loadingIndicator').style.display = 'none';
+
+                if (!result.success || !result.data || result.data.length === 0) {
+                    document.getElementById('noDataMessage').style.display = '';
+                    document.getElementById('exportBtn').disabled = true;
+                    return;
+                }
+
+                renderMatrix(result.data, result.monthlyTotals, result.grandTotal);
+                document.getElementById('dataContainer').style.display = '';
+                document.getElementById('summaryCards').style.display = '';
+                document.getElementById('exportBtn').disabled = false;
+                document.getElementById('yearBadge').textContent = year;
+                document.getElementById('sumYear').textContent = year;
+
+                // Update URL
+                var url = new URL(window.location);
+                url.searchParams.set('year', year);
+                window.history.replaceState({}, '', url);
+            })
+            .catch(function(err) {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                console.error('Error loading effort matrix:', err);
+                alert('Error loading data. Please try again.');
+            });
+    }
+
+    function renderMatrix(rows, monthlyTotals, grandTotal) {
+        var body = document.getElementById('dataBody');
+
+        var html = '<table class="table table-hover matrix-table">';
+        html += '<thead><tr>' +
+            '<th class="text-start" style="width:120px;">SignIT</th>' +
+            '<th class="text-start">Project Title</th>' +
+            '<th class="text-start" style="width:140px;">Resource</th>' +
+            '<th class="text-start" style="width:80px;">Service Area</th>' +
+            '<th class="text-start" style="width:100px;">Charge Code</th>';
+
+        for (var m = 0; m < 12; m++) {
+            html += '<th style="width:60px;">' + monthNames[m] + '</th>';
+        }
+        html += '<th style="width:70px;">Total</th>';
+        html += '</tr></thead><tbody>';
+
+        rows.forEach(function(row) {
+            html += '<tr>' +
+                '<td class="signit-cell">' + escapeHtml(row.signIT) + '</td>' +
+                '<td class="description">' + escapeHtml(row.projectTitle) + '</td>' +
+                '<td>' + escapeHtml(row.resourceName) + '</td>' +
+                '<td><span class="badge bg-secondary">' + escapeHtml(row.serviceArea) + '</span></td>' +
+                '<td><code>' + escapeHtml(row.chargeCode || '—') + '</code></td>';
+
+            for (var m = 0; m < 12; m++) {
+                var val = row.months[m];
+                if (val > 0) {
+                    html += '<td class="month-cell has-value">' + fmt(val) + '</td>';
+                } else {
+                    html += '<td class="month-cell"></td>';
+                }
+            }
+
+            html += '<td class="total-cell">' + fmt(row.rowTotal) + '</td>';
+            html += '</tr>';
+        });
+
+        // Totals row
+        html += '<tr class="totals-row">' +
+            '<td colspan="5" class="text-end"><strong>Total</strong></td>';
+
+        for (var m = 0; m < 12; m++) {
+            var val = monthlyTotals[m];
+            if (val > 0) {
+                html += '<td class="month-cell">' + fmt(val) + '</td>';
+            } else {
+                html += '<td class="month-cell"></td>';
+            }
+        }
+        html += '<td class="total-cell">' + fmt(grandTotal) + '</td>';
+        html += '</tr>';
+
+        html += '</tbody></table>';
+        body.innerHTML = html;
+
+        // Update summary cards
+        document.getElementById('sumGrandTotal').textContent = fmt(grandTotal);
+        document.getElementById('sumRowCount').textContent = rows.length;
+    }
+
+    function fmt(val) {
+        if (val == null || val === 0) return '0.0';
+        return parseFloat(val).toFixed(1);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function exportToExcel() {
+        var year = document.getElementById('yearSelector').value;
+        if (!year) return;
+        window.location.href = '/invoicing/effort-matrix/export?year=' + encodeURIComponent(year);
+    }
+</script>

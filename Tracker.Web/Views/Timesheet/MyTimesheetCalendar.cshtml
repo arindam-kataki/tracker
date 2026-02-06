@@ -289,7 +289,7 @@
                         
                         <div class="entry-row">
                             <div class="row g-2 mb-2">
-                                <div class="col-md-6">
+                                <div class="col-md-6" >
                                     <label class="form-label small">Work Type <span class="text-danger">*</span></label>
                                     <select id="newEntryWorkPhase" class="form-select" onchange="updateNewEntryContributed()">
                                         <option value="">-- Select --</option>
@@ -304,7 +304,7 @@
                                     <input type="number" id="newEntryHours" class="form-control" 
                                            step="0.25" min="0.25" placeholder="0.00" onchange="updateNewEntryContributed()">
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-3" style="display: none;">
                                     <label class="form-label small">Contributed</label>
                                     <input type="number" id="newEntryContributed" class="form-control" 
                                            step="0.25" min="0" placeholder="0.00" readonly>
@@ -314,7 +314,7 @@
                             @* Notes on its own row - prominent! *@
                             <div class="mb-2">
                                 <label class="form-label small notes-label">
-                                    <i class="bi bi-chat-left-text me-1"></i>Notes / Comments <span class="text-muted">(Important!)</span>
+                                    <i class="bi bi-chat-left-text me-1"></i>Activity <span class="text-muted">(Important!)</span>
                                 </label>
                                 <textarea id="newEntryNotes" class="form-control notes-field" 
                                           rows="2" placeholder="Describe the work done... (comments are important for tracking!)"></textarea>
@@ -414,7 +414,7 @@
                         <label class="form-label">Hours</label>
                         <input type="number" id="editHours" class="form-control" step="0.25" min="0.25" onchange="updateEditContributed()">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3" style="display: none;">
                         <label class="form-label">Contributed</label>
                         <input type="number" id="editContributed" class="form-control" step="0.25" min="0">
                     </div>

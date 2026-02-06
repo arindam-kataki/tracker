@@ -160,7 +160,7 @@
                                     <th>Resource</th>
                                     <th class="text-end">Entries</th>
                                     <th class="text-end">Hours</th>
-                                    <th class="text-end">Contributed</th>
+                                    <th class="text-end" style="display:none;">Contributed</th>
                                     <th class="text-end">Contribution %</th>
                                 </tr>
                             </thead>
@@ -193,7 +193,7 @@
                                     <td>Total</td>
                                     <td class="text-end">@Model.Entries.Count</td>
                                     <td class="text-end">@Model.TotalHours.ToString("N2")</td>
-                                    <td class="text-end">@Model.TotalContributedHours.ToString("N2")</td>
+                                    <td class="text-end" style="display:none;">@Model.TotalContributedHours.ToString("N2")</td>
                                     <td class="text-end">
                                         @((Model.TotalHours > 0 ? Model.TotalContributedHours / Model.TotalHours * 100 : 0).ToString("N1"))%
                                     </td>
@@ -233,7 +233,7 @@
                                 <th class="text-end sortable" data-sort="hours">
                                     Hours <i class="bi bi-arrow-down-up text-muted small"></i>
                                 </th>
-                                <th class="text-end">Contributed</th>
+                                <th class="text-end" style="display:none;">Contributed</th>
                                 <th>Notes</th>
                             </tr>
                         </thead>
@@ -275,7 +275,7 @@
                                     <td class="text-end fw-medium">
                                         @entry.Hours.ToString("N2")
                                     </td>
-                                    <td class="text-end">
+                                    <td class="text-end" style="display:none;">
                                         @entry.ContributedHours.ToString("N2")
                                         @if (entry.Hours > 0)
                                         {

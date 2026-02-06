@@ -547,6 +547,7 @@ public class TrackerDbContext : DbContext
             entity.Property(e => e.Hours).HasPrecision(10, 2);
             entity.Property(e => e.ContributedHours).HasPrecision(10, 2);
             entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.Property(e => e.ChargeCode).HasMaxLength(50);
 
             entity.HasIndex(e => e.EnhancementId);
             entity.HasIndex(e => e.ResourceId);

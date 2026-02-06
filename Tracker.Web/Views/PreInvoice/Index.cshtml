@@ -1,0 +1,373 @@
+@model PreInvoiceViewModel
+@{
+    ViewData["Title"] = "Pre Invoice";
+}
+
+<style>
+    .pre-invoice-container {
+        font-size: 1rem;
+    }
+    
+    /* Summary cards - matching TeamTimesheet */
+    .summary-card {
+        transition: transform 0.15s;
+    }
+    .summary-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    /* Work items table - matching TeamTimesheet */
+    .work-items-table {
+        font-size: 0.95rem;
+        margin-bottom: 0;
+    }
+    .work-items-table th {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        color: #6c757d;
+        border-bottom-width: 2px;
+    }
+    .work-items-table td {
+        vertical-align: middle;
+    }
+    .work-items-table .signit-cell {
+        font-weight: 600;
+        color: #0d6efd;
+    }
+    .work-items-table .description {
+        color: #6c757d;
+        font-size: 0.9rem;
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    /* Totals row - matching TeamTimesheet */
+    .totals-row {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    .totals-row td {
+        border-top: 2px solid #dee2e6;
+    }
+    
+    /* Negative effort remaining */
+    .text-overrun {
+        color: #dc3545;
+        font-weight: 600;
+    }
+    
+    /* Empty state - matching TeamTimesheet */
+    .empty-state {
+        padding: 3rem;
+        text-align: center;
+        color: #6c757d;
+    }
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+
+<div class="container-fluid pre-invoice-container">
+
+    @* ============================================
+       PAGE HEADER
+       ============================================ *@
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">
+            <i class="bi bi-file-earmark-text me-2"></i>Pre Invoice
+        </h4>
+        <div>
+            <button type="button" class="btn btn-outline-success btn-sm" id="exportBtn"
+                    onclick="exportToExcel()" disabled>
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export
+            </button>
+        </div>
+    </div>
+
+    @* ============================================
+       FILTER CARD
+       ============================================ *@
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <div class="row g-2 align-items-center">
+                <div class="col-auto">
+                    <label class="form-label mb-0 fw-semibold">Period:</label>
+                </div>
+                <div class="col-auto">
+                    <select id="monthSelector" class="form-select form-select-sm" style="width: 200px;"
+                            onchange="onMonthChanged()">
+                        <option value="">-- Select Month --</option>
+                        @foreach (var m in Model.AvailableMonths)
+                        {
+                            <option value="@m.Value" selected="@(m.Value == Model.SelectedMonth)">@m.Display</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <small class="text-muted">Review effort consumption by SignIT, Service Area, and Charge Code</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ============================================
+       SUMMARY CARDS
+       ============================================ *@
+    <div id="summaryCards" class="row g-3 mb-4" style="display: none;">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white summary-card">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0" id="sumApproved">0</h3>
+                    <small>Approved Effort</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white summary-card">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0" id="sumToLastMonth">0</h3>
+                    <small>Hrs to Last Month</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white summary-card">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0" id="sumThisMonth">0</h3>
+                    <small>Hrs This Month</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white summary-card">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0" id="sumRemaining">0</h3>
+                    <small>Effort Remaining</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ============================================
+       LOADING / EMPTY STATES
+       ============================================ *@
+    <div id="loadingIndicator" class="text-center py-5" style="display: none;">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="mt-2 text-muted">Generating pre-invoice data...</div>
+    </div>
+
+    <div id="noDataMessage" style="display: none;">
+        <div class="empty-state">
+            <i class="bi bi-inbox d-block"></i>
+            <p>No timesheet data found for the selected period.</p>
+        </div>
+    </div>
+
+    <div id="selectMonthPrompt" style="@(string.IsNullOrEmpty(Model.SelectedMonth) ? "" : "display:none;")">
+        <div class="empty-state">
+            <i class="bi bi-calendar3 d-block"></i>
+            <p>Select a month to generate the pre-invoice report.</p>
+        </div>
+    </div>
+
+    @* ============================================
+       DATA CARD - flat table
+       ============================================ *@
+    <div id="dataContainer" style="@(string.IsNullOrEmpty(Model.SelectedMonth) ? "display:none;" : "")">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="bi bi-list-check me-2"></i>
+                    <strong>Pre Invoice Details</strong>
+                </span>
+                <span class="badge bg-secondary" id="periodBadge">
+                    @if (!string.IsNullOrEmpty(Model.SelectedMonth))
+                    {
+                        @Model.AvailableMonths.FirstOrDefault(m => m.Value == Model.SelectedMonth)?.Display
+                    }
+                </span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" id="dataBody">
+                    @if (Model.Groups.Any())
+                    {
+                        @await Html.PartialAsync("_PreInvoiceTable", Model)
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function onMonthChanged() {
+        var month = document.getElementById('monthSelector').value;
+        if (!month) {
+            document.getElementById('selectMonthPrompt').style.display = '';
+            document.getElementById('dataContainer').style.display = 'none';
+            document.getElementById('summaryCards').style.display = 'none';
+            document.getElementById('exportBtn').disabled = true;
+            return;
+        }
+
+        document.getElementById('selectMonthPrompt').style.display = 'none';
+        document.getElementById('noDataMessage').style.display = 'none';
+        document.getElementById('dataContainer').style.display = 'none';
+        document.getElementById('summaryCards').style.display = 'none';
+        document.getElementById('loadingIndicator').style.display = '';
+
+        fetch('/invoicing/pre-invoice/data?month=' + encodeURIComponent(month))
+            .then(function(r) { return r.json(); })
+            .then(function(result) {
+                document.getElementById('loadingIndicator').style.display = 'none';
+
+                if (!result.success || !result.data || result.data.length === 0) {
+                    document.getElementById('noDataMessage').style.display = '';
+                    document.getElementById('exportBtn').disabled = true;
+                    return;
+                }
+
+                renderPreInvoice(result.data);
+                document.getElementById('dataContainer').style.display = '';
+                document.getElementById('summaryCards').style.display = '';
+                document.getElementById('exportBtn').disabled = false;
+
+                // Update period badge
+                var sel = document.getElementById('monthSelector');
+                document.getElementById('periodBadge').textContent = sel.options[sel.selectedIndex].text;
+
+                // Update URL without reload
+                var url = new URL(window.location);
+                url.searchParams.set('month', month);
+                window.history.replaceState({}, '', url);
+            })
+            .catch(function(err) {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                console.error('Error loading pre-invoice data:', err);
+                alert('Error loading data. Please try again.');
+            });
+    }
+
+    function renderPreInvoice(groups) {
+        var body = document.getElementById('dataBody');
+        var grandApproved = 0, grandToLast = 0, grandThis = 0, grandToDate = 0, grandRemaining = 0;
+
+        // Flatten all items from all groups into a single list
+        var allItems = [];
+        groups.forEach(function(group) {
+            group.items.forEach(function(item) {
+                allItems.push(item);
+                grandApproved += item.approvedEffort;
+                grandToLast += item.hoursToLastMonth;
+                grandThis += item.hoursThisMonth;
+                grandToDate += item.hoursToDate;
+                grandRemaining += item.effortRemaining;
+            });
+        });
+
+        var html = '<table class="table table-hover work-items-table">';
+        html += '<thead><tr>' +
+            '<th style="width:130px;">SignIT</th>' +
+            '<th>Project Title</th>' +
+            '<th class="text-end" style="width:100px;">Approved</th>' +
+            '<th style="width:90px;">Service Area</th>' +
+            '<th style="width:110px;">Charge Code</th>' +
+            '<th class="text-end" style="width:110px;">To Last Mth</th>' +
+            '<th class="text-end" style="width:100px;">This Mth</th>' +
+            '<th class="text-end" style="width:100px;">To Date</th>' +
+            '<th class="text-end" style="width:100px;">Remaining</th>' +
+            '<th style="width:100px;">Status</th>' +
+            '</tr></thead><tbody>';
+
+        allItems.forEach(function(item) {
+            var remainClass = item.effortRemaining < 0 ? 'text-overrun' : '';
+            html += '<tr>' +
+                '<td class="signit-cell">' + escapeHtml(item.signIT) + '</td>' +
+                '<td class="description">' + escapeHtml(item.projectTitle) + '</td>' +
+                '<td class="text-end">' + fmt(item.approvedEffort) + '</td>' +
+                '<td><span class="badge bg-secondary">' + escapeHtml(item.serviceArea) + '</span></td>' +
+                '<td><code>' + escapeHtml(item.chargeCode || '—') + '</code></td>' +
+                '<td class="text-end">' + fmt(item.hoursToLastMonth) + '</td>' +
+                '<td class="text-end">' + fmt(item.hoursThisMonth) + '</td>' +
+                '<td class="text-end">' + fmt(item.hoursToDate) + '</td>' +
+                '<td class="text-end ' + remainClass + '">' + fmt(item.effortRemaining) + '</td>' +
+                '<td>' + statusBadge(item.status) + '</td>' +
+                '</tr>';
+        });
+
+        // Totals row
+        html += '<tr class="totals-row">' +
+            '<td colspan="2" class="text-end"><strong>Total</strong></td>' +
+            '<td class="text-end">' + fmt(grandApproved) + '</td>' +
+            '<td colspan="2"></td>' +
+            '<td class="text-end">' + fmt(grandToLast) + '</td>' +
+            '<td class="text-end">' + fmt(grandThis) + '</td>' +
+            '<td class="text-end">' + fmt(grandToDate) + '</td>' +
+            '<td class="text-end ' + (grandRemaining < 0 ? 'text-overrun' : '') + '">' + fmt(grandRemaining) + '</td>' +
+            '<td></td>' +
+            '</tr>';
+
+        html += '</tbody></table>';
+        body.innerHTML = html;
+
+        // Update summary cards
+        document.getElementById('sumApproved').textContent = fmt(grandApproved);
+        document.getElementById('sumToLastMonth').textContent = fmt(grandToLast);
+        document.getElementById('sumThisMonth').textContent = fmt(grandThis);
+        document.getElementById('sumRemaining').textContent = fmt(grandRemaining);
+    }
+
+    function fmt(val) {
+        if (val == null || val === 0) return '0.0';
+        return parseFloat(val).toFixed(1);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function statusBadge(status) {
+        if (!status || status === 'N/A') return '<span class="badge bg-light text-dark">N/A</span>';
+        var cls = 'bg-secondary';
+        var s = status.toLowerCase();
+        if (s === 'completed' || s === 'closed') cls = 'bg-success';
+        else if (s === 'in progress' || s === 'wip') cls = 'bg-primary';
+        else if (s === 'on hold') cls = 'bg-warning text-dark';
+        else if (s === 'cancelled') cls = 'bg-danger';
+        else if (s === 'new') cls = 'bg-info';
+        return '<span class="badge ' + cls + '">' + escapeHtml(status) + '</span>';
+    }
+
+    function exportToExcel() {
+        var month = document.getElementById('monthSelector').value;
+        if (!month) return;
+        window.location.href = '/invoicing/pre-invoice/export?month=' + encodeURIComponent(month);
+    }
+
+    // Auto-show cards if data was server-rendered
+    document.addEventListener('DOMContentLoaded', function () {
+        var sel = document.getElementById('monthSelector');
+        if (sel.value) {
+            @if (Model.Groups.Any())
+            {
+                <text>
+                document.getElementById('summaryCards').style.display = '';
+                document.getElementById('exportBtn').disabled = false;
+                document.getElementById('sumApproved').textContent = fmt(@Model.TotalApprovedEffort);
+                document.getElementById('sumToLastMonth').textContent = fmt(@Model.TotalHoursToLastMonth);
+                document.getElementById('sumThisMonth').textContent = fmt(@Model.TotalHoursThisMonth);
+                document.getElementById('sumRemaining').textContent = fmt(@Model.TotalEffortRemaining);
+                </text>
+            }
+        }
+    });
+</script>
